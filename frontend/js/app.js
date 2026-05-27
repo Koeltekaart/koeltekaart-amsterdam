@@ -610,6 +610,19 @@ function renderHoursBlock(hours) {
   return wrap;
 }
 
+// ── Suppress heat pulse during layer rebuild (prevents animation restart flash) ──
+function _withoutHeatPulse(fn) {
+  const mapSection = document.getElementById("map-section");
+  const wasActive = mapSection?.classList.contains("heat-active");
+  if (wasActive) mapSection.classList.remove("heat-active");
+  fn();
+  if (wasActive) {
+    requestAnimationFrame(() => requestAnimationFrame(() => {
+      if (mapSection) mapSection.classList.add("heat-active");
+    }));
+  }
+}
+
 // ── Map init ───────────────────────────────────────────────────────────────
 function initMap() {
   state.map = L.map("map", { zoomControl: false }).setView([52.368, 4.827], 13);
@@ -817,6 +830,9 @@ function buildKoelteplekkenLayer(def, data) {
 }
 
 function _renderKoelteplekkenLayer(def, features) {
+  _withoutHeatPulse(() => _renderKoelteplekkenLayerInner(def, features));
+}
+function _renderKoelteplekkenLayerInner(def, features) {
   HC.hide(); // dismiss any lingering hover card before swapping layers
   if (state.layers.koelteplekken) state.map.removeLayer(state.layers.koelteplekken);
   const filtered = features.filter(f => koelteplekPassesFilters(f.properties||{}));
@@ -918,6 +934,9 @@ function buildStaticLayer(def, data) {
 
 // ── Swimming pools layer (filtered by sub-type) ────────────────────────────
 function _renderSwimmingPoolsLayer(def, features) {
+  _withoutHeatPulse(() => _renderSwimmingPoolsLayerInner(def, features));
+}
+function _renderSwimmingPoolsLayerInner(def, features) {
   HC.hide();
   if (state.layers.swimming_pools) state.map.removeLayer(state.layers.swimming_pools);
 
@@ -1203,12 +1222,7 @@ function renderMobileFilterBar() {
     layersRow.appendChild(btn);
   });
 
-  // Reflect active filters in the header label style
-  const header = document.querySelector(".mfb-header");
-  if (header) {
-    const anyActive = Object.values(state.filters).some(Boolean) || state.activeCategory !== null;
-    header.classList.toggle("mfb-header--active", anyActive);
-  }
+  // Header label is always black — no color state change
 }
 
 // ── Mobile filter bar collapse ────────────────────────────────────────────
@@ -1424,70 +1438,90 @@ function renderKoelteDetailContent(feature, container) {
   const catLabel = typeLabels[p.type] || p.type || "Koelteplek";
   const locationLabel = [p.neighborhood, p.district].filter(Boolean).join(" · ");
 
-  // Full-width photo
-  if (p.photo_url) {
-    const imgWrap = document.createElement("div"); imgWrap.className = "detail-img-full";
-    const img = document.createElement("img");
-    img.src = p.photo_url; img.alt = p.name || ""; img.loading = "lazy";
-    imgWrap.appendChild(img);
-    container.appendChild(imgWrap);
-  }
-
   const body = document.createElement("div"); body.className = "detail-panel-body";
 
-  // Inactive notice (shown before name when temporarily closed)
+  // ── Compact header row: info on left, thumbnail on right ──
+  const headerRow = document.createElement("div"); headerRow.className = "detail-header-row";
+  const infoSide  = document.createElement("div"); infoSide.className = "detail-header-info";
+
   if (p.active === false) {
     const notice = document.createElement("div"); notice.className = "inactive-notice";
+    notice.style.marginBottom = "6px";
     notice.textContent = state.lang === "nl" ? "⚠ Tijdelijk gesloten" : "⚠ Temporarily unavailable";
-    body.appendChild(notice);
+    infoSide.appendChild(notice);
   }
 
-  // Name section
-  const nameSec = document.createElement("div"); nameSec.className = "detail-panel-namesec";
   const catLbl = document.createElement("div"); catLbl.className = "dp-cat";
   catLbl.textContent = [catLabel, locationLabel].filter(Boolean).join(" · ");
-  const nameEl = document.createElement("div"); nameEl.className = "sheet-name";
-  nameEl.textContent = p.name || "Koelteplek";
-  nameSec.append(catLbl, nameEl);
-  body.appendChild(nameSec);
 
-  // Hours
-  body.appendChild(renderHoursBlock(p.hours));
+  const nameEl = document.createElement("div"); nameEl.className = "detail-panel-name";
+  nameEl.textContent = p.name || "Koelteplek";
+
+  // Inline open/closed status tag
+  const openStatus = getOpenStatus(p.hours);
+  const statusTag = document.createElement("span");
+  if (openStatus.status === "open") {
+    statusTag.className = "tag tag--open"; statusTag.style.marginTop = "5px";
+    statusTag.textContent = t("open_now") + (openStatus.closesAt ? ` – ${t("closes_at")} ${openStatus.closesAt}` : "");
+  } else if (openStatus.status === "closed") {
+    statusTag.className = "tag tag--closed"; statusTag.style.marginTop = "5px";
+    let txt = t("closed_now");
+    if (openStatus.opensAt) txt += ` – ${t("opens_at")} ${openStatus.opensAt}`;
+    statusTag.textContent = txt;
+  }
+
+  infoSide.append(catLbl, nameEl);
+  if (statusTag.className) infoSide.appendChild(statusTag);
+
+  if (p.photo_url) {
+    const photoWrap = document.createElement("div"); photoWrap.className = "detail-panel-photo";
+    const img = document.createElement("img");
+    img.src = p.photo_url; img.alt = p.name || ""; img.loading = "lazy";
+    photoWrap.appendChild(img);
+    headerRow.append(infoSide, photoWrap);
+  } else {
+    headerRow.appendChild(infoSide);
+  }
+  body.appendChild(headerRow);
+
+  // ── Hours block (compact via CSS) ──
+  const hoursBlock = renderHoursBlock(p.hours);
+  // Hide the status row in the hours block — we show it inline above
+  const statusRow = hoursBlock.querySelector(".hours-status");
+  if (statusRow) statusRow.style.display = "none";
+  body.appendChild(hoursBlock);
+
   if (p.hours_note) {
     const noteEl = document.createElement("div"); noteEl.className = "hours-note";
     noteEl.textContent = p.hours_note;
     body.appendChild(noteEl);
   }
 
-  // Amenity chips (dynamic — all boolean fields from data)
-  // Present amenities shown first, then absent ones
-  const chipsWrap = document.createElement("div"); chipsWrap.className = "filter-chips detail-chips";
-  const sortedDefs = [...AMENITY_DEFS]
-    .filter(def => p[def.key] !== null && p[def.key] !== undefined)
-    .sort((a, b) => (p[b.key] ? 1 : 0) - (p[a.key] ? 1 : 0));
-  sortedDefs.forEach(def => {
-    const val = p[def.key];
-    const label = state.lang === "nl" ? def.label_nl : def.label_en;
-    const chip = document.createElement("button");
-    chip.className = "filter-chip" + (val ? " on" : " off");
-    chip.textContent = val
-      ? label
-      : (state.lang === "nl" ? `Geen ${label.toLowerCase()}` : `No ${label.toLowerCase()}`);
-    chip.setAttribute("aria-pressed", String(!!state.filters[def.key]));
-    if (val) chip.addEventListener("click", () => toggleFilter(def.key, chip));
-    else     chip.disabled = true;
-    chipsWrap.appendChild(chip);
-  });
-  body.appendChild(chipsWrap);
+  // ── Amenity chips — only show present amenities ──
+  const trueAmenities = AMENITY_DEFS.filter(def =>
+    p[def.key] === true && def.filterable
+  );
+  if (trueAmenities.length) {
+    const chipsWrap = document.createElement("div"); chipsWrap.className = "filter-chips detail-chips";
+    trueAmenities.forEach(def => {
+      const label = state.lang === "nl" ? def.label_nl : def.label_en;
+      const chip = document.createElement("button");
+      chip.className = "filter-chip on" + (state.filters[def.key] ? " active" : "");
+      chip.textContent = label;
+      chip.setAttribute("aria-pressed", String(!!state.filters[def.key]));
+      chip.addEventListener("click", () => toggleFilter(def.key, chip));
+      chipsWrap.appendChild(chip);
+    });
+    body.appendChild(chipsWrap);
+  }
 
-  // Notes
   if (p.notes) {
     const notesBox = document.createElement("div"); notesBox.className = "detail-notes";
     notesBox.textContent = p.notes;
     body.appendChild(notesBox);
   }
 
-  // Actions
+  // ── Action buttons ──
   const actions = document.createElement("div"); actions.className = "detail-actions";
   if (p.website_url) {
     const a = document.createElement("a");
@@ -1612,55 +1646,6 @@ function renderParkDetailContent(feature, container) {
   container.appendChild(body);
 }
 
-
-function renderSwimmingPoolDetailContent(feature, container) {
-  const p = feature.properties || {};
-  const swimType = getSwimTypeDef(p.category);
-
-  const body = document.createElement("div");
-  body.className = "detail-panel-body";
-
-  const nameSec = document.createElement("div");
-  nameSec.className = "detail-panel-namesec";
-
-  const catLbl = document.createElement("div");
-  catLbl.className = "dp-cat";
-  catLbl.textContent = state.lang === "nl" ? swimType.label_nl : swimType.label_en;
-
-  const nameEl = document.createElement("div");
-  nameEl.className = "sheet-name";
-  nameEl.textContent = p.name || "Zwemplek";
-
-  nameSec.append(catLbl, nameEl);
-  body.appendChild(nameSec);
-
-  const grid = document.createElement("div");
-  grid.className = "prop-grid";
-
-  grid.append(
-    cell(
-      t("type_label"),
-      state.lang === "nl" ? swimType.label_nl : swimType.label_en
-    )
-  );
-
-  if (p.id) grid.appendChild(cell("ID", String(p.id)));
-
-  body.appendChild(grid);
-
-  if (feature.geometry?.type === "Point") {
-    const [lon, lat] = feature.geometry.coordinates;
-    const actions = document.createElement("div");
-    actions.className = "detail-actions";
-    actions.appendChild(makeDirectionsBtn(lat, lon));
-    body.appendChild(actions);
-  }
-
-  container.appendChild(body);
-}
-
-
-function showSwimmingPoolDetail(feature) { openDetailPanel(feature, renderSwimmingPoolDetailContent); }
 
 function showTapDetail(feature)  { openDetailPanel(feature, renderTapDetailContent);  }
 function showParkDetail(feature) { openDetailPanel(feature, renderParkDetailContent); }
@@ -2020,7 +2005,15 @@ function renderListView() {
   const countEl = document.getElementById("panel-hdr-count");
   if (titleEl) titleEl.textContent = state.userPos ? t("near_you") : t("lv_title");
   if (countEl) {
-    countEl.textContent = `${items.length} ${t("lv_found")}`;
+    if (state.userPos) {
+      // Counts are shown in section headers — just show total here
+      const nearCount = nearItems.length;
+      countEl.textContent = state.lang === "nl"
+        ? `${nearCount} dichtbij · ${items.length} totaal`
+        : `${nearCount} nearby · ${items.length} total`;
+    } else {
+      countEl.textContent = `${items.length} ${t("lv_found")}`;
+    }
   }
 
   const statusEl = document.getElementById("a11y-status");

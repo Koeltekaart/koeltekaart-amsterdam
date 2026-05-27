@@ -232,11 +232,11 @@
         </button>
       </div>
       <div class="mfb-body">
+        <div id="mfb-layers"    class="mfb-row" aria-label="Kaartlagen"></div>
+        <div class="mfb-row-divider" aria-hidden="true"></div>
         <div id="mfb-cats"      class="mfb-row" aria-label="Soort locatie"></div>
         <div class="mfb-row-divider" aria-hidden="true"></div>
         <div id="mfb-amenities" class="mfb-row" aria-label="Voorzieningen"></div>
-        <div class="mfb-row-divider" aria-hidden="true"></div>
-        <div id="mfb-layers"    class="mfb-row" aria-label="Kaartlagen"></div>
       </div>
     </div>
 
@@ -294,11 +294,13 @@
         <summary class="filter-group-summary" data-i18n-label="layers">Lagen</summary>
         <div class="filter-group-body">
           <div class="layer-row on" data-cat="koelteplekken" role="switch" aria-checked="true" tabindex="0">
-            <span class="l-dot" style="background:#004699;"></span>
+            <span class="l-dot"></span>
             <span class="l-name" data-i18n="koelteplekken_label">Koelteplekken</span>
             <span class="l-count" id="cnt-koelteplekken"></span>
             <span class="l-sw" aria-hidden="true"></span>
           </div>
+          <!-- Koelteplek type filter chips — directly below koelteplekken row -->
+          <div id="category-chips" class="category-chips layer-subfilter" role="group" aria-label="Filter by category"></div>
           <div class="layer-row on" data-cat="water_taps" role="switch" aria-checked="true" tabindex="0">
             <span class="l-dot" style="background:#009de6;"></span>
             <span class="l-name" data-i18n="water_label">Drinkwaterkranen</span>
@@ -317,13 +319,13 @@
             <span class="l-count" id="cnt-swimming_pools"></span>
             <span class="l-sw" aria-hidden="true"></span>
           </div>
+          <!-- Zwemplek type chips are inserted here by JS (rebuildSwimmingPoolChips) -->
         </div>
       </details>
 
       <details class="filter-group">
-        <summary class="filter-group-summary">Filters</summary>
+        <summary class="filter-group-summary">Voorzieningen</summary>
         <div class="filter-group-body">
-          <div id="category-chips" class="category-chips" role="group" aria-label="Filter by category"></div>
           <div id="koelte-controls">
             <div id="filter-chips" class="filter-chips" role="group" aria-label="Filter amenities"></div>
           </div>
@@ -360,46 +362,66 @@
   <footer class="contact-strip" id="contact-footer">
     <!-- Mobile: collapsed summary row -->
     <div class="cs-collapsed-summary" id="cs-toggle" role="button" aria-expanded="false" aria-controls="cs-expanded-body">
-      <span class="cs-collapsed-text lang-nl">Vragen? 020 555 5405 · Aanmelden: 06 117 38 325</span>
-      <span class="cs-collapsed-text lang-en">Questions? 020 555 5405 · Add location: 06 117 38 325</span>
+      <span class="cs-collapsed-text lang-nl">Contact &amp; Aanmelden</span>
+      <span class="cs-collapsed-text lang-en">Contact &amp; Register</span>
       <svg class="cs-collapsed-chevron" width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
-        <path d="M4 6l4 4 4-4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M4 6l4 4 4-4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
       </svg>
     </div>
     <!-- Mobile: expanded body -->
     <div class="cs-expanded-body" id="cs-expanded-body">
       <div class="cs-group">
-        <span class="cs-label lang-nl">Vragen over hittestress</span>
-        <span class="cs-label lang-en">Questions about heat stress</span>
-        <a href="tel:0205555405" class="cs-value">020 555 5405</a>
-        <a href="mailto:Leefomgeving@ggd.amsterdam.nl" class="cs-value">Leefomgeving@ggd.amsterdam.nl</a>
+        <div class="cs-group-label">
+          <span class="cs-label lang-nl">Vragen over hittestress</span>
+          <span class="cs-label lang-en">Questions about heat stress</span>
+        </div>
+        <div class="cs-group-values">
+          <a href="tel:0205555405" class="cs-value">020 555 5405</a>
+          <a href="mailto:Leefomgeving@ggd.amsterdam.nl" class="cs-value">Leefomgeving@ggd.amsterdam.nl</a>
+        </div>
       </div>
       <div class="cs-group">
-        <span class="cs-label lang-nl">Locatie aanmelden</span>
-        <span class="cs-label lang-en">Submit a location</span>
-        <a href="tel:0611738325" class="cs-value">06 117 38 325</a>
-        <a href="mailto:pratischa.koirala@amsterdam.nl" class="cs-value">pratischa.koirala@amsterdam.nl</a>
+        <div class="cs-group-label">
+          <span class="cs-label lang-nl">Locatie aanmelden</span>
+          <span class="cs-label lang-en">Submit a location</span>
+        </div>
+        <div class="cs-group-values">
+          <a href="tel:0611738325" class="cs-value">06 117 38 325</a>
+          <a href="mailto:pratischa.koirala@amsterdam.nl" class="cs-value">pratischa.koirala@amsterdam.nl</a>
+        </div>
       </div>
     </div>
     <!-- Desktop: full contact strip -->
     <div class="contact-strip-inner cs-desktop-inner">
       <div class="cs-group">
-        <span class="cs-label lang-nl">Vragen over hittestress</span>
-        <span class="cs-label lang-en">Questions about heat stress</span>
-        <a href="tel:0205555405" class="cs-value">020 555 5405</a>
-        <a href="mailto:Leefomgeving@ggd.amsterdam.nl" class="cs-value">Leefomgeving@ggd.amsterdam.nl</a>
+        <div class="cs-group-label">
+          <span class="cs-label lang-nl">Vragen over hittestress</span>
+          <span class="cs-label lang-en">Questions about heat stress</span>
+        </div>
+        <div class="cs-group-values">
+          <a href="tel:0205555405" class="cs-value">020 555 5405</a>
+          <a href="mailto:Leefomgeving@ggd.amsterdam.nl" class="cs-value">Leefomgeving@ggd.amsterdam.nl</a>
+        </div>
       </div>
       <div class="cs-div" aria-hidden="true"></div>
       <div class="cs-group">
-        <span class="cs-label lang-nl">Locatie aanmelden</span>
-        <span class="cs-label lang-en">Submit a location</span>
-        <a href="tel:0611738325" class="cs-value">06 117 38 325</a>
-        <a href="mailto:pratischa.koirala@amsterdam.nl" class="cs-value">pratischa.koirala@amsterdam.nl</a>
+        <div class="cs-group-label">
+          <span class="cs-label lang-nl">Locatie aanmelden</span>
+          <span class="cs-label lang-en">Submit a location</span>
+        </div>
+        <div class="cs-group-values">
+          <a href="tel:0611738325" class="cs-value">06 117 38 325</a>
+          <a href="mailto:pratischa.koirala@amsterdam.nl" class="cs-value">pratischa.koirala@amsterdam.nl</a>
+        </div>
       </div>
       <div class="cs-div" aria-hidden="true"></div>
       <div class="cs-group cs-group--brand">
-        <span class="cs-label">GGD Amsterdam</span>
-        <span class="cs-value cs-value--muted">Koeltekaart Amsterdam</span>
+        <div class="cs-group-label">
+          <span class="cs-label">GGD Amsterdam</span>
+        </div>
+        <div class="cs-group-values">
+          <span class="cs-value cs-value--muted">Koeltekaart Amsterdam</span>
+        </div>
       </div>
     </div>
   </footer>
