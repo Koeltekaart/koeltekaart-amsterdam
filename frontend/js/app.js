@@ -5,7 +5,7 @@ const LAYER_DEFS = [
   { cat: "koelteplekken", label: "Koelteplekken",   color: "#1A3B8B", src: "/api/koelteplekken",           type: "geojson", radius: 8 },
   { cat: "water_taps",    label: "Water fountains",  color: "#0566C8", src: "/data/raw/water_taps.geojson", type: "geojson", radius: 4 },
   { cat: "parks",         label: "Parks",            color: "#147A37", src: "/data/raw/parks.json",         type: "polygon" },
-  { cat: "swimming_pools", label: "Swimming pools", color: "#00A6A6", src: "/data/raw/zwemwater.geojson", type: "geojson", radius: 6 },
+  { cat: "swimming_pools", label: "Swimming pools", color: "#ff00ae94", src: "/data/raw/zwemwater.geojson", type: "geojson", radius: 6 },
 ];
 
 const TYPE_LABEL    = { koelteplekken: "Koelteplek", water_taps: "Water fountain", parks: "Park", swimming_pools: "Swimming pool" };
@@ -72,11 +72,11 @@ const CATEGORY_COLORS = {
 };
 
 const SWIM_TYPE_DEFS = [
-  { key: "Binnenzwembad",  label_en: "Indoor pool",              label_nl: "Binnenzwembad",              color: "#D71920" },
-  { key: "Buitenzwembad",  label_en: "Outdoor pool",             label_nl: "Buitenzwembad",             color: "#0000CC" },
-  { key: "Zwemplek",       label_en: "Official outdoor swim spot", label_nl: "Officiële buitenzwemplek", color: "#43B02A" },
-  { key: "Peuterbadje",    label_en: "Paddling pool",            label_nl: "Peuterbadje",               color: "#1EB8E8" },
-  { key: "Waterspeeltuin", label_en: "Water playground",         label_nl: "Waterspeeltuin",            color: "#D98200" },
+  { key: "Binnenzwembad",  label_en: "Indoor pool",              label_nl: "Binnenzwembad",              color: "#ff00ae94" },
+  { key: "Buitenzwembad",  label_en: "Outdoor pool",             label_nl: "Buitenzwembad",             color: "#ff00ae94"},
+  { key: "Zwemplek",       label_en: "Official outdoor swim spot", label_nl: "Officiële buitenzwemplek", color: "#ff00ae94" },
+  { key: "Peuterbadje",    label_en: "Paddling pool",            label_nl: "Peuterbadje",               color: "#ff00ae94"},
+  { key: "Waterspeeltuin", label_en: "Water playground",         label_nl: "Waterspeeltuin",            color: "#ff00ae94" },
 ];
 
 
@@ -90,7 +90,7 @@ function getSwimTypeDef(category) {
     key: raw || "unknown",
     label_en: raw || "Swimming spot",
     label_nl: raw || "Zwemplek",
-    color: "#00A6A6",
+    color: "#ff00ae94",
   };
 }
 
