@@ -575,6 +575,11 @@ function renderHoursBlock(hours) {
 // ── Map init ───────────────────────────────────────────────────────────────
 function initMap() {
   state.map = L.map("map", { zoomControl: false }).setView([52.368, 4.827], 13);
+  state.map.createPane("parksPane");
+  state.map.getPane("parksPane").style.zIndex = 350;
+
+  state.map.createPane("pointsPane");
+  state.map.getPane("pointsPane").style.zIndex = 650;
   L.tileLayer("https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png", {
     attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>',
     subdomains: "abcd", maxZoom: 19,
@@ -698,9 +703,11 @@ function buildStaticLayer(def, data) {
 }
   const fc = { type:"FeatureCollection", features };
   if (def.type === "polygon") {
-    const parkGroups = {};
-    state.layers[def.cat] = L.geoJSON(fc, {
-      style: { color:def.color, weight:1.5, opacity:0.85, fillColor:def.color, fillOpacity:0.12 },
+  const parkGroups = {};
+  state.layers[def.cat] = L.geoJSON(fc, {
+      pane: "parksPane",
+    style: { color:def.color, weight:1.5, opacity:0.85, fillColor:def.color, fillOpacity:0.12 },
+
       onEachFeature: (f,l) => {
         const name=f.properties?.Naam||"Park", sub=(f.properties?.Stadsdeel||"")+" · Park";
         if (!parkGroups[name]) parkGroups[name]=[];
@@ -712,9 +719,11 @@ function buildStaticLayer(def, data) {
       },
     });
   } else {
-    state.layers[def.cat] = L.geoJSON(fc, {
-      pointToLayer: (_f,ll) => L.circleMarker(ll,{radius:def.radius,fillColor:def.color,color:"#fff",weight:2,opacity:1,fillOpacity:0.88}),
-      onEachFeature: (f,l) => {
+  state.layers[def.cat] = L.geoJSON(fc, {
+    pane: "pointsPane",
+    pointToLayer: (_f,ll) => L.circleMarker(ll,{radius:def.radius,fillColor:def.color,color:"#fff",weight:2,opacity:1,fillOpacity:0.88}),
+
+    onEachFeature: (f,l) => {
         const p = f.properties || {};
         const name = def.cat === "swimming_pools"
           ? (p.name || p.Naam_locatie || "Zwemplek")
@@ -744,7 +753,9 @@ function _renderSwimmingPoolsLayer(def, features) {
   const fc = { type: "FeatureCollection", features: filtered };
 
   state.layers.swimming_pools = L.geoJSON(fc, {
-    pointToLayer: (f, ll) => {
+  pane: "pointsPane",
+  pointToLayer: (f, ll) => {
+
       const swimType = getSwimTypeDef(swimCategory(f.properties || {}));
       return L.circleMarker(ll, {
         radius: def.radius,
