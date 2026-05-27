@@ -71,6 +71,39 @@ const CATEGORY_COLORS = {
   default:          "#0D8A7E",
 };
 
+const SWIM_TYPE_DEFS = [
+  { key: "Binnenzwembad",  label_en: "Indoor pool",              label_nl: "Binnenzwembad",              color: "#D71920" },
+  { key: "Buitenzwembad",  label_en: "Outdoor pool",             label_nl: "Buitenzwembad",             color: "#0000CC" },
+  { key: "Zwemplek",       label_en: "Official outdoor swim spot", label_nl: "Officiële buitenzwemplek", color: "#43B02A" },
+  { key: "Peuterbadje",    label_en: "Paddling pool",            label_nl: "Peuterbadje",               color: "#1EB8E8" },
+  { key: "Waterspeeltuin", label_en: "Water playground",         label_nl: "Waterspeeltuin",            color: "#D98200" },
+];
+
+
+function swimCategory(p) {
+  return p?.category || p?.Categorie || p?.categorie || "";
+}
+
+function getSwimTypeDef(category) {
+  const raw = String(category || "").trim();
+  return SWIM_TYPE_DEFS.find(d => d.key.toLowerCase() === raw.toLowerCase()) || {
+    key: raw || "unknown",
+    label_en: raw || "Swimming spot",
+    label_nl: raw || "Zwemplek",
+    color: "#00A6A6",
+  };
+}
+
+function swimmingPoolPassesFilters(p) {
+  const selected = Object.entries(state.swimTypes || {})
+    .filter(([, on]) => on)
+    .map(([key]) => key.toLowerCase());
+
+  if (!selected.length) return true;
+  return selected.includes(String(swimCategory(p)).trim().toLowerCase());
+}
+
+
 const DAY_SHORT_NL = ["Ma","Di","Wo","Do","Vr","Za","Zo"];
 const DAY_SHORT_EN = ["Mon","Tue","Wed","Thu","Fri","Sat","Sun"];
 const DAY_LONG_NL  = ["maandag","dinsdag","woensdag","donderdag","vrijdag","zaterdag","zondag"];
@@ -328,6 +361,7 @@ const state = {
   userPos: null,
   rings: [],
   filters: {},
+  swimTypes: Object.fromEntries(SWIM_TYPE_DEFS.map(d => [d.key, false])),
   search: "",
   lang: localStorage.getItem("koeltekaart_lang") || "nl",
   activeCategory: null,
@@ -369,6 +403,7 @@ function applyLanguage() {
   });
   updateBannerText();
   rebuildFilterChips();
+  rebuildSwimmingPoolChips();
   renderMobileFilterBar();
   // Update panel title if in list mode
   updatePanelTitle();
@@ -655,6 +690,12 @@ function buildStaticLayer(def, data) {
   const features = data.features || [];
   state.features[def.cat] = features;
   animateCount(def.cat, features.length);
+  if (def.cat === "swimming_pools") {
+  rebuildSwimmingPoolChips();
+  _renderSwimmingPoolsLayer(def, features);
+  refreshListIfActive();
+  return;
+}
   const fc = { type:"FeatureCollection", features };
   if (def.type === "polygon") {
     const parkGroups = {};
@@ -694,6 +735,96 @@ function buildStaticLayer(def, data) {
   }
   if (state.on[def.cat]) state.layers[def.cat].addTo(state.map);
 }
+
+function _renderSwimmingPoolsLayer(def, features) {
+  HC.hide();
+  if (state.layers.swimming_pools) state.map.removeLayer(state.layers.swimming_pools);
+
+  const filtered = features.filter(f => swimmingPoolPassesFilters(f.properties || {}));
+  const fc = { type: "FeatureCollection", features: filtered };
+
+  state.layers.swimming_pools = L.geoJSON(fc, {
+    pointToLayer: (f, ll) => {
+      const swimType = getSwimTypeDef(swimCategory(f.properties || {}));
+      return L.circleMarker(ll, {
+        radius: def.radius,
+        fillColor: swimType.color,
+        color: "#fff",
+        weight: 2,
+        opacity: 1,
+        fillOpacity: 0.9,
+      });
+    },
+    onEachFeature: (f, l) => {
+      const p = f.properties || {};
+      const swimType = getSwimTypeDef(swimCategory(p));
+      const name = p.name || p.Naam_locatie || p.Naam || "Zwemplek";
+      const sub = state.lang === "nl" ? swimType.label_nl : swimType.label_en;
+
+      if (!IS_TOUCH_DEVICE) {
+        l.on("mouseover", e => HC.show(e.originalEvent.clientX, e.originalEvent.clientY, name, sub, swimType.color));
+        l.on("mouseout", () => HC.hide());
+        l.on("mousemove", e => HC.move(e.originalEvent.clientX, e.originalEvent.clientY));
+      }
+
+      l.on("click", e => {
+        HC.hide();
+        L.DomEvent.stopPropagation(e);
+        showSwimmingPoolDetail(f);
+      });
+    },
+  });
+
+  if (state.on.swimming_pools) state.layers.swimming_pools.addTo(state.map);
+
+  const countEl = document.getElementById("cnt-swimming_pools");
+  if (countEl) countEl.textContent = filtered.length.toLocaleString();
+}
+
+function rebuildSwimmingPoolsLayer() {
+  const def = LAYER_DEFS.find(d => d.cat === "swimming_pools");
+  if (!def || !state.features.swimming_pools) return;
+  _renderSwimmingPoolsLayer(def, state.features.swimming_pools);
+  refreshListIfActive();
+}
+
+function rebuildSwimmingPoolChips() {
+  const row = document.querySelector('.layer-row[data-cat="swimming_pools"]');
+  if (!row) return;
+
+  let container = document.getElementById("swimming-filter-chips");
+  if (!container) {
+    container = document.createElement("div");
+    container.id = "swimming-filter-chips";
+    container.className = "filter-chips swimming-filter-chips";
+    container.setAttribute("role", "group");
+    container.setAttribute("aria-label", "Filter swimming spot types");
+    row.insertAdjacentElement("afterend", container);
+  }
+
+  container.innerHTML = "";
+
+  SWIM_TYPE_DEFS.forEach(def => {
+    const btn = document.createElement("button");
+    const isOn = !!state.swimTypes[def.key];
+
+    btn.className = "filter-chip swim-filter-chip" + (isOn ? " active" : "");
+    btn.dataset.swimType = def.key;
+    btn.setAttribute("aria-pressed", String(isOn));
+    btn.textContent = state.lang === "nl" ? def.label_nl : def.label_en;
+
+    btn.addEventListener("click", e => {
+      e.stopPropagation();
+      state.swimTypes[def.key] = !state.swimTypes[def.key];
+      rebuildSwimmingPoolChips();
+      rebuildSwimmingPoolsLayer();
+      renderMobileFilterBar();
+    });
+
+    container.appendChild(btn);
+  });
+}
+
 
 // ── Count-up animation ─────────────────────────────────────────────────────
 function animateCount(cat, target) {
@@ -1229,26 +1360,50 @@ function renderParkDetailContent(feature, container) {
 
 function renderSwimmingPoolDetailContent(feature, container) {
   const p = feature.properties || {};
-  const body = document.createElement("div"); body.className = "detail-panel-body";
-  const nameSec = document.createElement("div"); nameSec.className = "detail-panel-namesec";
-  const catLbl = document.createElement("div"); catLbl.className = "dp-cat"; catLbl.textContent = p.category || t("swimming_pools_label");
-  const nameEl = document.createElement("div"); nameEl.className = "sheet-name";
-  nameEl.textContent = p.name || "Zwemplek";
-  nameSec.append(catLbl, nameEl); body.appendChild(nameSec);
+  const swimType = getSwimTypeDef(p.category);
 
-  const grid = document.createElement("div"); grid.className = "prop-grid";
-  grid.append(cell(t("type_label"), p.category || t("swimming_pools_label")));
+  const body = document.createElement("div");
+  body.className = "detail-panel-body";
+
+  const nameSec = document.createElement("div");
+  nameSec.className = "detail-panel-namesec";
+
+  const catLbl = document.createElement("div");
+  catLbl.className = "dp-cat";
+  catLbl.textContent = state.lang === "nl" ? swimType.label_nl : swimType.label_en;
+
+  const nameEl = document.createElement("div");
+  nameEl.className = "sheet-name";
+  nameEl.textContent = p.name || "Zwemplek";
+
+  nameSec.append(catLbl, nameEl);
+  body.appendChild(nameSec);
+
+  const grid = document.createElement("div");
+  grid.className = "prop-grid";
+
+  grid.append(
+    cell(
+      t("type_label"),
+      state.lang === "nl" ? swimType.label_nl : swimType.label_en
+    )
+  );
+
   if (p.id) grid.appendChild(cell("ID", String(p.id)));
+
   body.appendChild(grid);
 
   if (feature.geometry?.type === "Point") {
     const [lon, lat] = feature.geometry.coordinates;
-    const actions = document.createElement("div"); actions.className = "detail-actions";
+    const actions = document.createElement("div");
+    actions.className = "detail-actions";
     actions.appendChild(makeDirectionsBtn(lat, lon));
     body.appendChild(actions);
   }
+
   container.appendChild(body);
 }
+
 
 function showSwimmingPoolDetail(feature) { openDetailPanel(feature, renderSwimmingPoolDetailContent); }
 
