@@ -395,6 +395,9 @@ const state = {
   panelMode: "list",    // "list" | "detail"
   mobileView: "map",    // "map"  | "list"   — mobile only
   detailBackTo: "map",  // "map"  | "list"   — where back button returns to on mobile
+  currentDetailFeature: null,
+  currentDetailRenderFn: null,
+
 };
 
 function isDesktop() { return window.innerWidth > 768; }
@@ -431,8 +434,12 @@ function applyLanguage() {
   rebuildFilterChips();
   rebuildSwimmingPoolChips();
   renderMobileFilterBar();
+
+
   // Update panel title if in list mode
   updatePanelTitle();
+
+  rerenderCurrentDetailPanel();
 }
 
 function setupLang() {
@@ -1322,7 +1329,12 @@ function updatePanelTitle() {
 }
 
 function enterDetailMode(feature, renderFn, backTo) {
+  
   state.panelMode  = "detail";
+  state.currentDetailFeature = feature;
+  state.currentDetailRenderFn = renderFn || renderKoelteDetailContent;
+
+
   state.detailBackTo = backTo !== undefined ? backTo
                      : (isDesktop() ? "list" : state.mobileView);
 
@@ -1351,6 +1363,9 @@ function enterDetailMode(feature, renderFn, backTo) {
 
 function exitDetailMode() {
   state.panelMode = "list";
+  state.currentDetailFeature = null;
+  state.currentDetailRenderFn = null;
+
   const hdrList = document.getElementById("panel-hdr-list");
   const hdrBack = document.getElementById("panel-hdr-back");
   if (hdrList) hdrList.hidden = false;
@@ -1376,6 +1391,19 @@ function exitDetailMode() {
 
   renderListView();
 }
+
+function rerenderCurrentDetailPanel() {
+  if (state.panelMode !== "detail") return;
+  if (!state.currentDetailFeature || !state.currentDetailRenderFn) return;
+
+  const inner = document.getElementById("list-view-inner");
+  if (!inner) return;
+
+  inner.innerHTML = "";
+  inner.scrollTop = 0;
+  state.currentDetailRenderFn(state.currentDetailFeature, inner);
+}
+
 
 // ── Generic helper: open any feature in the detail panel ──────────────────
 function openDetailPanel(feature, renderFn) {
@@ -1479,6 +1507,64 @@ function showKoelteplaatsDetail(feature) {
   openDetailPanel(feature, renderKoelteDetailContent);
 }
 
+function translateTapStatus(value) {
+  if (!value) return value;
+
+  const v = String(value).trim().toLowerCase();
+
+  const map = {
+    "in bedrijf": {
+      nl: "In bedrijf",
+      en: "In service",
+    },
+    "verwijderd": {
+      nl: "Verwijderd",
+      en: "Removed",
+    },
+    "afgesneden (vervallen of uitgehaald)": {
+      nl: "Afgesneden (vervallen of uitgehaald)",
+      en: "Disconnected / removed from service",
+    },
+  };
+
+  return map[v]?.[state.lang] || value;
+}
+
+function translateTapType(value) {
+  if (!value) {
+    return state.lang === "nl" ? "Onbekend" : "Unknown";
+  }
+
+  const v = String(value).trim().toLowerCase();
+
+  const map = {
+    "delta tappunt": {
+      nl: "Delta tappunt",
+      en: "Delta tap point",
+    },
+    "drinkfontein": {
+      nl: "Drinkfontein",
+      en: "Drinking fountain",
+    },
+    "happertje": {
+      nl: "Happertje",
+      en: "Small drinking fountain",
+    },
+    "drinkfontein met drukknop": {
+      nl: "Drinkfontein met drukknop",
+      en: "Drinking fountain with push button",
+    },
+    "model vondelpark": {
+      nl: "Model Vondelpark",
+      en: "Vondelpark model drinking fountain",
+    },
+  };
+
+  return map[v]?.[state.lang] || value;
+}
+
+
+
 function renderTapDetailContent(feature, container) {
   const p = feature.properties || {}, col = "#009de6";
   const body = document.createElement("div"); body.className = "detail-panel-body";
@@ -1489,10 +1575,11 @@ function renderTapDetailContent(feature, container) {
   nameSec.append(catLbl, nameEl); body.appendChild(nameSec);
   const grid = document.createElement("div"); grid.className = "prop-grid";
   grid.append(
-    cell(t("status"),     p.Status),
-    cell(t("type_label"), p["Subtype afnamepunt"]),
-    cell(t("district"),   p.District),
-  );
+  cell(t("status"),     translateTapStatus(p.Status)),
+  cell(t("type_label"), translateTapType(p["Subtype afnamepunt"])),
+  cell(t("district"),   p.District),
+);
+
   if (p.Aanlegjaar) grid.appendChild(cell(t("installed"), String(p.Aanlegjaar).replace(".0", "")));
   body.appendChild(grid);
   if (feature.geometry?.type === "Point") {

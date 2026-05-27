@@ -532,6 +532,18 @@ body.mode-user #sidebar-policy { display: none; }
 .filter-chip.on:hover { background: #D1FAE5; border-color: var(--c-koelte); }
 .filter-chip.off { background: transparent; border-color: var(--border); color: var(--subtle); cursor: default; text-decoration: line-through; text-decoration-color: rgba(0,0,0,0.18); }
 
+.filter-chip.active {
+  background: var(--navy);
+  border-color: var(--navy);
+  color: #fff;
+}
+
+.filter-chip.active:hover {
+  background: var(--navy);
+  border-color: var(--navy);
+  color: #fff;
+}
+
 /* ── Heat overlay ────────────────────────────────────────────────────────── */
 .heat-dot { background: linear-gradient(135deg, #00893c 0%, #ffe600 50%, #ec0000 100%) !important; }
 #heat-row:not(.on) .heat-dot { opacity: 0.22; }
