@@ -5,10 +5,11 @@ const LAYER_DEFS = [
   { cat: "koelteplekken", label: "Koelteplekken",   color: "#1A3B8B", src: "/api/koelteplekken",           type: "geojson", radius: 8 },
   { cat: "water_taps",    label: "Water fountains",  color: "#0566C8", src: "/data/raw/water_taps.geojson", type: "geojson", radius: 4 },
   { cat: "parks",         label: "Parks",            color: "#147A37", src: "/data/raw/parks.json",         type: "polygon" },
+  { cat: "swimming_pools", label: "Swimming pools", color: "#00A6A6", src: "/data/raw/zwemwater.geojson", type: "geojson", radius: 6 },
 ];
 
-const TYPE_LABEL    = { koelteplekken: "Koelteplek", water_taps: "Water fountain", parks: "Park" };
-const TYPE_LABEL_NL = { koelteplekken: "Koelteplek", water_taps: "Drinkwaterkraan", parks: "Park" };
+const TYPE_LABEL    = { koelteplekken: "Koelteplek", water_taps: "Water fountain", parks: "Park", swimming_pools: "Swimming pool" };
+const TYPE_LABEL_NL = { koelteplekken: "Koelteplek", water_taps: "Drinkwaterkraan", parks: "Park", swimming_pools: "Zwemplek" };
 
 // ── Amenity label map (translatable) — new keys discovered in data auto-add ─
 const AMENITY_LABELS = {
@@ -98,6 +99,7 @@ const TR = {
     koelteplekken_label: "Koelteplekken",
     water_label: "Drinkwaterkranen",
     parks_label: "Parken",
+    swimming_pools_label: "Zwemplekken",
     mode_user: "Bewoners",
     mode_policy: "Beleid",
     lp_headline: "Vind verkoeling in Amsterdam",
@@ -215,6 +217,7 @@ const TR = {
     koelteplekken_label: "Cooling shelters",
     water_label: "Water fountains",
     parks_label: "Parks",
+    swimming_pools_label: "Swimming spots",
     mode_user: "Residents",
     mode_policy: "Policy",
     lp_headline: "Find cooling spots in Amsterdam",
@@ -319,8 +322,8 @@ function t(key) { return TR[state.lang]?.[key] ?? TR.en[key] ?? key; }
 const state = {
   map: null,
   layers: {},
-  on: { koelteplekken: true, water_taps: true, parks: true },
-  features: { koelteplekken: [], water_taps: [], parks: [] },
+  on: { koelteplekken: true, water_taps: true, parks: true, swimming_pools: true },
+  features: { koelteplekken: [], water_taps: [], parks: [], swimming_pools: [] },
   userMarker: null,
   userPos: null,
   rings: [],
@@ -671,12 +674,21 @@ function buildStaticLayer(def, data) {
     state.layers[def.cat] = L.geoJSON(fc, {
       pointToLayer: (_f,ll) => L.circleMarker(ll,{radius:def.radius,fillColor:def.color,color:"#fff",weight:2,opacity:1,fillOpacity:0.88}),
       onEachFeature: (f,l) => {
-        const name=f.properties?.["Dichtstbijzijnde adres binnen 100 meter"]||"Drinkwaterkraan";
-        const sub=state.lang==="nl"?"Drinkwaterkraan":"Drinking water";
+        const p = f.properties || {};
+        const name = def.cat === "swimming_pools"
+          ? (p.name || p.Naam_locatie || "Zwemplek")
+          : (p["Dichtstbijzijnde adres binnen 100 meter"] || "Drinkwaterkraan");
+        const sub = def.cat === "swimming_pools"
+          ? (p.category || (state.lang === "nl" ? "Zwemplek" : "Swimming spot"))
+          : (state.lang === "nl" ? "Drinkwaterkraan" : "Drinking water");
         l.on("mouseover",e=>HC.show(e.originalEvent.clientX,e.originalEvent.clientY,name,sub,def.color));
         l.on("mouseout",()=>HC.hide());
         l.on("mousemove",e=>HC.move(e.originalEvent.clientX,e.originalEvent.clientY));
-        l.on("click",e=>{L.DomEvent.stopPropagation(e);showTapDetail(f);});
+        l.on("click",e=>{
+          L.DomEvent.stopPropagation(e);
+          if (def.cat === "swimming_pools") showSwimmingPoolDetail(f);
+          else showTapDetail(f);
+        });
       },
     });
   }
@@ -871,7 +883,9 @@ function renderMobileFilterBar() {
     const lbl = document.createElement("span");
     lbl.textContent = t(def.cat === "koelteplekken" ? "koelteplekken_label"
                       : def.cat === "water_taps"    ? "water_label"
-                      : "parks_label");
+                      : def.cat === "parks"         ? "parks_label"
+                      : def.cat === "swimming_pools" ? "swimming_pools_label"
+                      : def.label);
     btn.append(dot, lbl);
     btn.addEventListener("click", () => {
       const nowOn = !state.on[def.cat];
@@ -1211,6 +1225,32 @@ function renderParkDetailContent(feature, container) {
   body.appendChild(grid);
   container.appendChild(body);
 }
+
+
+function renderSwimmingPoolDetailContent(feature, container) {
+  const p = feature.properties || {};
+  const body = document.createElement("div"); body.className = "detail-panel-body";
+  const nameSec = document.createElement("div"); nameSec.className = "detail-panel-namesec";
+  const catLbl = document.createElement("div"); catLbl.className = "dp-cat"; catLbl.textContent = p.category || t("swimming_pools_label");
+  const nameEl = document.createElement("div"); nameEl.className = "sheet-name";
+  nameEl.textContent = p.name || "Zwemplek";
+  nameSec.append(catLbl, nameEl); body.appendChild(nameSec);
+
+  const grid = document.createElement("div"); grid.className = "prop-grid";
+  grid.append(cell(t("type_label"), p.category || t("swimming_pools_label")));
+  if (p.id) grid.appendChild(cell("ID", String(p.id)));
+  body.appendChild(grid);
+
+  if (feature.geometry?.type === "Point") {
+    const [lon, lat] = feature.geometry.coordinates;
+    const actions = document.createElement("div"); actions.className = "detail-actions";
+    actions.appendChild(makeDirectionsBtn(lat, lon));
+    body.appendChild(actions);
+  }
+  container.appendChild(body);
+}
+
+function showSwimmingPoolDetail(feature) { openDetailPanel(feature, renderSwimmingPoolDetailContent); }
 
 function showTapDetail(feature)  { openDetailPanel(feature, renderTapDetailContent);  }
 function showParkDetail(feature) { openDetailPanel(feature, renderParkDetailContent); }
