@@ -1435,27 +1435,102 @@ function setupSearch() {
   document.addEventListener("click",e=>{if(!e.target.closest("#search-wrap"))results.setAttribute("hidden","");});
 }
 
-function doSearch(query) {
-  const results=document.getElementById("search-results");
-  results.innerHTML="";
-  const q=query.toLowerCase();
-  const localMatches=state.features.koelteplekken.filter(f=>{const p=f.properties||{};return(p.name||"").toLowerCase().includes(q)||(p.neighborhood||"").toLowerCase().includes(q)||(p.address||"").toLowerCase().includes(q);}).slice(0,3);
-  localMatches.forEach(f=>{
-    const p=f.properties||{};
-    const el=document.createElement("div"); el.className="sr-item sr-item--local";
-    el.innerHTML=`<div class="sr-name">${p.name}</div><div class="sr-sub">${[p.neighborhood,p.district].filter(Boolean).join(" · ")} · Koelteplaats</div>`;
-    el.addEventListener("click",()=>{state.map.setView([f.geometry.coordinates[1],f.geometry.coordinates[0]],17);results.setAttribute("hidden","");document.getElementById("search-input").value=p.name;showKoelteplaatsDetail(f);closeSidebarMobile();const ms=document.getElementById("map-section");if(ms)ms.scrollIntoView({behavior:"smooth"});});
+async function doSearch(query) {
+  const results = document.getElementById("search-results");
+  if (!results) return;
+
+  results.innerHTML = "";
+
+  const q = query.trim();
+  const qLower = q.toLowerCase();
+
+  // Dutch postcode helper: 1060MT -> 1060 MT
+  const normalizedQuery = q.replace(/^(\d{4})\s*([a-zA-Z]{2})$/, "$1 $2");
+
+  // Local matches first
+  const localMatches = state.features.koelteplekken
+    .filter(f => {
+      const p = f.properties || {};
+      return (
+        (p.name || "").toLowerCase().includes(qLower) ||
+        (p.neighborhood || "").toLowerCase().includes(qLower) ||
+        (p.address || "").toLowerCase().includes(qLower)
+      );
+    })
+    .slice(0, 3);
+
+  localMatches.forEach(f => {
+    const p = f.properties || {};
+    const el = document.createElement("div");
+    el.className = "sr-item sr-item--local";
+    el.innerHTML = `
+      <div class="sr-name">${p.name || "Koelteplek"}</div>
+      <div class="sr-sub">${[p.neighborhood, p.district].filter(Boolean).join(" · ")} · Koelteplek</div>
+    `;
+
+    el.addEventListener("click", () => {
+      state.map.setView([f.geometry.coordinates[1], f.geometry.coordinates[0]], 17);
+      results.setAttribute("hidden", "");
+      document.getElementById("search-input").value = p.name || "";
+      showKoelteplaatsDetail(f);
+      closeSidebarMobile();
+
+      const ms = document.getElementById("map-section");
+      if (ms) ms.scrollIntoView({ behavior: "smooth" });
+    });
+
     results.appendChild(el);
   });
-  const url=`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query+" Amsterdam")}&format=json&countrycodes=nl&limit=4&viewbox=4.72,52.26,5.08,52.48&bounded=1`;
-  fetch(url,{headers:{"Accept-Language":state.lang==="nl"?"nl":"en"}})
-    .then(r=>r.json())
-    .then(items=>{
-      if (!items.length&&!localMatches.length){const el=document.createElement("div");el.className="sr-item";el.innerHTML=`<div class="sr-name">${t("no_search_results")}</div>`;results.appendChild(el);}
-      else{items.forEach(item=>{const parts=item.display_name.split(", ");const el=document.createElement("div");el.className="sr-item";el.innerHTML=`<div class="sr-name">${parts[0]}</div><div class="sr-sub">${parts.slice(1,3).join(", ")}</div>`;el.addEventListener("click",()=>{state.map.setView([parseFloat(item.lat),parseFloat(item.lon)],16);results.setAttribute("hidden","");document.getElementById("search-input").value=parts[0];closeSidebarMobile();const ms=document.getElementById("map-section");if(ms)ms.scrollIntoView({behavior:"smooth"});});results.appendChild(el);});}
-      results.removeAttribute("hidden");
-    }).catch(e=>console.error("search:",e));
+
+  try {
+    const url=`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query+" Amsterdam")}&format=json&countrycodes=nl&limit=6&viewbox=4.72,52.48,5.08,52.26&bounded=1`;
+
+    const response = await fetch(url, {
+      headers: {
+        "Accept-Language": state.lang === "nl" ? "nl" : "en"
+      }
+    });
+
+    if (!response.ok) throw new Error("Search request failed");
+
+    const items = await response.json();
+
+    items.forEach(item => {
+      const parts = item.display_name.split(", ");
+      const el = document.createElement("div");
+      el.className = "sr-item";
+      el.innerHTML = `
+        <div class="sr-name">${parts[0]}</div>
+        <div class="sr-sub">${parts.slice(1, 3).join(", ")}</div>
+      `;
+
+      el.addEventListener("click", () => {
+        state.map.setView([parseFloat(item.lat), parseFloat(item.lon)], 16);
+        results.setAttribute("hidden", "");
+        document.getElementById("search-input").value = parts[0];
+        closeSidebarMobile();
+
+        const ms = document.getElementById("map-section");
+        if (ms) ms.scrollIntoView({ behavior: "smooth" });
+      });
+
+      results.appendChild(el);
+    });
+  } catch (e) {
+    console.error("search:", e);
+  }
+
+  // Always show something, even if the external search fails
+  if (!results.children.length) {
+    const el = document.createElement("div");
+    el.className = "sr-item";
+    el.innerHTML = `<div class="sr-name">${t("no_search_results")}</div>`;
+    results.appendChild(el);
+  }
+
+  results.removeAttribute("hidden");
 }
+
 
 // ── Tips / Contact ─────────────────────────────────────────────────────────
 function setupTipsBtn() {
