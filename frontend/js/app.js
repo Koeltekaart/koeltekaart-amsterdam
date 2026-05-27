@@ -5,7 +5,7 @@ const LAYER_DEFS = [
   { cat: "koelteplekken",  label: "Koelteplekken",   color: "#004699",   type: "geojson", radius: 8 },
   { cat: "water_taps",     label: "Water fountains",  color: "#009de6",   src: "data/raw/water_taps.geojson",  type: "geojson", radius: 4 },
   { cat: "parks",          label: "Parks",            color: "#00893c",   src: "data/raw/parks.json",          type: "polygon" },
-  { cat: "swimming_pools", label: "Swimming spots",   color: "#ff00ae94", src: "data/raw/zwemwater.geojson",   type: "geojson", radius: 6 },
+  { cat: "swimming_pools", label: "Swimming spots",   color: "#009de6",   src: "data/raw/zwemwater.geojson",   type: "geojson", radius: 6 },
 ];
 
 // ── Google Sheets data sources ─────────────────────────────────────────────
@@ -93,19 +93,19 @@ const CATEGORY_COLORS = {
   library:          "#004699",  // Amsterdam dark blue
   church:           "#a00078",  // Amsterdam purple
   supermarket:      "#00893c",  // Amsterdam dark green
-  urban_farm:       "#00893c",  // Amsterdam dark green
+  urban_farm:       "#bed200",  // Amsterdam lime green
   community_center: "#ff9100",  // Amsterdam orange
-  sports:           "#ec0000",  // Amsterdam red
+  sports:           "#e50082",  // Amsterdam magenta
   default:          "#004699",  // Amsterdam dark blue
 };
 
 // ── Swimming pool sub-types ────────────────────────────────────────────────
 const SWIM_TYPE_DEFS = [
-  { key: "Binnenzwembad",  label_en: "Indoor pool",               label_nl: "Binnenzwembad",              color: "#ff00ae94" },
-  { key: "Buitenzwembad",  label_en: "Outdoor pool",              label_nl: "Buitenzwembad",              color: "#ff00ae94" },
-  { key: "Zwemplek",       label_en: "Official outdoor swim spot", label_nl: "Officiële buitenzwemplek",  color: "#ff00ae94" },
-  { key: "Peuterbadje",    label_en: "Paddling pool",             label_nl: "Peuterbadje",                color: "#ff00ae94" },
-  { key: "Waterspeeltuin", label_en: "Water playground",          label_nl: "Waterspeeltuin",             color: "#ff00ae94" },
+  { key: "Binnenzwembad",  label_en: "Indoor pool",               label_nl: "Binnenzwembad",              color: "#009de6" },
+  { key: "Buitenzwembad",  label_en: "Outdoor pool",              label_nl: "Buitenzwembad",              color: "#009de6" },
+  { key: "Zwemplek",       label_en: "Official outdoor swim spot", label_nl: "Officiële buitenzwemplek",  color: "#009de6" },
+  { key: "Peuterbadje",    label_en: "Paddling pool",             label_nl: "Peuterbadje",                color: "#009de6" },
+  { key: "Waterspeeltuin", label_en: "Water playground",          label_nl: "Waterspeeltuin",             color: "#009de6" },
 ];
 
 function swimCategory(p) {
@@ -118,7 +118,7 @@ function getSwimTypeDef(category) {
     key: raw || "unknown",
     label_en: raw || "Swimming spot",
     label_nl: raw || "Zwemplek",
-    color: "#ff00ae94",
+    color: "#009de6",
   };
 }
 
@@ -179,9 +179,9 @@ const TR = {
     contact_emergency: "Noodgeval? Bel 112",
     tips_cta_title: "Tips om koel te blijven",
     tips_cta_sub: "Advies van GGD Amsterdam",
-    banner_active: "Het Amsterdamse hitteplan is actief — koelteplekken zijn open als verkoelplek",
+    banner_active: "Het Amsterdam hitteplan is actief - locaties zijn nu open als koelteplek",
     banner_active_short: "Hitteplan actief — koelteplekken open",
-    banner_inactive: "Geen hitteplan actief · Locaties zijn open maar niet als verkoelplek ingezet",
+    banner_inactive: "Geen hitteplan actief - locaties worden niet als koelteplek ingezet",
     banner_inactive_short: "Geen hitteplan actief",
     banner_toggle: "Wijzig status",
     open_now: "Open",
@@ -263,7 +263,7 @@ const TR = {
     weather_feels_info: "Feels-like temperature is how warm it feels outside, based on temperature, humidity and wind.",
     skip_to_list: "Skip the map and go to the list of cooling locations",
     org: "GGD Amsterdam",
-    title: "Cool Map Amsterdam",
+    title: "Cool map Amsterdam",
     search_placeholder: "Search street, neighbourhood or place…",
     near_me: "Near me",
     stay_cool: "Stay cool",
@@ -273,7 +273,7 @@ const TR = {
     layers: "Layers",
     overlays: "Overlays",
     policy_map: "Policy map",
-    koelteplekken_label: "Cooling shelters",
+    koelteplekken_label: "Cooling spots",
     water_label: "Water fountains",
     parks_label: "Parks",
     swimming_pools_label: "Swimming spots",
@@ -282,10 +282,10 @@ const TR = {
     lp_headline: "Find cooling spots in Amsterdam",
     lp_hl1: "Too warm?",
     lp_hl2: "Find relief.",
-    lp_sub: "Water fountains, parks and cooling shelters — free, near you.",
+    lp_sub: "Water fountains, parks and cooling spots — free, near you.",
     lp_enter: "Open the map",
     lp_on_map_title: "What's on the map?",
-    lp_layer_koelte_title: "Cooling shelters",
+    lp_layer_koelte_title: "Cooling spots",
     lp_layer_koelte_desc: "298 indoor spaces — libraries, community centres and more.",
     lp_layer_water_title: "Water fountains",
     lp_layer_water_desc: "554 public drinking taps across the city, available 24/7.",
@@ -293,13 +293,13 @@ const TR = {
     lp_layer_parks_desc: "Green spaces across Amsterdam.",
     lp_tips_title: "Stay cool during a heatwave",
     contact: "Contact",
-    contact_text: "Questions about the cooling shelters or this map?",
+    contact_text: "Questions about the cooling spots or this map?",
     contact_emergency: "Emergency? Call 112",
     tips_cta_title: "Stay cool tips",
     tips_cta_sub: "Advice from GGD Amsterdam",
-    banner_active: "Amsterdam Heat Plan active — cooling shelters are open as relief spots",
-    banner_active_short: "Heat Plan active — shelters open",
-    banner_inactive: "No heat plan active · Locations are open on regular hours, not deployed as cooling shelters",
+    banner_active: "Amsterdam Heat Plan active — locations are now open as cooling spots",
+    banner_active_short: "Heat Plan active — cooling spots open",
+    banner_inactive: "No heat plan active — locations are not available as cooling spots",
     banner_inactive_short: "No heat plan active",
     banner_toggle: "Toggle status",
     open_now: "Open now",
@@ -317,15 +317,15 @@ const TR = {
     tips_page_title: "Stay cool",
     tips_page_subtitle: "Heat safety tips from GGD Amsterdam",
     heat_plan_what_title: "What is the Heat Plan?",
-    heat_plan_what_body: "The Amsterdam Heat Plan is activated when the KNMI issues a heat warning. During the plan, cooling shelters across the city are available to everyone — free of charge, no appointment needed.",
+    heat_plan_what_body: "The Amsterdam Heat Plan is activated when the KNMI issues a heat warning. During the plan, cooling spots across the city are available to everyone — free of charge, no appointment needed.",
     tip1_title: "Stay hydrated",
     tip1_body: "Drink water regularly — at least 1.5–2 litres per day during a heatwave.",
     tip2_title: "Keep your home cool",
     tip2_body: "Close curtains and blinds on sun-facing windows during the day.",
     tip3_title: "Limit outdoor activity",
     tip3_body: "Avoid strenuous activity between 12:00 and 16:00 when temperatures peak.",
-    tip4_title: "Use a cooling shelter",
-    tip4_body: "Find the nearest cooling shelter using this map.",
+    tip4_title: "Use a cooling spot",
+    tip4_body: "Find the nearest cooling spot using this map.",
     tip5_title: "Look out for others",
     tip5_body: "Elderly people, young children, and those with chronic illness are most at risk.",
     tip6_title: "Keeping pets cool",
@@ -346,7 +346,7 @@ const TR = {
     contact_ggd_visit: "",
     contact_ggd_web_label: "",
     contact_submit_title: "Register a cooling spot",
-    contact_submit_body: "Do you know a location that could serve as a cooling spot? Get in touch using the details below.",
+    contact_submit_body: "Do you know a location that could serve as a cooling spot? Get in touch with the details below.",
     contact_submit_phone_label: "Phone",
     contact_submit_phone: "06 117 38 325",
     contact_submit_email_label: "Email",
@@ -366,7 +366,7 @@ const TR = {
     filter_panel_title: "Location types",
     view_map: "Map",
     view_list: "List",
-    lv_title: "Cooling locations",
+    lv_title: "Cooling spots",
     lv_found: "locations",
     lv_no_results: "No results",
     lv_no_results_sub: "Adjust the filters to see locations.",
@@ -624,7 +624,7 @@ function initMap() {
     attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>',
     subdomains: "abcd", maxZoom: 19,
   }).addTo(state.map);
-  L.control.zoom({ position: "bottomright" }).addTo(state.map);
+  L.control.zoom({ position: "topright" }).addTo(state.map);
   state.map.on("click", () => { closeSidebarMobile(); });
   state.map.on("mousemove", e => HC.move(e.originalEvent.clientX, e.originalEvent.clientY));
 
@@ -1329,11 +1329,13 @@ function updatePanelTitle() {
 }
 
 function enterDetailMode(feature, renderFn, backTo) {
-  
+
   state.panelMode  = "detail";
   state.currentDetailFeature = feature;
   state.currentDetailRenderFn = renderFn || renderKoelteDetailContent;
 
+  const mapSection = document.getElementById("map-section");
+  if (mapSection && isDesktop()) mapSection.classList.add("detail-open");
 
   state.detailBackTo = backTo !== undefined ? backTo
                      : (isDesktop() ? "list" : state.mobileView);
@@ -1365,6 +1367,9 @@ function exitDetailMode() {
   state.panelMode = "list";
   state.currentDetailFeature = null;
   state.currentDetailRenderFn = null;
+
+  const mapSection = document.getElementById("map-section");
+  if (mapSection) mapSection.classList.remove("detail-open");
 
   const hdrList = document.getElementById("panel-hdr-list");
   const hdrBack = document.getElementById("panel-hdr-back");
@@ -2015,12 +2020,7 @@ function renderListView() {
   const countEl = document.getElementById("panel-hdr-count");
   if (titleEl) titleEl.textContent = state.userPos ? t("near_you") : t("lv_title");
   if (countEl) {
-    if (state.userPos) {
-      const nearTxt = state.lang === "nl" ? "in uw buurt" : "in range";
-      countEl.textContent = `${nearItems.length} ${nearTxt} · ${items.length} ${t("lv_found")}`;
-    } else {
-      countEl.textContent = `${items.length} ${t("lv_found")}`;
-    }
+    countEl.textContent = `${items.length} ${t("lv_found")}`;
   }
 
   const statusEl = document.getElementById("a11y-status");
@@ -2229,6 +2229,18 @@ document.addEventListener("DOMContentLoaded", () => {
   // Panel back button
   const panelBack = document.getElementById("panel-hdr-back");
   if (panelBack) panelBack.addEventListener("click", exitDetailMode);
+
+  // Mobile contact bar toggle
+  const csToggle = document.getElementById("cs-toggle");
+  if (csToggle) {
+    csToggle.addEventListener("click", () => {
+      const footer = document.getElementById("contact-footer");
+      if (footer) {
+        const expanded = footer.classList.toggle("cs-expanded");
+        csToggle.setAttribute("aria-expanded", String(expanded));
+      }
+    });
+  }
 
   // Mobile scroll handle — tapping scrolls the page back up to the landing section
   const scrollHandle = document.getElementById("map-scroll-up");
