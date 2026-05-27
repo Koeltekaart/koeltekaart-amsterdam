@@ -1,0 +1,511 @@
+<!doctype html>
+<html lang="nl">
+<head>
+  <meta charset="utf-8" />
+  <title>Koeltekaart Amsterdam</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+  <link rel="preload" href="/fonts/AmsterdamSans-Regular.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="/fonts/AmsterdamSans-Bold.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="/fonts/AmsterdamSans-ExtraBold.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="stylesheet" href="/css/app.css" />
+</head>
+<body class="mode-user">
+
+<a class="skip-link" href="#list-view-inner" data-i18n="skip_to_list">
+  Sla de kaart over en ga naar de lijst met koelteplekken
+</a>
+<div id="a11y-status" class="sr-only" aria-live="polite" aria-atomic="true"></div>
+
+<!-- ── Topbar ──────────────────────────────────────────────────────────────── -->
+<header id="topbar">
+
+  <!-- Heat plan status strip — always visible, topmost -->
+  <div id="heat-banner" class="heat-banner heat-banner--inactive" role="status" aria-live="polite">
+    <div class="banner-inner">
+      <span class="banner-pulse" aria-hidden="true"></span>
+      <span id="banner-text" class="banner-text"></span>
+    </div>
+  </div>
+
+  <!-- Main nav row -->
+  <div class="topbar-main">
+    <a class="logo" href="#landing-intro" aria-label="Koeltekaart homepage">
+      <img src="/images/logo.png" class="logo-img" alt="Koeltekaart logo" width="36" height="32" />
+      <span class="logo-title" data-i18n="title">Koeltekaart</span>
+    </a>
+
+    <div id="search-wrap" role="search">
+      <svg class="search-icon" width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
+        <circle cx="5.5" cy="5.5" r="4" stroke="currentColor" stroke-width="1.5"/>
+        <line x1="8.5" y1="8.5" x2="13" y2="13" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+      </svg>
+      <input id="search-input" type="search" autocomplete="off" spellcheck="false"
+             data-i18n-placeholder="search_placeholder" aria-label="Search" />
+      <div id="search-results" role="listbox" hidden></div>
+    </div>
+
+    <div class="topbar-actions">
+      <button id="btn-near" class="ctrl-btn">
+        <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
+          <circle cx="7" cy="7" r="6" stroke="currentColor" stroke-width="1.5"/>
+          <circle cx="7" cy="7" r="2" fill="currentColor"/>
+          <line x1="7" y1="0"    x2="7"  y2="2.5"  stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+          <line x1="7" y1="11.5" x2="7"  y2="14"   stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+          <line x1="0" y1="7"    x2="2.5" y2="7"   stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+          <line x1="11.5" y1="7" x2="14" y2="7"    stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+        </svg>
+        <span data-i18n="near_me">In mijn buurt</span>
+      </button>
+      <button id="btn-lang" class="ctrl-btn lang-btn" aria-label="Switch language">EN</button>
+    </div>
+  </div>
+</header>
+
+<!-- ── Page content ───────────────────────────────────────────────────────── -->
+<div id="page">
+
+  <!-- ── Landing intro ──────────────────────────────────────────────────── -->
+  <section id="landing-intro">
+
+    <!-- Hero — navy background, headline left + weather column right -->
+    <div class="li-hero">
+
+      <!-- Hero inner: flex row — content left, weather column right -->
+      <div class="li-hero-inner">
+
+        <!-- Left: headline + sub + CTA -->
+        <div class="li-hero-content">
+          <h1 class="li-headline">
+            <span class="li-hl-line" data-i18n="lp_hl1">Te warm?</span>
+            <span class="li-hl-line li-hl-accent" data-i18n="lp_hl2">Vind verkoeling.</span>
+          </h1>
+          <p class="li-hero-sub" data-i18n="lp_sub">Drinkwaterkranen, parken en koelteplekken — gratis, in jouw buurt.</p>
+          <button class="li-cta btn-li-enter" data-i18n="lp_enter">Open de kaart</button>
+        </div>
+
+        <!-- Right: weather column — 3 metrics stacked, fills hero height -->
+        <div class="li-weather-col" id="weather-strip" aria-live="polite">
+
+          <!-- Temperature -->
+          <div class="li-weather-item">
+            <svg class="li-weather-icon" width="16" height="22" viewBox="0 0 16 22" fill="none" aria-hidden="true">
+              <rect x="5.5" y="1" width="5" height="13" rx="2.5" stroke="currentColor" stroke-width="1.5"/>
+              <circle cx="8" cy="18" r="3.5" stroke="currentColor" stroke-width="1.5"/>
+              <line x1="8" y1="10" x2="8" y2="14.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+            </svg>
+            <span class="li-weather-val" id="weather-temp">--°</span>
+            <span class="li-weather-lbl" data-i18n="weather_temp_label">Actuele temperatuur</span>
+          </div>
+
+          <!-- Feels like -->
+          <div class="li-weather-item">
+            <svg class="li-weather-icon" width="20" height="16" viewBox="0 0 20 16" fill="none" aria-hidden="true">
+              <path d="M1 5 Q5 1 9 5 Q13 9 17 5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" fill="none"/>
+              <path d="M1 11 Q5 7 9 11 Q13 15 17 11" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" fill="none"/>
+            </svg>
+            <span class="li-weather-val" id="weather-feels">--°</span>
+            <span class="li-weather-lbl" data-i18n="weather_feels_label">Gevoelstemperatuur</span>
+          </div>
+
+          <!-- Humidity -->
+          <div class="li-weather-item">
+            <svg class="li-weather-icon" width="14" height="20" viewBox="0 0 14 20" fill="none" aria-hidden="true">
+              <path d="M7 1 C7 1 1 9 1 13 a6 6 0 0 0 12 0 C13 9 7 1 7 1 Z" stroke="currentColor" stroke-width="1.5"/>
+            </svg>
+            <span class="li-weather-val" id="weather-humidity">--%</span>
+            <span class="li-weather-lbl" data-i18n="weather_humidity_label">Luchtvochtigheid</span>
+          </div>
+
+          <p class="li-weather-credit">
+            <a id="weather-source" href="https://open-meteo.com/" target="_blank" rel="noopener noreferrer">Open-Meteo</a>
+          </p>
+        </div>
+
+      </div><!-- /.li-hero-inner -->
+
+      <!-- Orange cityscape strip -->
+      <div class="li-warm-strip" aria-hidden="true">
+        <svg viewBox="0 0 1200 80" preserveAspectRatio="none" class="li-city-svg">
+          <g fill="rgba(255,255,255,0.18)">
+            <rect x="0"    y="30" width="60"  height="50"/>
+            <rect x="55"   y="48" width="40"  height="32"/>
+            <rect x="90"   y="20" width="55"  height="60"/>
+            <rect x="140"  y="38" width="35"  height="42"/>
+            <rect x="170"  y="10" width="70"  height="70"/>
+            <rect x="235"  y="42" width="45"  height="38"/>
+            <rect x="275"  y="28" width="50"  height="52"/>
+            <rect x="320"  y="50" width="30"  height="30"/>
+            <rect x="345"  y="18" width="65"  height="62"/>
+            <rect x="405"  y="44" width="40"  height="36"/>
+            <rect x="440"  y="32" width="55"  height="48"/>
+            <rect x="490"  y="55" width="35"  height="25"/>
+            <rect x="520"  y="15" width="70"  height="65"/>
+            <rect x="585"  y="40" width="45"  height="40"/>
+            <rect x="625"  y="26" width="50"  height="54"/>
+            <rect x="670"  y="52" width="35"  height="28"/>
+            <rect x="700"  y="12" width="65"  height="68"/>
+            <rect x="760"  y="46" width="40"  height="34"/>
+            <rect x="795"  y="30" width="55"  height="50"/>
+            <rect x="845"  y="56" width="30"  height="24"/>
+            <rect x="870"  y="22" width="60"  height="58"/>
+            <rect x="925"  y="44" width="45"  height="36"/>
+            <rect x="965"  y="34" width="50"  height="46"/>
+            <rect x="1010" y="58" width="35"  height="22"/>
+            <rect x="1040" y="16" width="65"  height="64"/>
+            <rect x="1100" y="42" width="40"  height="38"/>
+            <rect x="1135" y="28" width="65"  height="52"/>
+          </g>
+        </svg>
+      </div>
+
+    </div><!-- /.li-hero -->
+
+    <!-- Info content section -->
+    <div class="info-section-wrap">
+      <section class="info-section" aria-label="Over de koeltekaart / About the cool map">
+
+        <h2 class="info-section-heading">
+          <span class="lang-nl">Over de Koeltekaart</span>
+          <span class="lang-en">About the Cool Map</span>
+        </h2>
+
+        <div class="info-two-col">
+
+          <!-- Left column -->
+          <div class="info-col">
+
+            <details class="info-block">
+              <summary class="info-block-title">
+                <span class="lang-nl">Wat zijn koelteplekken?</span>
+                <span class="lang-en">What are cooling spots?</span>
+                <svg class="info-block-chevron" width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M4 6l4 4 4-4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </summary>
+              <div class="info-block-body">
+                <p class="lang-nl">Wanneer het Amsterdams Hitteplan actief is, openen in verschillende buurten koelteplekken. Koelteplekken zijn openbare locaties waar u verkoeling kunt vinden tijdens warme dagen, zoals bibliotheken, supermarkten, kerken en andere publieke gebouwen. Deze plekken bieden een koele en fijne omgeving waar u tijdelijk aan de warmte kunt ontsnappen.</p>
+                <p class="lang-en">When the Amsterdam Heat Plan is active, cooling spots open in various neighbourhoods. Cooling spots are public locations where you can find relief from the heat, such as libraries, supermarkets, churches and other public buildings. These places offer a cool and pleasant environment where you can temporarily escape the heat.</p>
+                <p class="lang-nl">Tijdens warme periodes passen deze locaties hun aanbod aan. Zo stellen zij (extra) zitplekken beschikbaar, verruimen zij hun openingstijden en voegen zij voorzieningen toe om bezoekers beter te helpen verkoelen.</p>
+                <p class="lang-en">During warm periods, these locations adapt their offering. They provide (extra) seating, extend their opening hours and add facilities to better help visitors cool down.</p>
+              </div>
+            </details>
+
+            <details class="info-block">
+              <summary class="info-block-title">
+                <span class="lang-nl">Waarom koelteplekken?</span>
+                <span class="lang-en">Why cooling spots?</span>
+                <svg class="info-block-chevron" width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M4 6l4 4 4-4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </summary>
+              <div class="info-block-body">
+                <p class="lang-nl">Tijdens warme periodes kunnen veel woningen in Amsterdam sterk opwarmen. Als u langere tijd in een warme woning verblijft (boven de 27 graden), kan dit schadelijk zijn voor uw gezondheid. U kunt last krijgen van klachten zoals uitdroging, vermoeidheid of oververhitting. Vooral ouderen, jonge kinderen, zwangere vrouwen en mensen met gezondheidsklachten zijn hier gevoelig voor.</p>
+                <p class="lang-en">During warm periods, many homes in Amsterdam can heat up significantly. Staying in a warm home for an extended period (above 27°C) can be harmful to your health. You may experience symptoms such as dehydration, fatigue or overheating. Elderly people, young children, pregnant women and people with health conditions are particularly susceptible.</p>
+              </div>
+            </details>
+
+            <details class="info-block">
+              <summary class="info-block-title">
+                <span class="lang-nl">Goed om te weten</span>
+                <span class="lang-en">Good to know</span>
+                <svg class="info-block-chevron" width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M4 6l4 4 4-4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </summary>
+              <div class="info-block-body">
+                <ul class="lang-nl">
+                  <li>De toegang is gratis</li>
+                  <li>U kunt zonder afspraak binnenlopen tijdens openingstijden</li>
+                  <li>De meeste locaties zijn toegankelijk voor mensen met een beperking</li>
+                  <li>Houd rekening met andere bezoekers en maak samen gebruik van de ruimte</li>
+                </ul>
+                <ul class="lang-en">
+                  <li>Entry is free</li>
+                  <li>You can walk in without an appointment during opening hours</li>
+                  <li>Most locations are accessible for people with a disability</li>
+                  <li>Be considerate of other visitors and share the space</li>
+                </ul>
+                <p class="info-disclaimer lang-nl">Let op: de locaties zijn niet bedoeld voor mensen die medische hulp nodig hebben. De locaties kunnen geen zorgtaken op zich nemen. Voor passende hulp kunt u contact opnemen met een zorginstelling.</p>
+                <p class="info-disclaimer lang-en">Please note: the locations are not intended for people who need medical assistance. The locations cannot provide care. For appropriate help, please contact a healthcare provider.</p>
+              </div>
+            </details>
+
+          </div><!-- /.info-col left -->
+
+          <!-- Right column -->
+          <div class="info-col">
+
+            <details class="info-block">
+              <summary class="info-block-title">
+                <span class="lang-nl">Wat kunt u verwachten?</span>
+                <span class="lang-en">What can you expect?</span>
+                <svg class="info-block-chevron" width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M4 6l4 4 4-4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </summary>
+              <div class="info-block-body">
+                <p class="lang-nl">Per locatie kan het aanbod verschillen. U kunt hier altijd het volgende verwachten:</p>
+                <p class="lang-en">What is available may vary by location. You can always expect the following:</p>
+                <ul class="lang-nl">
+                  <li>een koele ruimte</li>
+                  <li>zitplaatsen</li>
+                  <li>gratis drinkwater</li>
+                  <li>gratis toiletten</li>
+                  <li>mogelijkheid om iets te eten (zelf meenemen, ter plekke verkrijgen of soms gratis)</li>
+                  <li>activiteiten, zoals lezen of een spelletje</li>
+                  <li>een toezichthouder</li>
+                </ul>
+                <ul class="lang-en">
+                  <li>a cool space</li>
+                  <li>seating</li>
+                  <li>free drinking water</li>
+                  <li>free toilets</li>
+                  <li>the opportunity to eat (bring your own, buy on-site, or sometimes free)</li>
+                  <li>activities such as reading or a game</li>
+                  <li>a supervisor</li>
+                </ul>
+              </div>
+            </details>
+
+            <details class="info-block">
+              <summary class="info-block-title">
+                <span class="lang-nl">Wanneer zijn koelteplekken open?</span>
+                <span class="lang-en">When are cooling spots open?</span>
+                <svg class="info-block-chevron" width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M4 6l4 4 4-4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </summary>
+              <div class="info-block-body">
+                <p class="lang-nl">Koelteplekken zijn geopend wanneer het Amsterdams Hitteplan actief is. Sommige locaties hebben tijdens warme periodes aangepaste openingstijden. De openingstijden kunnen per locatie verschillen. Houd deze website in de gaten voor de openingstijden van de koelteplekken.</p>
+                <p class="lang-en">Cooling spots are open when the Amsterdam Heat Plan is active. Some locations have adjusted opening hours during warm periods. Opening hours may vary by location. Keep an eye on this website for the opening hours of cooling spots.</p>
+              </div>
+            </details>
+
+            <details class="info-block">
+              <summary class="info-block-title">
+                <span class="lang-nl">Hoe herkent u een koelteplek?</span>
+                <span class="lang-en">How do you recognise a cooling spot?</span>
+                <svg class="info-block-chevron" width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M4 6l4 4 4-4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </summary>
+              <div class="info-block-body">
+                <p class="lang-nl">Koelteplekken zijn herkenbaar aan posters en flyers met het koelteplek-logo. Via de QR-code op deze materialen komt u op deze website waar u de:</p>
+                <p class="lang-en">Cooling spots are recognisable by posters and flyers with the cooling spot logo. Via the QR code on these materials you can reach this website where you can find:</p>
+                <ul class="lang-nl">
+                  <li>koelteplekken bij u in de buurt</li>
+                  <li>openingstijden</li>
+                  <li>aanwezige diensten</li>
+                </ul>
+                <ul class="lang-en">
+                  <li>cooling spots near you</li>
+                  <li>opening hours</li>
+                  <li>available facilities</li>
+                </ul>
+              </div>
+            </details>
+
+            <details class="info-block">
+              <summary class="info-block-title">
+                <span class="lang-nl">Kaart met koelteplekken</span>
+                <span class="lang-en">Map of cooling spots</span>
+                <svg class="info-block-chevron" width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M4 6l4 4 4-4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </summary>
+              <div class="info-block-body">
+                <p class="lang-nl">Hieronder vindt u een kaart met alle koelteplekken in Amsterdam. Per locatie kunt u zien:</p>
+                <p class="lang-en">Below you will find a map of all cooling spots in Amsterdam. For each location you can see:</p>
+                <ul class="lang-nl">
+                  <li>wat de aangepaste openingstijden zijn</li>
+                  <li>welke voorzieningen aanwezig zijn</li>
+                  <li>welke activiteiten worden aangeboden</li>
+                </ul>
+                <ul class="lang-en">
+                  <li>the adjusted opening hours</li>
+                  <li>which facilities are available</li>
+                  <li>which activities are offered</li>
+                </ul>
+                <p class="lang-nl">Houd deze website in de gaten voor nieuwe koelteplekken in uw buurt. GGD Amsterdam is met een pilot van start gegaan in een aantal stadsdelen. In de toekomst zullen er koelteplekken in heel Amsterdam openen.</p>
+                <p class="lang-en">Keep an eye on this website for new cooling spots in your area. GGD Amsterdam has started a pilot in a number of boroughs. In the future, cooling spots will open throughout Amsterdam.</p>
+              </div>
+            </details>
+
+          </div><!-- /.info-col right -->
+
+        </div><!-- /.info-two-col -->
+      </section>
+    </div>
+
+  </section><!-- /#landing-intro -->
+
+  <!-- ── Map + contact wrapper: sticky flex column, fills viewport below topbar -->
+  <div id="map-contact-wrap">
+
+  <!-- ── Map section (flex:1 inside wrapper) ────────────────────────────── -->
+  <div id="map-section">
+
+    <!-- Mobile scroll handle — tap/swipe UP to return to landing section -->
+    <div class="map-scroll-handle" id="map-scroll-up" aria-hidden="true"></div>
+
+    <!-- Mobile filter bar -->
+    <div id="mobile-filter-bar" role="group" aria-label="Filters">
+      <div class="mfb-header">
+        <span class="mfb-header-label" data-i18n="filter_panel_title">Soorten locaties</span>
+        <button class="mfb-collapse-btn" id="mfb-collapse-btn" aria-label="Filters in- of uitklappen" aria-expanded="true">
+          <svg width="11" height="11" viewBox="0 0 11 11" fill="none" aria-hidden="true">
+            <path d="M1.5 3.5L5.5 7.5L9.5 3.5" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </button>
+      </div>
+      <div class="mfb-body">
+        <div id="mfb-cats"      class="mfb-row" aria-label="Soort locatie"></div>
+        <div class="mfb-row-divider" aria-hidden="true"></div>
+        <div id="mfb-amenities" class="mfb-row" aria-label="Voorzieningen"></div>
+        <div class="mfb-row-divider" aria-hidden="true"></div>
+        <div id="mfb-layers"    class="mfb-row" aria-label="Kaartlagen"></div>
+      </div>
+    </div>
+
+    <!-- Filter FAB — hidden -->
+    <button id="btn-filter-fab" aria-label="Soorten locaties en lagen" aria-expanded="false" style="display:none">
+      <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+        <line x1="2" y1="4"  x2="14" y2="4"  stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+        <line x1="4" y1="8"  x2="12" y2="8"  stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+        <line x1="6" y1="12" x2="10" y2="12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+      </svg>
+      <span data-i18n="filter_fab">Soorten locaties</span>
+    </button>
+
+    <!-- View toggle (mobile floating pill) -->
+    <div class="view-toggle-bar" role="group" aria-label="View mode">
+      <button class="view-btn active" data-view="map" aria-pressed="true">
+        <svg width="13" height="13" viewBox="0 0 13 13" fill="none" aria-hidden="true">
+          <rect x="1" y="1" width="4.5" height="4.5" rx="1" stroke="currentColor" stroke-width="1.3"/>
+          <rect x="7.5" y="1" width="4.5" height="4.5" rx="1" stroke="currentColor" stroke-width="1.3"/>
+          <rect x="1" y="7.5" width="4.5" height="4.5" rx="1" stroke="currentColor" stroke-width="1.3"/>
+          <rect x="7.5" y="7.5" width="4.5" height="4.5" rx="1" stroke="currentColor" stroke-width="1.3"/>
+        </svg>
+        <span data-i18n="view_map">Kaart</span>
+      </button>
+      <button class="view-btn" data-view="list" aria-pressed="false">
+        <svg width="13" height="13" viewBox="0 0 13 13" fill="none" aria-hidden="true">
+          <line x1="1" y1="3"   x2="12" y2="3"   stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/>
+          <line x1="1" y1="6.5" x2="12" y2="6.5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/>
+          <line x1="1" y1="10"  x2="12" y2="10"  stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/>
+        </svg>
+        <span data-i18n="view_list">Lijst</span>
+      </button>
+    </div>
+
+    <!-- Desktop sidebar collapse tab -->
+    <button id="sidebar-collapse-btn" aria-label="Filter zijbalk inklappen" aria-expanded="true">
+      <svg width="8" height="13" viewBox="0 0 8 13" fill="none" aria-hidden="true">
+        <path d="M6.5 1.5L1.5 6.5L6.5 11.5" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+    </button>
+
+    <!-- Sidebar -->
+    <aside id="sidebar" aria-label="Map controls and filters">
+      <div class="sidebar-mobile-header">
+        <span class="sidebar-mobile-title" data-i18n="filter_panel_title">Soorten locaties</span>
+        <button class="sidebar-mobile-close" aria-label="Sluit filters">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+            <line x1="3" y1="3"  x2="13" y2="13" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+            <line x1="13" y1="3" x2="3"  y2="13" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+          </svg>
+        </button>
+      </div>
+
+      <div class="sidebar-section">
+        <div id="category-chips" class="category-chips" role="group" aria-label="Filter by category"></div>
+      </div>
+
+      <div class="sidebar-section">
+        <div class="layer-row on" data-cat="koelteplekken" role="switch" aria-checked="true" tabindex="0">
+          <span class="l-dot" style="background:#1A3B8B;"></span>
+          <span class="l-name" data-i18n="koelteplekken_label">Koelteplekken</span>
+          <span class="l-count" id="cnt-koelteplekken"></span>
+          <span class="l-sw" aria-hidden="true"></span>
+        </div>
+        <div id="koelte-controls">
+          <div id="filter-chips" class="filter-chips" role="group" aria-label="Filter amenities"></div>
+        </div>
+        <div class="layer-row on" data-cat="water_taps" role="switch" aria-checked="true" tabindex="0">
+          <span class="l-dot" style="background:#0566C8;"></span>
+          <span class="l-name" data-i18n="water_label">Drinkwaterkranen</span>
+          <span class="l-count" id="cnt-water_taps"></span>
+          <span class="l-sw" aria-hidden="true"></span>
+        </div>
+        <div class="layer-row on" data-cat="parks" role="switch" aria-checked="true" tabindex="0">
+          <span class="l-dot" style="background:#147A37;"></span>
+          <span class="l-name" data-i18n="parks_label">Parken</span>
+          <span class="l-count" id="cnt-parks"></span>
+          <span class="l-sw" aria-hidden="true"></span>
+        </div>
+      </div>
+
+    </aside>
+
+    <!-- Map -->
+    <div id="map"
+      aria-label="Interactieve kaart. Gebruik de lijstweergave voor een screenreader-vriendelijke versie."
+      role="application">
+    </div>
+
+    <!-- Right panel — list or detail view -->
+    <div id="list-view" hidden aria-label="Locaties">
+      <div class="panel-hdr">
+        <div id="panel-hdr-list">
+          <div id="panel-hdr-title"></div>
+          <div id="panel-hdr-count"></div>
+        </div>
+        <button class="panel-hdr-back" id="panel-hdr-back" aria-label="Terug" hidden>
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+            <path d="M10 3L5 8l5 5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </button>
+      </div>
+      <div id="list-view-inner" tabindex="-1"></div>
+    </div>
+
+  </div><!-- /#map-section -->
+
+  <!-- ── Contact footer — flex child below map, always visible ──────────── -->
+  <footer class="contact-strip" id="contact-footer">
+    <div class="contact-strip-inner">
+      <div class="cs-group">
+        <span class="cs-label lang-nl">Vragen over hittestress</span>
+        <span class="cs-label lang-en">Questions about heat stress</span>
+        <a href="tel:0205555405" class="cs-value">020 555 5405</a>
+        <a href="mailto:Leefomgeving@ggd.amsterdam.nl" class="cs-value">Leefomgeving@ggd.amsterdam.nl</a>
+      </div>
+      <div class="cs-div" aria-hidden="true"></div>
+      <div class="cs-group">
+        <span class="cs-label lang-nl">Locatie aanmelden</span>
+        <span class="cs-label lang-en">Submit a location</span>
+        <a href="tel:0611738325" class="cs-value">06 117 38 325</a>
+        <a href="mailto:pratischa.koirala@amsterdam.nl" class="cs-value">pratischa.koirala@amsterdam.nl</a>
+      </div>
+      <div class="cs-div" aria-hidden="true"></div>
+      <div class="cs-group cs-group--brand">
+        <span class="cs-label">GGD Amsterdam</span>
+        <span class="cs-value cs-value--muted">Koeltekaart Amsterdam</span>
+      </div>
+    </div>
+  </footer>
+
+  </div><!-- /#map-contact-wrap -->
+
+</div><!-- /#page -->
+
+<!-- ── Fixed overlays ─────────────────────────────────────────────────────── -->
+<div id="sidebar-backdrop" aria-hidden="true"></div>
+<div id="loader" aria-hidden="true"></div>
+<div id="hover-card" aria-hidden="true"></div>
+
+<div id="contact-page" role="dialog" aria-modal="true" aria-labelledby="contact-page-title">
+  <div class="tips-page-header">
+    <button id="contact-back" class="tips-back-btn" aria-label="Back to map">
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+        <path d="M10 3L5 8l5 5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+      <span data-i18n="back">Terug</span>
+    </button>
+    <span id="contact-page-title" class="tips-page-title" data-i18n="contact_page_title">Contact</span>
+    <div style="width:60px;"></div>
+  </div>
+  <div class="tips-page-body" id="contact-page-body"></div>
+</div>
+
+<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+<script src="/js/app.js"></script>
+</body>
+</html>
