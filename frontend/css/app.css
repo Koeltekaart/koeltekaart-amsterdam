@@ -101,7 +101,7 @@ body {
   overflow: hidden;
 }
 .heat-banner--active   { background: #ec0000; }
-.heat-banner--inactive { background: rgba(255,255,255,0.07); }
+.heat-banner--inactive { background: #767676; }
 
 .banner-inner {
   display: flex; align-items: center; gap: 9px;
@@ -132,10 +132,6 @@ body {
 .logo { display: flex; align-items: center; gap: 10px; flex-shrink: 0; text-decoration: none; }
 .logo-img {
   height: 36px; width: auto; display: block;
-  /* Original logo colours — white badge lifts it off the navy header */
-  background: rgba(255,255,255,0.96);
-  padding: 4px 6px;
-  border-radius: 6px;
 }
 .logo-title { font-size: 15px; font-weight: 700; color: #fff; letter-spacing: -0.02em; }
 .topbar-actions { display: flex; align-items: center; gap: 5px; margin-left: auto; flex-shrink: 0; }
@@ -658,8 +654,8 @@ body.mode-user #sidebar-policy { display: none; }
 .btn-website    { background: var(--c-koelte); color: #fff; }
 .btn-website:hover { background: #142e6b; }
 .btn-website:active { transform: scale(0.98); }
-.btn-directions { background: var(--orange); color: #fff; }
-.btn-directions:hover { background: #d96c10; }
+.btn-directions { background: #202020; color: #fff; }
+.btn-directions:hover { background: #3d3d3d; }
 .btn-directions:active { transform: scale(0.98); }
 
 /* ── Sheet: property grid ────────────────────────────────────────────────── */
@@ -1000,7 +996,7 @@ body.mode-user #sidebar-policy { display: none; }
 }
 .li-hl-accent::after {
   content: ''; position: absolute; left: 0; bottom: 0;
-  width: 60%; height: 5px; background: var(--orange); border-radius: 3px;
+  width: 60%; height: 5px; background: var(--red); border-radius: 3px;
 }
 .li-hero-sub {
   font-size: clamp(14px, 1.5vw, 16px);
@@ -1009,13 +1005,13 @@ body.mode-user #sidebar-policy { display: none; }
 }
 .li-cta {
   display: inline-flex; align-items: center; gap: 8px;
-  background: var(--orange); color: #fff; border: none;
+  background: var(--red); color: #fff; border: none;
   border-radius: 8px; padding: 13px 28px;
   font-size: 14px; font-weight: 700; font-family: var(--font);
   letter-spacing: -0.01em; cursor: pointer; white-space: nowrap;
   transition: background 0.15s;
 }
-.li-cta:hover { background: #d97e00; }
+.li-cta:hover { background: #b80000; }
 
 /* ── Hero inner: centred container — pulls tagline away from left edge ───── */
 .li-hero-inner {
@@ -1124,10 +1120,6 @@ body.mode-user #sidebar-policy { display: none; }
   margin: clamp(14px, 2vh, 22px) 0; flex-shrink: 0; align-self: stretch;
 }
 
-/* Cityscape strip */
-.li-warm-strip { background: var(--orange); height: 60px; position: relative; overflow: hidden; }
-.li-city-svg { position: absolute; bottom: 0; left: 0; width: 100%; height: 100%; }
-
 /* ── Mobile hero ─────────────────────────────────────────────────────────── */
 @media (max-width: 640px) {
   /* Stack hero vertically: headline on top, weather strip below */
@@ -1161,7 +1153,6 @@ body.mode-user #sidebar-policy { display: none; }
   .li-weather-val   { font-size: clamp(20px, 6vw, 28px); }
   .li-weather-lbl   { font-size: 9px; letter-spacing: 0.06em; }
   .li-weather-credit { display: none; }
-  .li-warm-strip { height: 40px; }
 }
 
 /* ── Accessibility ───────────────────────────────────────────────────────── */
@@ -1371,11 +1362,26 @@ html[lang="en"] div.lang-en, html[lang="en"] h2.lang-en, html[lang="en"] h3.lang
 .info-three-col {
   display: grid;
   grid-template-columns: 1fr 1fr 1fr;
-  gap: 0 clamp(28px, 4vw, 56px);
+  gap: 0;
   align-items: start;
 }
 .info-col-item {
   min-width: 0; /* prevent overflow inside grid track */
+}
+/* Subtle vertical divider between columns */
+.info-col-item:not(:last-child) {
+  border-right: 1px solid rgba(0,0,0,0.09);
+  padding-right: clamp(14px, 2vw, 28px);
+}
+.info-col-item:not(:first-child) {
+  padding-left: clamp(14px, 2vw, 28px);
+}
+
+/* Blue accent bar at the foot of the landing section */
+.landing-end-bar {
+  background: var(--navy);
+  height: 8px;
+  width: 100%;
 }
 
 /* Each content block */
@@ -1434,6 +1440,8 @@ html[lang="en"] div.lang-en, html[lang="en"] h2.lang-en, html[lang="en"] h3.lang
   .info-section-heading { padding: 24px clamp(16px,5vw,24px) 16px; margin-bottom: 0; font-size: 20px; }
   .info-three-col { grid-template-columns: 1fr; gap: 0; }
   .info-col-item { min-width: unset; }
+  .info-col-item:not(:last-child) { border-right: none; padding-right: 0; }
+  .info-col-item:not(:first-child) { padding-left: 0; }
   .info-block { margin-bottom: 0; padding-bottom: 0; border-bottom: none; }
   details.info-block > summary {
     list-style: none; cursor: pointer; user-select: none;
