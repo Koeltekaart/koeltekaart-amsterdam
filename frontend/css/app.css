@@ -560,9 +560,9 @@ body.mode-user #sidebar-policy { display: none; }
 }
 .tag-dot { width: 5px; height: 5px; border-radius: 50%; flex-shrink: 0; }
 .tag-row { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 5px; }
-.tag--open   { background: rgba(0,121,74,0.09);  color: #00794A; border-color: rgba(0,121,74,0.18); }
-.tag--closed { background: rgba(200,16,46,0.08); color: #B0102A; border-color: rgba(200,16,46,0.14); }
-.tag--open .tag-dot   { background: #00794A; }
+.tag--open   { background: rgba(0,137,60,0.09);  color: #00893c; border-color: rgba(0,137,60,0.18); }
+.tag--closed { background: rgba(236,0,0,0.08); color: #b80000; border-color: rgba(236,0,0,0.14); }
+.tag--open .tag-dot   { background: #00893c; }
 .tag--closed .tag-dot { background: #ec0000; }
 .tag--category { font-weight: 500; }
 .tag--inactive { background: rgba(156,163,175,0.12); color: #6B7280; border-color: rgba(156,163,175,0.3); }
@@ -592,14 +592,14 @@ body.mode-user #sidebar-policy { display: none; }
 /* ── Opening hours ───────────────────────────────────────────────────────── */
 .hours-wrap { margin-bottom: 10px; border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
 .hours-status { display: flex; align-items: center; gap: 7px; padding: 9px 12px; font-size: 12px; border-bottom: 1px solid var(--border); }
-.hours-status--open    { background: rgba(0,121,74,0.07); }
-.hours-status--closed  { background: rgba(200,16,46,0.05); }
+.hours-status--open    { background: rgba(0,137,60,0.07); }
+.hours-status--closed  { background: rgba(236,0,0,0.05); }
 .hours-status--unknown { background: var(--bg); color: var(--muted); font-style: italic; border-bottom: none; }
 .hours-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
-.hours-status--open    .hours-dot { background: #00794A; }
+.hours-status--open    .hours-dot { background: #00893c; }
 .hours-status--closed  .hours-dot { background: #ec0000; }
 .hours-status--unknown .hours-dot { background: var(--subtle); }
-.hours-status--open    span:not(.hours-dot) { color: #065F46; }
+.hours-status--open    span:not(.hours-dot) { color: #006d2e; }
 .hours-status--closed  span:not(.hours-dot) { color: #991B1B; }
 .hours-table { padding: 6px 0; }
 .hours-row { display: flex; align-items: center; padding: 4px 12px; border-radius: 4px; margin: 1px 4px; }
@@ -937,7 +937,7 @@ body.mode-user #sidebar-policy { display: none; }
   text-transform: uppercase; letter-spacing: 0.05em;
   padding: 2px 6px; border-radius: 4px; flex-shrink: 0;
 }
-.lv-status-badge--open    { background: rgba(0,121,74,0.10);   color: #00794A; }
+.lv-status-badge--open    { background: rgba(0,137,60,0.10);   color: #00893c; }
 .lv-status-badge--closing { background: rgba(228,108,10,0.12); color: #C4600A; }
 .lv-status-badge--closed  { background: rgba(200,16,46,0.09);  color: #B0102A; }
 .lv-status-badge--unknown { background: rgba(0,0,0,0.06);      color: var(--muted); }

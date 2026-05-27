@@ -2,9 +2,10 @@
 
 // ── Layer definitions ──────────────────────────────────────────────────────
 const LAYER_DEFS = [
-  { cat: "koelteplekken", label: "Koelteplekken",   color: "#004699", type: "geojson", radius: 8 },
-  { cat: "water_taps",    label: "Water fountains",  color: "#009de6", src: "data/raw/water_taps.geojson", type: "geojson", radius: 4 },
-  { cat: "parks",         label: "Parks",            color: "#00893c", src: "data/raw/parks.json",         type: "polygon" },
+  { cat: "koelteplekken",  label: "Koelteplekken",   color: "#004699",   type: "geojson", radius: 8 },
+  { cat: "water_taps",     label: "Water fountains",  color: "#009de6",   src: "data/raw/water_taps.geojson",  type: "geojson", radius: 4 },
+  { cat: "parks",          label: "Parks",            color: "#00893c",   src: "data/raw/parks.json",          type: "polygon" },
+  { cat: "swimming_pools", label: "Swimming spots",   color: "#ff00ae94", src: "data/raw/zwemwater.geojson",   type: "geojson", radius: 6 },
 ];
 
 // ── Google Sheets data sources ─────────────────────────────────────────────
@@ -35,8 +36,8 @@ function _sheetsReady() {
   return SHEETS_CONFIG.publishedId && !SHEETS_CONFIG.publishedId.startsWith("PASTE_");
 }
 
-const TYPE_LABEL    = { koelteplekken: "Koelteplek", water_taps: "Water fountain", parks: "Park" };
-const TYPE_LABEL_NL = { koelteplekken: "Koelteplek", water_taps: "Drinkwaterkraan", parks: "Park" };
+const TYPE_LABEL    = { koelteplekken: "Koelteplek", water_taps: "Water fountain", parks: "Park", swimming_pools: "Swimming spot" };
+const TYPE_LABEL_NL = { koelteplekken: "Koelteplek", water_taps: "Drinkwaterkraan", parks: "Park", swimming_pools: "Zwemplek" };
 
 // ── Amenity label map (translatable) — new keys discovered in data auto-add ─
 const AMENITY_LABELS = {
@@ -98,6 +99,37 @@ const CATEGORY_COLORS = {
   default:          "#004699",  // Amsterdam dark blue
 };
 
+// ── Swimming pool sub-types ────────────────────────────────────────────────
+const SWIM_TYPE_DEFS = [
+  { key: "Binnenzwembad",  label_en: "Indoor pool",               label_nl: "Binnenzwembad",              color: "#ff00ae94" },
+  { key: "Buitenzwembad",  label_en: "Outdoor pool",              label_nl: "Buitenzwembad",              color: "#ff00ae94" },
+  { key: "Zwemplek",       label_en: "Official outdoor swim spot", label_nl: "Officiële buitenzwemplek",  color: "#ff00ae94" },
+  { key: "Peuterbadje",    label_en: "Paddling pool",             label_nl: "Peuterbadje",                color: "#ff00ae94" },
+  { key: "Waterspeeltuin", label_en: "Water playground",          label_nl: "Waterspeeltuin",             color: "#ff00ae94" },
+];
+
+function swimCategory(p) {
+  return p?.category || p?.Categorie || p?.categorie || "";
+}
+
+function getSwimTypeDef(category) {
+  const raw = String(category || "").trim();
+  return SWIM_TYPE_DEFS.find(d => d.key.toLowerCase() === raw.toLowerCase()) || {
+    key: raw || "unknown",
+    label_en: raw || "Swimming spot",
+    label_nl: raw || "Zwemplek",
+    color: "#ff00ae94",
+  };
+}
+
+function swimmingPoolPassesFilters(p) {
+  const selected = Object.entries(state.swimTypes || {})
+    .filter(([, on]) => on)
+    .map(([key]) => key.toLowerCase());
+  if (!selected.length) return true;
+  return selected.includes(String(swimCategory(p)).trim().toLowerCase());
+}
+
 const DAY_SHORT_NL = ["Ma","Di","Wo","Do","Vr","Za","Zo"];
 const DAY_SHORT_EN = ["Mon","Tue","Wed","Thu","Fri","Sat","Sun"];
 const DAY_LONG_NL  = ["maandag","dinsdag","woensdag","donderdag","vrijdag","zaterdag","zondag"];
@@ -126,6 +158,7 @@ const TR = {
     koelteplekken_label: "Koelteplekken",
     water_label: "Drinkwaterkranen",
     parks_label: "Parken",
+    swimming_pools_label: "Zwemplekken",
     mode_user: "Bewoners",
     mode_policy: "Beleid",
     lp_headline: "Vind verkoeling in Amsterdam",
@@ -243,6 +276,7 @@ const TR = {
     koelteplekken_label: "Cooling shelters",
     water_label: "Water fountains",
     parks_label: "Parks",
+    swimming_pools_label: "Swimming spots",
     mode_user: "Residents",
     mode_policy: "Policy",
     lp_headline: "Find cooling spots in Amsterdam",
@@ -347,12 +381,13 @@ function t(key) { return TR[state.lang]?.[key] ?? TR.en[key] ?? key; }
 const state = {
   map: null,
   layers: {},
-  on: { koelteplekken: true, water_taps: true, parks: true },
-  features: { koelteplekken: [], water_taps: [], parks: [] },
+  on: { koelteplekken: true, water_taps: true, parks: true, swimming_pools: true },
+  features: { koelteplekken: [], water_taps: [], parks: [], swimming_pools: [] },
   userMarker: null,
   userPos: null,
   rings: [],
   filters: {},
+  swimTypes: Object.fromEntries(SWIM_TYPE_DEFS.map(d => [d.key, false])),
   search: "",
   lang: localStorage.getItem("koeltekaart_lang") || "nl",
   activeCategory: null,
@@ -394,6 +429,7 @@ function applyLanguage() {
   });
   updateBannerText();
   rebuildFilterChips();
+  rebuildSwimmingPoolChips();
   renderMobileFilterBar();
   // Update panel title if in list mode
   updatePanelTitle();
@@ -570,6 +606,13 @@ function renderHoursBlock(hours) {
 // ── Map init ───────────────────────────────────────────────────────────────
 function initMap() {
   state.map = L.map("map", { zoomControl: false }).setView([52.368, 4.827], 13);
+
+  // Custom panes so park polygons never obscure point markers
+  state.map.createPane("parksPane");
+  state.map.getPane("parksPane").style.zIndex = 350;
+  state.map.createPane("pointsPane");
+  state.map.getPane("pointsPane").style.zIndex = 650;
+
   L.tileLayer("https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png", {
     attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>',
     subdomains: "abcd", maxZoom: 19,
@@ -820,10 +863,20 @@ function buildStaticLayer(def, data) {
   const features = data.features || [];
   state.features[def.cat] = features;
   animateCount(def.cat, features.length);
+
+  // Swimming pools get their own render path (sub-type filter chips + layer)
+  if (def.cat === "swimming_pools") {
+    rebuildSwimmingPoolChips();
+    _renderSwimmingPoolsLayer(def, features);
+    refreshListIfActive();
+    return;
+  }
+
   const fc = { type:"FeatureCollection", features };
   if (def.type === "polygon") {
     const parkGroups = {};
     state.layers[def.cat] = L.geoJSON(fc, {
+      pane: "parksPane",
       style: { color:def.color, weight:1.5, opacity:0.85, fillColor:def.color, fillOpacity:0.12 },
       onEachFeature: (f,l) => {
         const name=f.properties?.Naam||"Park", sub=(f.properties?.Stadsdeel||"")+" · Park";
@@ -837,6 +890,7 @@ function buildStaticLayer(def, data) {
     });
   } else {
     state.layers[def.cat] = L.geoJSON(fc, {
+      pane: "pointsPane",
       pointToLayer: (_f,ll) => L.circleMarker(ll,{radius:def.radius,fillColor:def.color,color:"#fff",weight:2,opacity:1,fillOpacity:0.88}),
       onEachFeature: (f,l) => {
         const name=f.properties?.["Dichtstbijzijnde adres binnen 100 meter"]||"Drinkwaterkraan";
@@ -849,6 +903,86 @@ function buildStaticLayer(def, data) {
     });
   }
   if (state.on[def.cat]) state.layers[def.cat].addTo(state.map);
+}
+
+// ── Swimming pools layer (filtered by sub-type) ────────────────────────────
+function _renderSwimmingPoolsLayer(def, features) {
+  HC.hide();
+  if (state.layers.swimming_pools) state.map.removeLayer(state.layers.swimming_pools);
+
+  const filtered = features.filter(f => swimmingPoolPassesFilters(f.properties || {}));
+  const fc = { type: "FeatureCollection", features: filtered };
+
+  state.layers.swimming_pools = L.geoJSON(fc, {
+    pane: "pointsPane",
+    pointToLayer: (f, ll) => {
+      const swimType = getSwimTypeDef(swimCategory(f.properties || {}));
+      return L.circleMarker(ll, {
+        radius: def.radius,
+        fillColor: swimType.color,
+        color: "#fff",
+        weight: 2,
+        opacity: 1,
+        fillOpacity: 0.9,
+      });
+    },
+    onEachFeature: (f, l) => {
+      const p = f.properties || {};
+      const swimType = getSwimTypeDef(swimCategory(p));
+      const name = p.name || p.Naam_locatie || p.Naam || "Zwemplek";
+      const sub = state.lang === "nl" ? swimType.label_nl : swimType.label_en;
+      if (!IS_TOUCH_DEVICE) {
+        l.on("mouseover", e => HC.show(e.originalEvent.clientX, e.originalEvent.clientY, name, sub, swimType.color));
+        l.on("mouseout", () => HC.hide());
+        l.on("mousemove", e => HC.move(e.originalEvent.clientX, e.originalEvent.clientY));
+      }
+      l.on("click", e => { HC.hide(); L.DomEvent.stopPropagation(e); showSwimmingPoolDetail(f); });
+    },
+  });
+
+  if (state.on.swimming_pools) state.layers.swimming_pools.addTo(state.map);
+  const countEl = document.getElementById("cnt-swimming_pools");
+  if (countEl) countEl.textContent = filtered.length.toLocaleString();
+}
+
+function rebuildSwimmingPoolsLayer() {
+  const def = LAYER_DEFS.find(d => d.cat === "swimming_pools");
+  if (!def || !state.features.swimming_pools) return;
+  _renderSwimmingPoolsLayer(def, state.features.swimming_pools);
+  refreshListIfActive();
+}
+
+function rebuildSwimmingPoolChips() {
+  const row = document.querySelector('.layer-row[data-cat="swimming_pools"]');
+  if (!row) return;
+
+  let container = document.getElementById("swimming-filter-chips");
+  if (!container) {
+    container = document.createElement("div");
+    container.id = "swimming-filter-chips";
+    container.className = "filter-chips swimming-filter-chips";
+    container.setAttribute("role", "group");
+    container.setAttribute("aria-label", "Filter swimming spot types");
+    row.insertAdjacentElement("afterend", container);
+  }
+  container.innerHTML = "";
+
+  SWIM_TYPE_DEFS.forEach(def => {
+    const btn = document.createElement("button");
+    const isOn = !!state.swimTypes[def.key];
+    btn.className = "filter-chip swim-filter-chip" + (isOn ? " active" : "");
+    btn.dataset.swimType = def.key;
+    btn.setAttribute("aria-pressed", String(isOn));
+    btn.textContent = state.lang === "nl" ? def.label_nl : def.label_en;
+    btn.addEventListener("click", e => {
+      e.stopPropagation();
+      state.swimTypes[def.key] = !state.swimTypes[def.key];
+      rebuildSwimmingPoolChips();
+      rebuildSwimmingPoolsLayer();
+      renderMobileFilterBar();
+    });
+    container.appendChild(btn);
+  });
 }
 
 // ── Count-up animation ─────────────────────────────────────────────────────
@@ -1037,9 +1171,11 @@ function renderMobileFilterBar() {
     const dot = document.createElement("span"); dot.className = "mfb-dot";
     dot.style.background = on ? def.color : "var(--subtle)";
     const lbl = document.createElement("span");
-    lbl.textContent = t(def.cat === "koelteplekken" ? "koelteplekken_label"
+    lbl.textContent = t(def.cat === "koelteplekken"  ? "koelteplekken_label"
                       : def.cat === "water_taps"    ? "water_label"
-                      : "parks_label");
+                      : def.cat === "parks"         ? "parks_label"
+                      : def.cat === "swimming_pools" ? "swimming_pools_label"
+                      : def.label);
     btn.append(dot, lbl);
     btn.addEventListener("click", () => {
       const nowOn = !state.on[def.cat];
@@ -1162,10 +1298,10 @@ function placeDistanceRings(lat, lon) {
   // Single dashed circle — 1 km radius with a subtle navy tint inside
   const r = L.circle([lat, lon], {
     radius: 1000,
-    color: "#1A3B8B",
+    color: "#004699",
     weight: 2,
     opacity: 0.65,
-    fillColor: "#1A3B8B",
+    fillColor: "#004699",
     fillOpacity: 0.08,
     dashArray: "8 10",
     interactive: false,
@@ -1246,7 +1382,7 @@ function openDetailPanel(feature, renderFn) {
 // ── Koelteplek detail — right panel (desktop) ──────────────────────────────
 function renderKoelteDetailContent(feature, container) {
   const p = feature.properties || {};
-  const col = CATEGORY_COLORS[p.type] || "#1A3B8B";
+  const col = CATEGORY_COLORS[p.type] || "#004699";
   const typeLabels = state.lang === "nl" ? TYPE_DISPLAY_NL : TYPE_DISPLAY_EN;
   const catLabel = typeLabels[p.type] || p.type || "Koelteplek";
   const locationLabel = [p.neighborhood, p.district].filter(Boolean).join(" · ");
@@ -1340,7 +1476,7 @@ function showKoelteplaatsDetail(feature) {
 }
 
 function renderTapDetailContent(feature, container) {
-  const p = feature.properties || {}, col = "#0566C8";
+  const p = feature.properties || {}, col = "#009de6";
   const body = document.createElement("div"); body.className = "detail-panel-body";
   const nameSec = document.createElement("div"); nameSec.className = "detail-panel-namesec";
   const catLbl = document.createElement("div"); catLbl.className = "dp-cat"; catLbl.textContent = t("water_label");
@@ -1365,7 +1501,7 @@ function renderTapDetailContent(feature, container) {
 }
 
 function renderParkDetailContent(feature, container) {
-  const p = feature.properties || {}, col = "#147A37";
+  const p = feature.properties || {}, col = "#00893c";
   const body = document.createElement("div"); body.className = "detail-panel-body";
   const nameSec = document.createElement("div"); nameSec.className = "detail-panel-namesec";
   const catLbl = document.createElement("div"); catLbl.className = "dp-cat"; catLbl.textContent = p.Stadsdeel || t("parks_label");
@@ -1382,6 +1518,46 @@ function renderParkDetailContent(feature, container) {
 
 function showTapDetail(feature)  { openDetailPanel(feature, renderTapDetailContent);  }
 function showParkDetail(feature) { openDetailPanel(feature, renderParkDetailContent); }
+
+function renderSwimmingPoolDetailContent(feature, container) {
+  const p = feature.properties || {};
+  const swimType = getSwimTypeDef(swimCategory(p));
+
+  const body = document.createElement("div");
+  body.className = "detail-panel-body";
+
+  const nameSec = document.createElement("div");
+  nameSec.className = "detail-panel-namesec";
+
+  const catLbl = document.createElement("div");
+  catLbl.className = "dp-cat";
+  catLbl.textContent = state.lang === "nl" ? swimType.label_nl : swimType.label_en;
+
+  const nameEl = document.createElement("div");
+  nameEl.className = "sheet-name";
+  nameEl.textContent = p.name || p.Naam_locatie || p.Naam || "Zwemplek";
+
+  nameSec.append(catLbl, nameEl);
+  body.appendChild(nameSec);
+
+  const grid = document.createElement("div");
+  grid.className = "prop-grid";
+  grid.append(cell(t("type_label"), state.lang === "nl" ? swimType.label_nl : swimType.label_en));
+  if (p.id) grid.appendChild(cell("ID", String(p.id)));
+  body.appendChild(grid);
+
+  if (feature.geometry?.type === "Point") {
+    const [lon, lat] = feature.geometry.coordinates;
+    const actions = document.createElement("div");
+    actions.className = "detail-actions";
+    actions.appendChild(makeDirectionsBtn(lat, lon));
+    body.appendChild(actions);
+  }
+
+  container.appendChild(body);
+}
+
+function showSwimmingPoolDetail(feature) { openDetailPanel(feature, renderSwimmingPoolDetailContent); }
 
 function makeDirectionsBtn(lat, lon) {
   const isIOS=/iPad|iPhone|iPod/.test(navigator.userAgent);
@@ -1408,26 +1584,79 @@ function setupSearch() {
   document.addEventListener("click",e=>{if(!e.target.closest("#search-wrap"))results.setAttribute("hidden","");});
 }
 
-function doSearch(query) {
-  const results=document.getElementById("search-results");
-  results.innerHTML="";
-  const q=query.toLowerCase();
-  const localMatches=state.features.koelteplekken.filter(f=>{const p=f.properties||{};return(p.name||"").toLowerCase().includes(q)||(p.neighborhood||"").toLowerCase().includes(q)||(p.address||"").toLowerCase().includes(q);}).slice(0,3);
-  localMatches.forEach(f=>{
-    const p=f.properties||{};
-    const el=document.createElement("div"); el.className="sr-item sr-item--local";
-    el.innerHTML=`<div class="sr-name">${p.name}</div><div class="sr-sub">${[p.neighborhood,p.district].filter(Boolean).join(" · ")} · Koelteplaats</div>`;
-    el.addEventListener("click",()=>{state.map.setView([f.geometry.coordinates[1],f.geometry.coordinates[0]],17);results.setAttribute("hidden","");document.getElementById("search-input").value=p.name;showKoelteplaatsDetail(f);closeSidebarMobile();const ms=document.getElementById("map-section");if(ms)ms.scrollIntoView({behavior:"smooth"});});
+async function doSearch(query) {
+  const results = document.getElementById("search-results");
+  if (!results) return;
+
+  results.innerHTML = "";
+  const q = query.trim();
+  const qLower = q.toLowerCase();
+
+  // Local koelteplekken matches first
+  const localMatches = state.features.koelteplekken
+    .filter(f => {
+      const p = f.properties || {};
+      return (
+        (p.name || "").toLowerCase().includes(qLower) ||
+        (p.neighborhood || "").toLowerCase().includes(qLower) ||
+        (p.address || "").toLowerCase().includes(qLower)
+      );
+    })
+    .slice(0, 3);
+
+  localMatches.forEach(f => {
+    const p = f.properties || {};
+    const el = document.createElement("div");
+    el.className = "sr-item sr-item--local";
+    el.innerHTML = `
+      <div class="sr-name">${p.name || "Koelteplek"}</div>
+      <div class="sr-sub">${[p.neighborhood, p.district].filter(Boolean).join(" · ")} · Koelteplek</div>
+    `;
+    el.addEventListener("click", () => {
+      state.map.setView([f.geometry.coordinates[1], f.geometry.coordinates[0]], 17);
+      results.setAttribute("hidden", "");
+      document.getElementById("search-input").value = p.name || "";
+      showKoelteplaatsDetail(f);
+      closeSidebarMobile();
+      const ms = document.getElementById("map-section");
+      if (ms) ms.scrollIntoView({ behavior: "smooth" });
+    });
     results.appendChild(el);
   });
-  const url=`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query+" Amsterdam")}&format=json&countrycodes=nl&limit=4&viewbox=4.72,52.26,5.08,52.48&bounded=1`;
-  fetch(url,{headers:{"Accept-Language":state.lang==="nl"?"nl":"en"}})
-    .then(r=>r.json())
-    .then(items=>{
-      if (!items.length&&!localMatches.length){const el=document.createElement("div");el.className="sr-item";el.innerHTML=`<div class="sr-name">${t("no_search_results")}</div>`;results.appendChild(el);}
-      else{items.forEach(item=>{const parts=item.display_name.split(", ");const el=document.createElement("div");el.className="sr-item";el.innerHTML=`<div class="sr-name">${parts[0]}</div><div class="sr-sub">${parts.slice(1,3).join(", ")}</div>`;el.addEventListener("click",()=>{state.map.setView([parseFloat(item.lat),parseFloat(item.lon)],16);results.setAttribute("hidden","");document.getElementById("search-input").value=parts[0];closeSidebarMobile();const ms=document.getElementById("map-section");if(ms)ms.scrollIntoView({behavior:"smooth"});});results.appendChild(el);});}
-      results.removeAttribute("hidden");
-    }).catch(e=>console.error("search:",e));
+
+  try {
+    const url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(q + " Amsterdam")}&format=json&countrycodes=nl&limit=6&viewbox=4.72,52.48,5.08,52.26&bounded=1`;
+    const response = await fetch(url, { headers: { "Accept-Language": state.lang === "nl" ? "nl" : "en" } });
+    if (!response.ok) throw new Error("Search request failed");
+    const items = await response.json();
+
+    items.forEach(item => {
+      const parts = item.display_name.split(", ");
+      const el = document.createElement("div");
+      el.className = "sr-item";
+      el.innerHTML = `<div class="sr-name">${parts[0]}</div><div class="sr-sub">${parts.slice(1, 3).join(", ")}</div>`;
+      el.addEventListener("click", () => {
+        state.map.setView([parseFloat(item.lat), parseFloat(item.lon)], 16);
+        results.setAttribute("hidden", "");
+        document.getElementById("search-input").value = parts[0];
+        closeSidebarMobile();
+        const ms = document.getElementById("map-section");
+        if (ms) ms.scrollIntoView({ behavior: "smooth" });
+      });
+      results.appendChild(el);
+    });
+  } catch (e) {
+    console.error("search:", e);
+  }
+
+  if (!results.children.length) {
+    const el = document.createElement("div");
+    el.className = "sr-item";
+    el.innerHTML = `<div class="sr-name">${t("no_search_results")}</div>`;
+    results.appendChild(el);
+  }
+
+  results.removeAttribute("hidden");
 }
 
 // ── Tips / Contact ─────────────────────────────────────────────────────────
