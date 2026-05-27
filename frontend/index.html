@@ -4,13 +4,14 @@
   <meta charset="utf-8" />
   <title>Koeltekaart Amsterdam</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
-  <link rel="preload" href="/fonts/AmsterdamSans-Regular.woff2" as="font" type="font/woff2" crossorigin>
-  <link rel="preload" href="/fonts/AmsterdamSans-Bold.woff2" as="font" type="font/woff2" crossorigin>
-  <link rel="preload" href="/fonts/AmsterdamSans-ExtraBold.woff2" as="font" type="font/woff2" crossorigin>
-  <link rel="stylesheet" href="/css/app.css" />
+  <link rel="stylesheet" href="libs/leaflet/leaflet.css" />
+  <link rel="preload" href="fonts/AmsterdamSans-Regular.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="fonts/AmsterdamSans-Bold.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="fonts/AmsterdamSans-ExtraBold.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="stylesheet" href="css/app.css" />
 </head>
 <body class="mode-user">
+<div data-app-start="">
 
 <a class="skip-link" href="#list-view-inner" data-i18n="skip_to_list">
   Sla de kaart over en ga naar de lijst met koelteplekken
@@ -80,7 +81,7 @@
             <span class="li-hl-line" data-i18n="lp_hl1">Te warm?</span>
             <span class="li-hl-line li-hl-accent" data-i18n="lp_hl2">Vind verkoeling.</span>
           </h1>
-          <p class="li-hero-sub" data-i18n="lp_sub">Drinkwaterkranen, parken en koelteplekken — gratis, in jouw buurt.</p>
+
           <button class="li-cta btn-li-enter" data-i18n="lp_enter">Open de kaart</button>
         </div>
 
@@ -165,42 +166,25 @@
     <div class="info-section-wrap">
       <section class="info-section" aria-label="Over de koeltekaart / About the cool map">
 
-        <h2 class="info-section-heading">
-          <span class="lang-nl">Over de Koeltekaart</span>
-          <span class="lang-en">About the Cool Map</span>
-        </h2>
+        <div class="info-three-col">
 
-        <div class="info-two-col">
-
-          <!-- Left column -->
-          <div class="info-col">
-
-            <details class="info-block">
+          <!-- Column 1: Wat zijn koelteplekken? — starts open on mobile -->
+          <div class="info-col-item">
+            <details class="info-block" open>
               <summary class="info-block-title">
                 <span class="lang-nl">Wat zijn koelteplekken?</span>
                 <span class="lang-en">What are cooling spots?</span>
                 <svg class="info-block-chevron" width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M4 6l4 4 4-4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
               </summary>
               <div class="info-block-body">
-                <p class="lang-nl">Wanneer het Amsterdams Hitteplan actief is, openen in verschillende buurten koelteplekken. Koelteplekken zijn openbare locaties waar u verkoeling kunt vinden tijdens warme dagen, zoals bibliotheken, supermarkten, kerken en andere publieke gebouwen. Deze plekken bieden een koele en fijne omgeving waar u tijdelijk aan de warmte kunt ontsnappen.</p>
-                <p class="lang-en">When the Amsterdam Heat Plan is active, cooling spots open in various neighbourhoods. Cooling spots are public locations where you can find relief from the heat, such as libraries, supermarkets, churches and other public buildings. These places offer a cool and pleasant environment where you can temporarily escape the heat.</p>
-                <p class="lang-nl">Tijdens warme periodes passen deze locaties hun aanbod aan. Zo stellen zij (extra) zitplekken beschikbaar, verruimen zij hun openingstijden en voegen zij voorzieningen toe om bezoekers beter te helpen verkoelen.</p>
-                <p class="lang-en">During warm periods, these locations adapt their offering. They provide (extra) seating, extend their opening hours and add facilities to better help visitors cool down.</p>
+                <p class="lang-nl">Tijdens warme dagen kan het in huis erg heet worden. Langere tijd verblijven in een hete woning (boven de 27 graden) kan slecht zijn voor uw gezondheid. Als het Amsterdams Hitteplan actief is, openen in verschillende buurten koelteplekken. Deze plekken bieden een koele en fijne omgeving waar u tijdelijk aan de hitte kunt ontsnappen. Sommige locaties zijn langer open en bieden extra voorzieningen aan.</p>
+                <p class="lang-en">During warm days, homes can heat up significantly. Staying in a warm home (above 27°C) for an extended period can be harmful to your health. When the Amsterdam Heat Plan is active, cooling spots open in various neighbourhoods. These places offer a cool and pleasant environment where you can temporarily escape the heat. Some locations have extended hours and extra facilities.</p>
               </div>
             </details>
+          </div>
 
-            <details class="info-block">
-              <summary class="info-block-title">
-                <span class="lang-nl">Waarom koelteplekken?</span>
-                <span class="lang-en">Why cooling spots?</span>
-                <svg class="info-block-chevron" width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M4 6l4 4 4-4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
-              </summary>
-              <div class="info-block-body">
-                <p class="lang-nl">Tijdens warme periodes kunnen veel woningen in Amsterdam sterk opwarmen. Als u langere tijd in een warme woning verblijft (boven de 27 graden), kan dit schadelijk zijn voor uw gezondheid. U kunt last krijgen van klachten zoals uitdroging, vermoeidheid of oververhitting. Vooral ouderen, jonge kinderen, zwangere vrouwen en mensen met gezondheidsklachten zijn hier gevoelig voor.</p>
-                <p class="lang-en">During warm periods, many homes in Amsterdam can heat up significantly. Staying in a warm home for an extended period (above 27°C) can be harmful to your health. You may experience symptoms such as dehydration, fatigue or overheating. Elderly people, young children, pregnant women and people with health conditions are particularly susceptible.</p>
-              </div>
-            </details>
-
+          <!-- Column 2: Goed om te weten — closed on mobile -->
+          <div class="info-col-item">
             <details class="info-block">
               <summary class="info-block-title">
                 <span class="lang-nl">Goed om te weten</span>
@@ -209,91 +193,25 @@
               </summary>
               <div class="info-block-body">
                 <ul class="lang-nl">
-                  <li>De toegang is gratis</li>
-                  <li>U kunt zonder afspraak binnenlopen tijdens openingstijden</li>
-                  <li>De meeste locaties zijn toegankelijk voor mensen met een beperking</li>
-                  <li>Houd rekening met andere bezoekers en maak samen gebruik van de ruimte</li>
+                  <li>toegang, toiletten en drinkwater zijn altijd gratis</li>
+                  <li>u kunt zonder afspraak binnenlopen</li>
+                  <li>er zijn zitplaatsen en activiteiten, zoals lezen of een spelletje doen</li>
+                  <li>de meeste locaties zijn toegankelijk voor mensen met een beperking</li>
                 </ul>
                 <ul class="lang-en">
-                  <li>Entry is free</li>
-                  <li>You can walk in without an appointment during opening hours</li>
-                  <li>Most locations are accessible for people with a disability</li>
-                  <li>Be considerate of other visitors and share the space</li>
+                  <li>entry, toilets and drinking water are always free</li>
+                  <li>you can walk in without an appointment</li>
+                  <li>there are seats and activities, such as reading or playing a game</li>
+                  <li>most locations are accessible for people with a disability</li>
                 </ul>
-                <p class="info-disclaimer lang-nl">Let op: de locaties zijn niet bedoeld voor mensen die medische hulp nodig hebben. De locaties kunnen geen zorgtaken op zich nemen. Voor passende hulp kunt u contact opnemen met een zorginstelling.</p>
-                <p class="info-disclaimer lang-en">Please note: the locations are not intended for people who need medical assistance. The locations cannot provide care. For appropriate help, please contact a healthcare provider.</p>
+                <p class="info-disclaimer lang-nl">Let op: de locaties zijn niet bedoeld voor mensen die medische hulp nodig hebben.</p>
+                <p class="info-disclaimer lang-en">Please note: the locations are not intended for people who need medical assistance.</p>
               </div>
             </details>
+          </div>
 
-          </div><!-- /.info-col left -->
-
-          <!-- Right column -->
-          <div class="info-col">
-
-            <details class="info-block">
-              <summary class="info-block-title">
-                <span class="lang-nl">Wat kunt u verwachten?</span>
-                <span class="lang-en">What can you expect?</span>
-                <svg class="info-block-chevron" width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M4 6l4 4 4-4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
-              </summary>
-              <div class="info-block-body">
-                <p class="lang-nl">Per locatie kan het aanbod verschillen. U kunt hier altijd het volgende verwachten:</p>
-                <p class="lang-en">What is available may vary by location. You can always expect the following:</p>
-                <ul class="lang-nl">
-                  <li>een koele ruimte</li>
-                  <li>zitplaatsen</li>
-                  <li>gratis drinkwater</li>
-                  <li>gratis toiletten</li>
-                  <li>mogelijkheid om iets te eten (zelf meenemen, ter plekke verkrijgen of soms gratis)</li>
-                  <li>activiteiten, zoals lezen of een spelletje</li>
-                  <li>een toezichthouder</li>
-                </ul>
-                <ul class="lang-en">
-                  <li>a cool space</li>
-                  <li>seating</li>
-                  <li>free drinking water</li>
-                  <li>free toilets</li>
-                  <li>the opportunity to eat (bring your own, buy on-site, or sometimes free)</li>
-                  <li>activities such as reading or a game</li>
-                  <li>a supervisor</li>
-                </ul>
-              </div>
-            </details>
-
-            <details class="info-block">
-              <summary class="info-block-title">
-                <span class="lang-nl">Wanneer zijn koelteplekken open?</span>
-                <span class="lang-en">When are cooling spots open?</span>
-                <svg class="info-block-chevron" width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M4 6l4 4 4-4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
-              </summary>
-              <div class="info-block-body">
-                <p class="lang-nl">Koelteplekken zijn geopend wanneer het Amsterdams Hitteplan actief is. Sommige locaties hebben tijdens warme periodes aangepaste openingstijden. De openingstijden kunnen per locatie verschillen. Houd deze website in de gaten voor de openingstijden van de koelteplekken.</p>
-                <p class="lang-en">Cooling spots are open when the Amsterdam Heat Plan is active. Some locations have adjusted opening hours during warm periods. Opening hours may vary by location. Keep an eye on this website for the opening hours of cooling spots.</p>
-              </div>
-            </details>
-
-            <details class="info-block">
-              <summary class="info-block-title">
-                <span class="lang-nl">Hoe herkent u een koelteplek?</span>
-                <span class="lang-en">How do you recognise a cooling spot?</span>
-                <svg class="info-block-chevron" width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M4 6l4 4 4-4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
-              </summary>
-              <div class="info-block-body">
-                <p class="lang-nl">Koelteplekken zijn herkenbaar aan posters en flyers met het koelteplek-logo. Via de QR-code op deze materialen komt u op deze website waar u de:</p>
-                <p class="lang-en">Cooling spots are recognisable by posters and flyers with the cooling spot logo. Via the QR code on these materials you can reach this website where you can find:</p>
-                <ul class="lang-nl">
-                  <li>koelteplekken bij u in de buurt</li>
-                  <li>openingstijden</li>
-                  <li>aanwezige diensten</li>
-                </ul>
-                <ul class="lang-en">
-                  <li>cooling spots near you</li>
-                  <li>opening hours</li>
-                  <li>available facilities</li>
-                </ul>
-              </div>
-            </details>
-
+          <!-- Column 3: Kaart met koelteplekken — closed on mobile -->
+          <div class="info-col-item">
             <details class="info-block">
               <summary class="info-block-title">
                 <span class="lang-nl">Kaart met koelteplekken</span>
@@ -306,21 +224,21 @@
                 <ul class="lang-nl">
                   <li>wat de aangepaste openingstijden zijn</li>
                   <li>welke voorzieningen aanwezig zijn</li>
-                  <li>welke activiteiten worden aangeboden</li>
+                  <li>of er activiteiten worden aangeboden</li>
                 </ul>
                 <ul class="lang-en">
                   <li>the adjusted opening hours</li>
                   <li>which facilities are available</li>
-                  <li>which activities are offered</li>
+                  <li>whether activities are offered</li>
                 </ul>
-                <p class="lang-nl">Houd deze website in de gaten voor nieuwe koelteplekken in uw buurt. GGD Amsterdam is met een pilot van start gegaan in een aantal stadsdelen. In de toekomst zullen er koelteplekken in heel Amsterdam openen.</p>
-                <p class="lang-en">Keep an eye on this website for new cooling spots in your area. GGD Amsterdam has started a pilot in a number of boroughs. In the future, cooling spots will open throughout Amsterdam.</p>
+                <p class="lang-nl">Houd de kaart in de gaten voor nieuwe koelteplekken in uw buurt. In de toekomst zullen er koelteplekken in heel Amsterdam openen.</p>
+                <p class="lang-en">Keep an eye on the map for new cooling spots in your area. In the future, cooling spots will open throughout Amsterdam.</p>
               </div>
             </details>
+          </div>
 
-          </div><!-- /.info-col right -->
+        </div><!-- /.info-three-col -->
 
-        </div><!-- /.info-two-col -->
       </section>
     </div>
 
@@ -505,7 +423,9 @@
   <div class="tips-page-body" id="contact-page-body"></div>
 </div>
 
-<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
-<script src="/js/app.js"></script>
+<script src="libs/leaflet/leaflet.js"></script>
+<script src="js/app.js"></script>
+
+</div><!-- /data-app-start -->
 </body>
 </html>

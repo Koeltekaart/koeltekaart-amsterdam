@@ -2,10 +2,38 @@
 
 // ── Layer definitions ──────────────────────────────────────────────────────
 const LAYER_DEFS = [
-  { cat: "koelteplekken", label: "Koelteplekken",   color: "#1A3B8B", src: "/api/koelteplekken",           type: "geojson", radius: 8 },
-  { cat: "water_taps",    label: "Water fountains",  color: "#0566C8", src: "/data/raw/water_taps.geojson", type: "geojson", radius: 4 },
-  { cat: "parks",         label: "Parks",            color: "#147A37", src: "/data/raw/parks.json",         type: "polygon" },
+  { cat: "koelteplekken", label: "Koelteplekken",   color: "#004699", type: "geojson", radius: 8 },
+  { cat: "water_taps",    label: "Water fountains",  color: "#009de6", src: "data/raw/water_taps.geojson", type: "geojson", radius: 4 },
+  { cat: "parks",         label: "Parks",            color: "#00893c", src: "data/raw/parks.json",         type: "polygon" },
 ];
+
+// ── Google Sheets data sources ─────────────────────────────────────────────
+// Setup (one-time):
+//   1. Open your Google Sheet
+//   2. File → Share → Publish to web → publish the whole document → click Publish
+//   3. The link shown looks like:
+//        https://docs.google.com/spreadsheets/d/e/PUBLISHED_ID/pubhtml
+//      Copy the PUBLISHED_ID (the long 2PACX-… string between /d/e/ and /pubhtml)
+//   4. For each tab, click the tab in your browser — the URL bar ends with #gid=NUMBER
+//      Copy those numbers into locationsGid / settingsGid
+//      (The very first tab is almost always gid 0)
+//
+// Sheet layout:
+//   "locations" tab — same columns as koelteplekken.csv (name, latitude, longitude, type, …)
+//   "settings"  tab — two columns: key, value — with one row: heat_plan_active, TRUE
+const SHEETS_CONFIG = {
+  publishedId:  "2PACX-1vToR12t2LARCufEpqz2xv0An5XQqBHd1VvqBmS9k3OdlsvzUryxgmwXTpaVfIX4zMYE61DH0-ujlnqB",  // the 2PACX-… string from the publish URL
+  locationsGid: "0",                         // #gid of the locations tab (first tab = 0)
+  settingsGid:  "971775516",   // #gid of the settings tab
+};
+
+/** Build a published CSV URL for a given sheet tab gid. */
+function _sheetsUrl(gid) {
+  return `https://docs.google.com/spreadsheets/d/e/${SHEETS_CONFIG.publishedId}/pub?gid=${gid}&single=true&output=csv`;
+}
+function _sheetsReady() {
+  return SHEETS_CONFIG.publishedId && !SHEETS_CONFIG.publishedId.startsWith("PASTE_");
+}
 
 const TYPE_LABEL    = { koelteplekken: "Koelteplek", water_taps: "Water fountain", parks: "Park" };
 const TYPE_LABEL_NL = { koelteplekken: "Koelteplek", water_taps: "Drinkwaterkraan", parks: "Park" };
@@ -61,13 +89,13 @@ const TYPE_DISPLAY_NL = { library: "Bibliotheek", church: "Kerk", supermarket: "
 const TYPE_DISPLAY_EN = { library: "Library", church: "Church", supermarket: "Supermarket", urban_farm: "Urban farm", community_center: "Community centre", sports: "Sports" };
 
 const CATEGORY_COLORS = {
-  library:          "#1D5EAD",
-  church:           "#7B4EA6",
-  supermarket:      "#0D8A7E",
-  urban_farm:       "#2E7A30",
-  community_center: "#B86520",
-  sports:           "#B82030",
-  default:          "#0D8A7E",
+  library:          "#004699",  // Amsterdam dark blue
+  church:           "#a00078",  // Amsterdam purple
+  supermarket:      "#00893c",  // Amsterdam dark green
+  urban_farm:       "#00893c",  // Amsterdam dark green
+  community_center: "#ff9100",  // Amsterdam orange
+  sports:           "#ec0000",  // Amsterdam red
+  default:          "#004699",  // Amsterdam dark blue
 };
 
 const DAY_SHORT_NL = ["Ma","Di","Wo","Do","Vr","Za","Zo"];
@@ -402,16 +430,21 @@ function updateBannerText() {
   applyHeatPlanToMap();
 }
 
-// ── Heat plan API (partner toggle) ────────────────────────────────────────
+// ── Heat plan status (read from Google Sheets settings tab) ───────────────
+// Settings tab must have columns: key, value
+// Add a row:  heat_plan_active, TRUE   (or FALSE)
 async function fetchHeatPlanStatus() {
+  if (!_sheetsReady()) return;
   try {
-    const r = await fetch("/api/heat-plan");
+    const r = await fetch(_sheetsUrl(SHEETS_CONFIG.settingsGid));
     if (!r.ok) return;
-    const d = await r.json();
+    const rows = parseCsv(await r.text());
+    const row  = rows.find(r => (r.key || "").trim().toLowerCase() === "heat_plan_active");
+    if (!row) return;
     const was = state.heatPlanActive;
-    state.heatPlanActive = !!d.active;
+    state.heatPlanActive = csvToBool(row.value) === true;
     if (was !== state.heatPlanActive) updateBannerText();
-  } catch (_) { /* server may not be running in dev */ }
+  } catch (_) { /* sheets may be unreachable */ }
 }
 
 function setupBanner() {
@@ -560,18 +593,153 @@ function initMap() {
   });
 }
 
+// ── CSV utilities (replaces Python backend parser) ─────────────────────────
+
+/** Parse a CSV string into an array of {header: value} objects. */
+function parseCsv(text) {
+  if (text.charCodeAt(0) === 0xFEFF) text = text.slice(1); // strip BOM
+  const rows = [];
+  let inQuotes = false, field = "", fields = [], i = 0;
+  while (i < text.length) {
+    const ch = text[i];
+    if (ch === '"') {
+      if (inQuotes && text[i + 1] === '"') { field += '"'; i += 2; continue; }
+      inQuotes = !inQuotes;
+    } else if (ch === ',' && !inQuotes) {
+      fields.push(field); field = "";
+    } else if ((ch === '\n' || ch === '\r') && !inQuotes) {
+      fields.push(field); field = "";
+      if (ch === '\r' && text[i + 1] === '\n') i++;
+      rows.push(fields); fields = [];
+    } else {
+      field += ch;
+    }
+    i++;
+  }
+  if (field || fields.length) { fields.push(field); rows.push(fields); }
+  if (!rows.length) return [];
+  const headers = rows[0].map(h => h.trim());
+  return rows.slice(1)
+    .filter(r => r.some(f => f.trim()))
+    .map(r => Object.fromEntries(headers.map((h, j) => [h, (r[j] || "").trim()])));
+}
+
+function csvToBool(value) {
+  const text = String(value || "").trim().toLowerCase();
+  if (!text || ["unknown","onbekend","n/a","na","null","none","-"].includes(text)) return null;
+  if (["yes","y","true","1","ja","j"].includes(text)) return true;
+  if (["no","n","false","0","nee"].includes(text)) return false;
+  return true;
+}
+
+function csvToFloat(value) {
+  const text = String(value || "").trim().replace(",", ".");
+  if (!text) return null;
+  const n = parseFloat(text);
+  return isNaN(n) ? null : n;
+}
+
+function csvSlugify(value) {
+  return value.toLowerCase().trim().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+}
+
+const _CSV_DAY_COLS = ["hours_mon","hours_tue","hours_wed","hours_thu","hours_fri","hours_sat","hours_sun"];
+
+function _normaliseSlot(raw) {
+  const text = (raw || "").trim().replace(/\s/g, "").replace("–", "-");
+  const match = text.match(/^(\d{1,2}:\d{2})-(\d{1,2}:\d{2})$/);
+  if (!match) return null;
+  const pad = p => { const [h, m] = p.split(":"); return `${String(parseInt(h)).padStart(2, "0")}:${m}`; };
+  return `${pad(match[1])}-${pad(match[2])}`;
+}
+
+function _parseHoursFromRow(row) {
+  const slots = _CSV_DAY_COLS.map(col => _normaliseSlot(row[col] || ""));
+  return slots.every(s => s === null) ? null : slots;
+}
+
+/**
+ * Convert a Google Drive sharing URL to a directly embeddable image URL.
+ * Partners can paste any of these into the photo_url column:
+ *   https://drive.google.com/file/d/FILE_ID/view?usp=sharing
+ *   https://drive.google.com/uc?id=FILE_ID
+ * Other URLs (direct image links, local paths) pass through unchanged.
+ */
+function _resolvePhotoUrl(url) {
+  if (!url) return url;
+  const fileMatch = url.match(/drive\.google\.com\/file\/d\/([^/?]+)/);
+  if (fileMatch) return `https://lh3.googleusercontent.com/d/${fileMatch[1]}`;
+  const ucMatch = url.match(/drive\.google\.com\/uc\?.*[?&]id=([^&]+)/);
+  if (ucMatch) return `https://lh3.googleusercontent.com/d/${ucMatch[1]}`;
+  return url;
+}
+
+/** Convert one CSV row into a GeoJSON Feature (returns null if row is invalid). */
+function _rowToFeature(row) {
+  const name = (row.name || "").trim();
+  if (!name) return null;
+  const lat = csvToFloat(row.latitude || row.lat);
+  const lon = csvToFloat(row.longitude || row.lon || row.lng);
+  if (lat === null || lon === null) return null;
+  return {
+    type: "Feature",
+    geometry: { type: "Point", coordinates: [lon, lat] },
+    properties: {
+      id:               (row.id || "").trim() || csvSlugify(name),
+      name,
+      type:             (row.type || "").trim(),
+      municipality:     (row.municipality || "").trim() || "Amsterdam",
+      district:         (row.district   || row.stadsdeel || "").trim(),
+      neighborhood:     (row.neighborhood || row.wijk    || "").trim(),
+      address:          (row.address    || "").trim(),
+      website_url:      (row.website_url || "").trim(),
+      photo_url:        _resolvePhotoUrl((row.photo_url || "").trim()),
+      hours:            _parseHoursFromRow(row),
+      hours_note:       (row.hours_note || row.note        || "").trim(),
+      notes:            (row.notes      || row.description  || "").trim(),
+      active:           row.active?.trim() ? csvToBool(row.active) : true,
+      ac:               csvToBool(row.ac    || row.airco),
+      seating:          csvToBool(row.seating),
+      toilets:          csvToBool(row.toilets),
+      free_water:       csvToBool(row.free_water),
+      free_fruit:       csvToBool(row.free_fruit),
+      food_to_buy:      csvToBool(row.food_to_buy),
+      own_food_allowed: csvToBool(row.own_food_allowed || row.own_food_ok),
+      supervisor:       csvToBool(row.supervisor),
+      wheelchair:       csvToBool(row.wheelchair || row.accessible),
+      games:            csvToBool(row.games),
+      pets_allowed:     csvToBool(row.pets_allowed || row.pets_ok),
+    },
+  };
+}
+
+async function _loadKoelteplekkenFromSheets(def) {
+  if (!_sheetsReady()) {
+    console.warn("Koeltekaart: fill in SHEETS_CONFIG (publishedId + gids) in app.js");
+    buildKoelteplekkenLayer(def, { type: "FeatureCollection", features: [] });
+    return;
+  }
+  const r = await fetch(_sheetsUrl(SHEETS_CONFIG.locationsGid));
+  if (!r.ok) throw new Error(`Sheets locations fetch failed: ${r.status}`);
+  const features = parseCsv(await r.text()).map(_rowToFeature).filter(Boolean);
+  buildKoelteplekkenLayer(def, { type: "FeatureCollection", features });
+}
+
 // ── Layer loading ──────────────────────────────────────────────────────────
 function loadAllLayers() {
   LAYER_DEFS.forEach(def => {
     setLoading(true);
-    fetch(def.src)
-      .then(r => r.json())
-      .then(data => {
-        if (def.cat === "koelteplekken") buildKoelteplekkenLayer(def, data);
-        else                             buildStaticLayer(def, data);
-      })
-      .catch(e => console.error(def.cat, e))
-      .finally(() => setLoading(false));
+    if (def.cat === "koelteplekken") {
+      _loadKoelteplekkenFromSheets(def)
+        .catch(e => console.error("koelteplekken", e))
+        .finally(() => setLoading(false));
+    } else {
+      fetch(def.src)
+        .then(r => r.json())
+        .then(data => buildStaticLayer(def, data))
+        .catch(e => console.error(def.cat, e))
+        .finally(() => setLoading(false));
+    }
   });
 }
 
@@ -1611,11 +1779,26 @@ async function loadWeatherBar() {
   const strip=document.getElementById("weather-strip");
   if (!strip) return;
   try {
-    const response=await fetch("/api/weather?locatie=Amsterdam");
+    // Call Open-Meteo directly — free, no API key, CORS-friendly
+    const params = new URLSearchParams({
+      latitude:  "52.3676",
+      longitude: "4.9041",
+      current:   "temperature_2m,relative_humidity_2m,apparent_temperature,weather_code",
+      timezone:  "Europe/Amsterdam",
+    });
+    const response=await fetch(`https://api.open-meteo.com/v1/forecast?${params}`);
     if (!response.ok) throw new Error(`Weather request failed: ${response.status}`);
-    const data=await response.json();
+    const payload=await response.json();
+    const current=payload.current||{};
+    const data={
+      temperature: current.temperature_2m,
+      feels_like:  current.apparent_temperature,
+      humidity:    current.relative_humidity_2m,
+      source:      "Open-Meteo",
+      source_url:  "https://open-meteo.com/",
+    };
     const tempEl=document.getElementById("weather-temp"), humidityEl=document.getElementById("weather-humidity"), feelsEl=document.getElementById("weather-feels"), sourceEl=document.getElementById("weather-source");
-    if (sourceEl){sourceEl.textContent=data.source||"Open-Meteo";sourceEl.href=data.source_url||"https://open-meteo.com/";sourceEl.target="_blank";sourceEl.rel="noopener noreferrer";}
+    if (sourceEl){sourceEl.textContent=data.source;sourceEl.href=data.source_url;sourceEl.target="_blank";sourceEl.rel="noopener noreferrer";}
     if (tempEl){const value=`${formatDutchNumber(data.temperature,1)}°`;tempEl.textContent=value;tempEl.setAttribute("aria-label",`${t("weather_temp_label")}: ${value}`);}
     if (humidityEl){const humidity=Number(String(data.humidity).replace(",","."));const value=Number.isFinite(humidity)?`${Math.round(humidity)}%`:"--%";humidityEl.textContent=value;humidityEl.setAttribute("aria-label",`${t("weather_humidity_label")}: ${value}`);}
     if (feelsEl){const value=`${formatDutchNumber(data.feels_like,0)}°`;feelsEl.textContent=value;feelsEl.setAttribute("aria-label",`${t("weather_feels_label")}: ${value}`);}
@@ -1630,14 +1813,19 @@ async function loadWeatherBar() {
 
 // ── Info blocks: force all open on desktop, accordion on mobile ──────────
 function initInfoBlocks() {
-  const blocks = document.querySelectorAll("details.info-block");
+  const blocks = document.querySelectorAll(".info-col-item details.info-block");
   function syncOpen() {
-    if (window.innerWidth > 640) blocks.forEach(d => d.setAttribute("open", ""));
+    if (window.innerWidth > 640) {
+      blocks.forEach(d => d.setAttribute("open", ""));
+    } else {
+      blocks.forEach((d, i) => {
+        if (i === 0) d.setAttribute("open", "");
+        else         d.removeAttribute("open");
+      });
+    }
   }
   syncOpen();
-  window.addEventListener("resize", () => {
-    if (window.innerWidth > 640) blocks.forEach(d => d.setAttribute("open", ""));
-  }, { passive: true });
+  window.addEventListener("resize", syncOpen, { passive: true });
 }
 
 // ── Boot ───────────────────────────────────────────────────────────────────
