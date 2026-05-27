@@ -2,13 +2,41 @@
 
 // ── Layer definitions ──────────────────────────────────────────────────────
 const LAYER_DEFS = [
-  { cat: "koelteplekken", label: "Koelteplekken",   color: "#1A3B8B", src: "/api/koelteplekken",           type: "geojson", radius: 8 },
-  { cat: "water_taps",    label: "Water fountains",  color: "#0566C8", src: "/data/raw/water_taps.geojson", type: "geojson", radius: 4 },
-  { cat: "parks",         label: "Parks",            color: "#147A37", src: "/data/raw/parks.json",         type: "polygon" },
-  { cat: "swimming_pools", label: "Swimming pools", color: "#ff00ae94", src: "/data/raw/zwemwater.geojson", type: "geojson", radius: 6 },
+  { cat: "koelteplekken",  label: "Koelteplekken",   color: "#004699",   type: "geojson", radius: 8 },
+  { cat: "water_taps",     label: "Water fountains",  color: "#009de6",   src: "data/raw/water_taps.geojson",  type: "geojson", radius: 4 },
+  { cat: "parks",          label: "Parks",            color: "#00893c",   src: "data/raw/parks.json",          type: "polygon" },
+  { cat: "swimming_pools", label: "Swimming spots",   color: "#ff00ae94", src: "data/raw/zwemwater.geojson",   type: "geojson", radius: 6 },
 ];
 
-const TYPE_LABEL    = { koelteplekken: "Koelteplek", water_taps: "Water fountain", parks: "Park", swimming_pools: "Swimming pool" };
+// ── Google Sheets data sources ─────────────────────────────────────────────
+// Setup (one-time):
+//   1. Open your Google Sheet
+//   2. File → Share → Publish to web → publish the whole document → click Publish
+//   3. The link shown looks like:
+//        https://docs.google.com/spreadsheets/d/e/PUBLISHED_ID/pubhtml
+//      Copy the PUBLISHED_ID (the long 2PACX-… string between /d/e/ and /pubhtml)
+//   4. For each tab, click the tab in your browser — the URL bar ends with #gid=NUMBER
+//      Copy those numbers into locationsGid / settingsGid
+//      (The very first tab is almost always gid 0)
+//
+// Sheet layout:
+//   "locations" tab — same columns as koelteplekken.csv (name, latitude, longitude, type, …)
+//   "settings"  tab — two columns: key, value — with one row: heat_plan_active, TRUE
+const SHEETS_CONFIG = {
+  publishedId:  "2PACX-1vToR12t2LARCufEpqz2xv0An5XQqBHd1VvqBmS9k3OdlsvzUryxgmwXTpaVfIX4zMYE61DH0-ujlnqB",  // the 2PACX-… string from the publish URL
+  locationsGid: "0",                         // #gid of the locations tab (first tab = 0)
+  settingsGid:  "971775516",   // #gid of the settings tab
+};
+
+/** Build a published CSV URL for a given sheet tab gid. */
+function _sheetsUrl(gid) {
+  return `https://docs.google.com/spreadsheets/d/e/${SHEETS_CONFIG.publishedId}/pub?gid=${gid}&single=true&output=csv`;
+}
+function _sheetsReady() {
+  return SHEETS_CONFIG.publishedId && !SHEETS_CONFIG.publishedId.startsWith("PASTE_");
+}
+
+const TYPE_LABEL    = { koelteplekken: "Koelteplek", water_taps: "Water fountain", parks: "Park", swimming_pools: "Swimming spot" };
 const TYPE_LABEL_NL = { koelteplekken: "Koelteplek", water_taps: "Drinkwaterkraan", parks: "Park", swimming_pools: "Zwemplek" };
 
 // ── Amenity label map (translatable) — new keys discovered in data auto-add ─
@@ -62,23 +90,23 @@ const TYPE_DISPLAY_NL = { library: "Bibliotheek", church: "Kerk", supermarket: "
 const TYPE_DISPLAY_EN = { library: "Library", church: "Church", supermarket: "Supermarket", urban_farm: "Urban farm", community_center: "Community centre", sports: "Sports" };
 
 const CATEGORY_COLORS = {
-  library:          "#1D5EAD",
-  church:           "#7B4EA6",
-  supermarket:      "#0D8A7E",
-  urban_farm:       "#2E7A30",
-  community_center: "#B86520",
-  sports:           "#B82030",
-  default:          "#0D8A7E",
+  library:          "#004699",  // Amsterdam dark blue
+  church:           "#a00078",  // Amsterdam purple
+  supermarket:      "#00893c",  // Amsterdam dark green
+  urban_farm:       "#00893c",  // Amsterdam dark green
+  community_center: "#ff9100",  // Amsterdam orange
+  sports:           "#ec0000",  // Amsterdam red
+  default:          "#004699",  // Amsterdam dark blue
 };
 
+// ── Swimming pool sub-types ────────────────────────────────────────────────
 const SWIM_TYPE_DEFS = [
-  { key: "Binnenzwembad",  label_en: "Indoor pool",              label_nl: "Binnenzwembad",              color: "#ff00ae94" },
-  { key: "Buitenzwembad",  label_en: "Outdoor pool",             label_nl: "Buitenzwembad",             color: "#ff00ae94"},
-  { key: "Zwemplek",       label_en: "Official outdoor swim spot", label_nl: "Officiële buitenzwemplek", color: "#ff00ae94" },
-  { key: "Peuterbadje",    label_en: "Paddling pool",            label_nl: "Peuterbadje",               color: "#ff00ae94"},
-  { key: "Waterspeeltuin", label_en: "Water playground",         label_nl: "Waterspeeltuin",            color: "#ff00ae94" },
+  { key: "Binnenzwembad",  label_en: "Indoor pool",               label_nl: "Binnenzwembad",              color: "#ff00ae94" },
+  { key: "Buitenzwembad",  label_en: "Outdoor pool",              label_nl: "Buitenzwembad",              color: "#ff00ae94" },
+  { key: "Zwemplek",       label_en: "Official outdoor swim spot", label_nl: "Officiële buitenzwemplek",  color: "#ff00ae94" },
+  { key: "Peuterbadje",    label_en: "Paddling pool",             label_nl: "Peuterbadje",                color: "#ff00ae94" },
+  { key: "Waterspeeltuin", label_en: "Water playground",          label_nl: "Waterspeeltuin",             color: "#ff00ae94" },
 ];
-
 
 function swimCategory(p) {
   return p?.category || p?.Categorie || p?.categorie || "";
@@ -98,11 +126,9 @@ function swimmingPoolPassesFilters(p) {
   const selected = Object.entries(state.swimTypes || {})
     .filter(([, on]) => on)
     .map(([key]) => key.toLowerCase());
-
   if (!selected.length) return true;
   return selected.includes(String(swimCategory(p)).trim().toLowerCase());
 }
-
 
 const DAY_SHORT_NL = ["Ma","Di","Wo","Do","Vr","Za","Zo"];
 const DAY_SHORT_EN = ["Mon","Tue","Wed","Thu","Fri","Sat","Sun"];
@@ -440,16 +466,21 @@ function updateBannerText() {
   applyHeatPlanToMap();
 }
 
-// ── Heat plan API (partner toggle) ────────────────────────────────────────
+// ── Heat plan status (read from Google Sheets settings tab) ───────────────
+// Settings tab must have columns: key, value
+// Add a row:  heat_plan_active, TRUE   (or FALSE)
 async function fetchHeatPlanStatus() {
+  if (!_sheetsReady()) return;
   try {
-    const r = await fetch("/api/heat-plan");
+    const r = await fetch(_sheetsUrl(SHEETS_CONFIG.settingsGid));
     if (!r.ok) return;
-    const d = await r.json();
+    const rows = parseCsv(await r.text());
+    const row  = rows.find(r => (r.key || "").trim().toLowerCase() === "heat_plan_active");
+    if (!row) return;
     const was = state.heatPlanActive;
-    state.heatPlanActive = !!d.active;
+    state.heatPlanActive = csvToBool(row.value) === true;
     if (was !== state.heatPlanActive) updateBannerText();
-  } catch (_) { /* server may not be running in dev */ }
+  } catch (_) { /* sheets may be unreachable */ }
 }
 
 function setupBanner() {
@@ -575,11 +606,13 @@ function renderHoursBlock(hours) {
 // ── Map init ───────────────────────────────────────────────────────────────
 function initMap() {
   state.map = L.map("map", { zoomControl: false }).setView([52.368, 4.827], 13);
+
+  // Custom panes so park polygons never obscure point markers
   state.map.createPane("parksPane");
   state.map.getPane("parksPane").style.zIndex = 350;
-
   state.map.createPane("pointsPane");
   state.map.getPane("pointsPane").style.zIndex = 650;
+
   L.tileLayer("https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png", {
     attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>',
     subdomains: "abcd", maxZoom: 19,
@@ -603,18 +636,153 @@ function initMap() {
   });
 }
 
+// ── CSV utilities (replaces Python backend parser) ─────────────────────────
+
+/** Parse a CSV string into an array of {header: value} objects. */
+function parseCsv(text) {
+  if (text.charCodeAt(0) === 0xFEFF) text = text.slice(1); // strip BOM
+  const rows = [];
+  let inQuotes = false, field = "", fields = [], i = 0;
+  while (i < text.length) {
+    const ch = text[i];
+    if (ch === '"') {
+      if (inQuotes && text[i + 1] === '"') { field += '"'; i += 2; continue; }
+      inQuotes = !inQuotes;
+    } else if (ch === ',' && !inQuotes) {
+      fields.push(field); field = "";
+    } else if ((ch === '\n' || ch === '\r') && !inQuotes) {
+      fields.push(field); field = "";
+      if (ch === '\r' && text[i + 1] === '\n') i++;
+      rows.push(fields); fields = [];
+    } else {
+      field += ch;
+    }
+    i++;
+  }
+  if (field || fields.length) { fields.push(field); rows.push(fields); }
+  if (!rows.length) return [];
+  const headers = rows[0].map(h => h.trim());
+  return rows.slice(1)
+    .filter(r => r.some(f => f.trim()))
+    .map(r => Object.fromEntries(headers.map((h, j) => [h, (r[j] || "").trim()])));
+}
+
+function csvToBool(value) {
+  const text = String(value || "").trim().toLowerCase();
+  if (!text || ["unknown","onbekend","n/a","na","null","none","-"].includes(text)) return null;
+  if (["yes","y","true","1","ja","j"].includes(text)) return true;
+  if (["no","n","false","0","nee"].includes(text)) return false;
+  return true;
+}
+
+function csvToFloat(value) {
+  const text = String(value || "").trim().replace(",", ".");
+  if (!text) return null;
+  const n = parseFloat(text);
+  return isNaN(n) ? null : n;
+}
+
+function csvSlugify(value) {
+  return value.toLowerCase().trim().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+}
+
+const _CSV_DAY_COLS = ["hours_mon","hours_tue","hours_wed","hours_thu","hours_fri","hours_sat","hours_sun"];
+
+function _normaliseSlot(raw) {
+  const text = (raw || "").trim().replace(/\s/g, "").replace("–", "-");
+  const match = text.match(/^(\d{1,2}:\d{2})-(\d{1,2}:\d{2})$/);
+  if (!match) return null;
+  const pad = p => { const [h, m] = p.split(":"); return `${String(parseInt(h)).padStart(2, "0")}:${m}`; };
+  return `${pad(match[1])}-${pad(match[2])}`;
+}
+
+function _parseHoursFromRow(row) {
+  const slots = _CSV_DAY_COLS.map(col => _normaliseSlot(row[col] || ""));
+  return slots.every(s => s === null) ? null : slots;
+}
+
+/**
+ * Convert a Google Drive sharing URL to a directly embeddable image URL.
+ * Partners can paste any of these into the photo_url column:
+ *   https://drive.google.com/file/d/FILE_ID/view?usp=sharing
+ *   https://drive.google.com/uc?id=FILE_ID
+ * Other URLs (direct image links, local paths) pass through unchanged.
+ */
+function _resolvePhotoUrl(url) {
+  if (!url) return url;
+  const fileMatch = url.match(/drive\.google\.com\/file\/d\/([^/?]+)/);
+  if (fileMatch) return `https://lh3.googleusercontent.com/d/${fileMatch[1]}`;
+  const ucMatch = url.match(/drive\.google\.com\/uc\?.*[?&]id=([^&]+)/);
+  if (ucMatch) return `https://lh3.googleusercontent.com/d/${ucMatch[1]}`;
+  return url;
+}
+
+/** Convert one CSV row into a GeoJSON Feature (returns null if row is invalid). */
+function _rowToFeature(row) {
+  const name = (row.name || "").trim();
+  if (!name) return null;
+  const lat = csvToFloat(row.latitude || row.lat);
+  const lon = csvToFloat(row.longitude || row.lon || row.lng);
+  if (lat === null || lon === null) return null;
+  return {
+    type: "Feature",
+    geometry: { type: "Point", coordinates: [lon, lat] },
+    properties: {
+      id:               (row.id || "").trim() || csvSlugify(name),
+      name,
+      type:             (row.type || "").trim(),
+      municipality:     (row.municipality || "").trim() || "Amsterdam",
+      district:         (row.district   || row.stadsdeel || "").trim(),
+      neighborhood:     (row.neighborhood || row.wijk    || "").trim(),
+      address:          (row.address    || "").trim(),
+      website_url:      (row.website_url || "").trim(),
+      photo_url:        _resolvePhotoUrl((row.photo_url || "").trim()),
+      hours:            _parseHoursFromRow(row),
+      hours_note:       (row.hours_note || row.note        || "").trim(),
+      notes:            (row.notes      || row.description  || "").trim(),
+      active:           row.active?.trim() ? csvToBool(row.active) : true,
+      ac:               csvToBool(row.ac    || row.airco),
+      seating:          csvToBool(row.seating),
+      toilets:          csvToBool(row.toilets),
+      free_water:       csvToBool(row.free_water),
+      free_fruit:       csvToBool(row.free_fruit),
+      food_to_buy:      csvToBool(row.food_to_buy),
+      own_food_allowed: csvToBool(row.own_food_allowed || row.own_food_ok),
+      supervisor:       csvToBool(row.supervisor),
+      wheelchair:       csvToBool(row.wheelchair || row.accessible),
+      games:            csvToBool(row.games),
+      pets_allowed:     csvToBool(row.pets_allowed || row.pets_ok),
+    },
+  };
+}
+
+async function _loadKoelteplekkenFromSheets(def) {
+  if (!_sheetsReady()) {
+    console.warn("Koeltekaart: fill in SHEETS_CONFIG (publishedId + gids) in app.js");
+    buildKoelteplekkenLayer(def, { type: "FeatureCollection", features: [] });
+    return;
+  }
+  const r = await fetch(_sheetsUrl(SHEETS_CONFIG.locationsGid));
+  if (!r.ok) throw new Error(`Sheets locations fetch failed: ${r.status}`);
+  const features = parseCsv(await r.text()).map(_rowToFeature).filter(Boolean);
+  buildKoelteplekkenLayer(def, { type: "FeatureCollection", features });
+}
+
 // ── Layer loading ──────────────────────────────────────────────────────────
 function loadAllLayers() {
   LAYER_DEFS.forEach(def => {
     setLoading(true);
-    fetch(def.src)
-      .then(r => r.json())
-      .then(data => {
-        if (def.cat === "koelteplekken") buildKoelteplekkenLayer(def, data);
-        else                             buildStaticLayer(def, data);
-      })
-      .catch(e => console.error(def.cat, e))
-      .finally(() => setLoading(false));
+    if (def.cat === "koelteplekken") {
+      _loadKoelteplekkenFromSheets(def)
+        .catch(e => console.error("koelteplekken", e))
+        .finally(() => setLoading(false));
+    } else {
+      fetch(def.src)
+        .then(r => r.json())
+        .then(data => buildStaticLayer(def, data))
+        .catch(e => console.error(def.cat, e))
+        .finally(() => setLoading(false));
+    }
   });
 }
 
@@ -695,19 +863,21 @@ function buildStaticLayer(def, data) {
   const features = data.features || [];
   state.features[def.cat] = features;
   animateCount(def.cat, features.length);
+
+  // Swimming pools get their own render path (sub-type filter chips + layer)
   if (def.cat === "swimming_pools") {
-  rebuildSwimmingPoolChips();
-  _renderSwimmingPoolsLayer(def, features);
-  refreshListIfActive();
-  return;
-}
+    rebuildSwimmingPoolChips();
+    _renderSwimmingPoolsLayer(def, features);
+    refreshListIfActive();
+    return;
+  }
+
   const fc = { type:"FeatureCollection", features };
   if (def.type === "polygon") {
-  const parkGroups = {};
-  state.layers[def.cat] = L.geoJSON(fc, {
+    const parkGroups = {};
+    state.layers[def.cat] = L.geoJSON(fc, {
       pane: "parksPane",
-    style: { color:def.color, weight:1.5, opacity:0.85, fillColor:def.color, fillOpacity:0.12 },
-
+      style: { color:def.color, weight:1.5, opacity:0.85, fillColor:def.color, fillOpacity:0.12 },
       onEachFeature: (f,l) => {
         const name=f.properties?.Naam||"Park", sub=(f.properties?.Stadsdeel||"")+" · Park";
         if (!parkGroups[name]) parkGroups[name]=[];
@@ -719,18 +889,12 @@ function buildStaticLayer(def, data) {
       },
     });
   } else {
-  state.layers[def.cat] = L.geoJSON(fc, {
-    pane: "pointsPane",
-    pointToLayer: (_f,ll) => L.circleMarker(ll,{radius:def.radius,fillColor:def.color,color:"#fff",weight:2,opacity:1,fillOpacity:0.88}),
-
-    onEachFeature: (f,l) => {
-        const p = f.properties || {};
-        const name = def.cat === "swimming_pools"
-          ? (p.name || p.Naam_locatie || "Zwemplek")
-          : (p["Dichtstbijzijnde adres binnen 100 meter"] || "Drinkwaterkraan");
-        const sub = def.cat === "swimming_pools"
-          ? (p.category || (state.lang === "nl" ? "Zwemplek" : "Swimming spot"))
-          : (state.lang === "nl" ? "Drinkwaterkraan" : "Drinking water");
+    state.layers[def.cat] = L.geoJSON(fc, {
+      pane: "pointsPane",
+      pointToLayer: (_f,ll) => L.circleMarker(ll,{radius:def.radius,fillColor:def.color,color:"#fff",weight:2,opacity:1,fillOpacity:0.88}),
+      onEachFeature: (f,l) => {
+        const name=f.properties?.["Dichtstbijzijnde adres binnen 100 meter"]||"Drinkwaterkraan";
+        const sub=state.lang==="nl"?"Drinkwaterkraan":"Drinking water";
         l.on("mouseover",e=>HC.show(e.originalEvent.clientX,e.originalEvent.clientY,name,sub,def.color));
         l.on("mouseout",()=>HC.hide());
         l.on("mousemove",e=>HC.move(e.originalEvent.clientX,e.originalEvent.clientY));
@@ -745,6 +909,7 @@ function buildStaticLayer(def, data) {
   if (state.on[def.cat]) state.layers[def.cat].addTo(state.map);
 }
 
+// ── Swimming pools layer (filtered by sub-type) ────────────────────────────
 function _renderSwimmingPoolsLayer(def, features) {
   HC.hide();
   if (state.layers.swimming_pools) state.map.removeLayer(state.layers.swimming_pools);
@@ -753,9 +918,8 @@ function _renderSwimmingPoolsLayer(def, features) {
   const fc = { type: "FeatureCollection", features: filtered };
 
   state.layers.swimming_pools = L.geoJSON(fc, {
-  pane: "pointsPane",
-  pointToLayer: (f, ll) => {
-
+    pane: "pointsPane",
+    pointToLayer: (f, ll) => {
       const swimType = getSwimTypeDef(swimCategory(f.properties || {}));
       return L.circleMarker(ll, {
         radius: def.radius,
@@ -771,23 +935,16 @@ function _renderSwimmingPoolsLayer(def, features) {
       const swimType = getSwimTypeDef(swimCategory(p));
       const name = p.name || p.Naam_locatie || p.Naam || "Zwemplek";
       const sub = state.lang === "nl" ? swimType.label_nl : swimType.label_en;
-
       if (!IS_TOUCH_DEVICE) {
         l.on("mouseover", e => HC.show(e.originalEvent.clientX, e.originalEvent.clientY, name, sub, swimType.color));
         l.on("mouseout", () => HC.hide());
         l.on("mousemove", e => HC.move(e.originalEvent.clientX, e.originalEvent.clientY));
       }
-
-      l.on("click", e => {
-        HC.hide();
-        L.DomEvent.stopPropagation(e);
-        showSwimmingPoolDetail(f);
-      });
+      l.on("click", e => { HC.hide(); L.DomEvent.stopPropagation(e); showSwimmingPoolDetail(f); });
     },
   });
 
   if (state.on.swimming_pools) state.layers.swimming_pools.addTo(state.map);
-
   const countEl = document.getElementById("cnt-swimming_pools");
   if (countEl) countEl.textContent = filtered.length.toLocaleString();
 }
@@ -812,18 +969,15 @@ function rebuildSwimmingPoolChips() {
     container.setAttribute("aria-label", "Filter swimming spot types");
     row.insertAdjacentElement("afterend", container);
   }
-
   container.innerHTML = "";
 
   SWIM_TYPE_DEFS.forEach(def => {
     const btn = document.createElement("button");
     const isOn = !!state.swimTypes[def.key];
-
     btn.className = "filter-chip swim-filter-chip" + (isOn ? " active" : "");
     btn.dataset.swimType = def.key;
     btn.setAttribute("aria-pressed", String(isOn));
     btn.textContent = state.lang === "nl" ? def.label_nl : def.label_en;
-
     btn.addEventListener("click", e => {
       e.stopPropagation();
       state.swimTypes[def.key] = !state.swimTypes[def.key];
@@ -831,11 +985,9 @@ function rebuildSwimmingPoolChips() {
       rebuildSwimmingPoolsLayer();
       renderMobileFilterBar();
     });
-
     container.appendChild(btn);
   });
 }
-
 
 // ── Count-up animation ─────────────────────────────────────────────────────
 function animateCount(cat, target) {
@@ -1023,7 +1175,7 @@ function renderMobileFilterBar() {
     const dot = document.createElement("span"); dot.className = "mfb-dot";
     dot.style.background = on ? def.color : "var(--subtle)";
     const lbl = document.createElement("span");
-    lbl.textContent = t(def.cat === "koelteplekken" ? "koelteplekken_label"
+    lbl.textContent = t(def.cat === "koelteplekken"  ? "koelteplekken_label"
                       : def.cat === "water_taps"    ? "water_label"
                       : def.cat === "parks"         ? "parks_label"
                       : def.cat === "swimming_pools" ? "swimming_pools_label"
@@ -1150,10 +1302,10 @@ function placeDistanceRings(lat, lon) {
   // Single dashed circle — 1 km radius with a subtle navy tint inside
   const r = L.circle([lat, lon], {
     radius: 1000,
-    color: "#1A3B8B",
+    color: "#004699",
     weight: 2,
     opacity: 0.65,
-    fillColor: "#1A3B8B",
+    fillColor: "#004699",
     fillOpacity: 0.08,
     dashArray: "8 10",
     interactive: false,
@@ -1234,7 +1386,7 @@ function openDetailPanel(feature, renderFn) {
 // ── Koelteplek detail — right panel (desktop) ──────────────────────────────
 function renderKoelteDetailContent(feature, container) {
   const p = feature.properties || {};
-  const col = CATEGORY_COLORS[p.type] || "#1A3B8B";
+  const col = CATEGORY_COLORS[p.type] || "#004699";
   const typeLabels = state.lang === "nl" ? TYPE_DISPLAY_NL : TYPE_DISPLAY_EN;
   const catLabel = typeLabels[p.type] || p.type || "Koelteplek";
   const locationLabel = [p.neighborhood, p.district].filter(Boolean).join(" · ");
@@ -1328,7 +1480,7 @@ function showKoelteplaatsDetail(feature) {
 }
 
 function renderTapDetailContent(feature, container) {
-  const p = feature.properties || {}, col = "#0566C8";
+  const p = feature.properties || {}, col = "#009de6";
   const body = document.createElement("div"); body.className = "detail-panel-body";
   const nameSec = document.createElement("div"); nameSec.className = "detail-panel-namesec";
   const catLbl = document.createElement("div"); catLbl.className = "dp-cat"; catLbl.textContent = t("water_label");
@@ -1353,7 +1505,7 @@ function renderTapDetailContent(feature, container) {
 }
 
 function renderParkDetailContent(feature, container) {
-  const p = feature.properties || {}, col = "#147A37";
+  const p = feature.properties || {}, col = "#00893c";
   const body = document.createElement("div"); body.className = "detail-panel-body";
   const nameSec = document.createElement("div"); nameSec.className = "detail-panel-namesec";
   const catLbl = document.createElement("div"); catLbl.className = "dp-cat"; catLbl.textContent = p.Stadsdeel || t("parks_label");
@@ -1421,6 +1573,46 @@ function showSwimmingPoolDetail(feature) { openDetailPanel(feature, renderSwimmi
 function showTapDetail(feature)  { openDetailPanel(feature, renderTapDetailContent);  }
 function showParkDetail(feature) { openDetailPanel(feature, renderParkDetailContent); }
 
+function renderSwimmingPoolDetailContent(feature, container) {
+  const p = feature.properties || {};
+  const swimType = getSwimTypeDef(swimCategory(p));
+
+  const body = document.createElement("div");
+  body.className = "detail-panel-body";
+
+  const nameSec = document.createElement("div");
+  nameSec.className = "detail-panel-namesec";
+
+  const catLbl = document.createElement("div");
+  catLbl.className = "dp-cat";
+  catLbl.textContent = state.lang === "nl" ? swimType.label_nl : swimType.label_en;
+
+  const nameEl = document.createElement("div");
+  nameEl.className = "sheet-name";
+  nameEl.textContent = p.name || p.Naam_locatie || p.Naam || "Zwemplek";
+
+  nameSec.append(catLbl, nameEl);
+  body.appendChild(nameSec);
+
+  const grid = document.createElement("div");
+  grid.className = "prop-grid";
+  grid.append(cell(t("type_label"), state.lang === "nl" ? swimType.label_nl : swimType.label_en));
+  if (p.id) grid.appendChild(cell("ID", String(p.id)));
+  body.appendChild(grid);
+
+  if (feature.geometry?.type === "Point") {
+    const [lon, lat] = feature.geometry.coordinates;
+    const actions = document.createElement("div");
+    actions.className = "detail-actions";
+    actions.appendChild(makeDirectionsBtn(lat, lon));
+    body.appendChild(actions);
+  }
+
+  container.appendChild(body);
+}
+
+function showSwimmingPoolDetail(feature) { openDetailPanel(feature, renderSwimmingPoolDetailContent); }
+
 function makeDirectionsBtn(lat, lon) {
   const isIOS=/iPad|iPhone|iPod/.test(navigator.userAgent);
   const href=isIOS?`maps://?daddr=${lat},${lon}`:`https://www.google.com/maps/dir/?api=1&destination=${lat},${lon}`;
@@ -1451,14 +1643,10 @@ async function doSearch(query) {
   if (!results) return;
 
   results.innerHTML = "";
-
   const q = query.trim();
   const qLower = q.toLowerCase();
 
-  // Dutch postcode helper: 1060MT -> 1060 MT
-  const normalizedQuery = q.replace(/^(\d{4})\s*([a-zA-Z]{2})$/, "$1 $2");
-
-  // Local matches first
+  // Local koelteplekken matches first
   const localMatches = state.features.koelteplekken
     .filter(f => {
       const p = f.properties || {};
@@ -1478,60 +1666,43 @@ async function doSearch(query) {
       <div class="sr-name">${p.name || "Koelteplek"}</div>
       <div class="sr-sub">${[p.neighborhood, p.district].filter(Boolean).join(" · ")} · Koelteplek</div>
     `;
-
     el.addEventListener("click", () => {
       state.map.setView([f.geometry.coordinates[1], f.geometry.coordinates[0]], 17);
       results.setAttribute("hidden", "");
       document.getElementById("search-input").value = p.name || "";
       showKoelteplaatsDetail(f);
       closeSidebarMobile();
-
       const ms = document.getElementById("map-section");
       if (ms) ms.scrollIntoView({ behavior: "smooth" });
     });
-
     results.appendChild(el);
   });
 
   try {
-    const url=`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query+" Amsterdam")}&format=json&countrycodes=nl&limit=6&viewbox=4.72,52.48,5.08,52.26&bounded=1`;
-
-    const response = await fetch(url, {
-      headers: {
-        "Accept-Language": state.lang === "nl" ? "nl" : "en"
-      }
-    });
-
+    const url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(q + " Amsterdam")}&format=json&countrycodes=nl&limit=6&viewbox=4.72,52.48,5.08,52.26&bounded=1`;
+    const response = await fetch(url, { headers: { "Accept-Language": state.lang === "nl" ? "nl" : "en" } });
     if (!response.ok) throw new Error("Search request failed");
-
     const items = await response.json();
 
     items.forEach(item => {
       const parts = item.display_name.split(", ");
       const el = document.createElement("div");
       el.className = "sr-item";
-      el.innerHTML = `
-        <div class="sr-name">${parts[0]}</div>
-        <div class="sr-sub">${parts.slice(1, 3).join(", ")}</div>
-      `;
-
+      el.innerHTML = `<div class="sr-name">${parts[0]}</div><div class="sr-sub">${parts.slice(1, 3).join(", ")}</div>`;
       el.addEventListener("click", () => {
         state.map.setView([parseFloat(item.lat), parseFloat(item.lon)], 16);
         results.setAttribute("hidden", "");
         document.getElementById("search-input").value = parts[0];
         closeSidebarMobile();
-
         const ms = document.getElementById("map-section");
         if (ms) ms.scrollIntoView({ behavior: "smooth" });
       });
-
       results.appendChild(el);
     });
   } catch (e) {
     console.error("search:", e);
   }
 
-  // Always show something, even if the external search fails
   if (!results.children.length) {
     const el = document.createElement("div");
     el.className = "sr-item";
@@ -1892,11 +2063,26 @@ async function loadWeatherBar() {
   const strip=document.getElementById("weather-strip");
   if (!strip) return;
   try {
-    const response=await fetch("/api/weather?locatie=Amsterdam");
+    // Call Open-Meteo directly — free, no API key, CORS-friendly
+    const params = new URLSearchParams({
+      latitude:  "52.3676",
+      longitude: "4.9041",
+      current:   "temperature_2m,relative_humidity_2m,apparent_temperature,weather_code",
+      timezone:  "Europe/Amsterdam",
+    });
+    const response=await fetch(`https://api.open-meteo.com/v1/forecast?${params}`);
     if (!response.ok) throw new Error(`Weather request failed: ${response.status}`);
-    const data=await response.json();
+    const payload=await response.json();
+    const current=payload.current||{};
+    const data={
+      temperature: current.temperature_2m,
+      feels_like:  current.apparent_temperature,
+      humidity:    current.relative_humidity_2m,
+      source:      "Open-Meteo",
+      source_url:  "https://open-meteo.com/",
+    };
     const tempEl=document.getElementById("weather-temp"), humidityEl=document.getElementById("weather-humidity"), feelsEl=document.getElementById("weather-feels"), sourceEl=document.getElementById("weather-source");
-    if (sourceEl){sourceEl.textContent=data.source||"Open-Meteo";sourceEl.href=data.source_url||"https://open-meteo.com/";sourceEl.target="_blank";sourceEl.rel="noopener noreferrer";}
+    if (sourceEl){sourceEl.textContent=data.source;sourceEl.href=data.source_url;sourceEl.target="_blank";sourceEl.rel="noopener noreferrer";}
     if (tempEl){const value=`${formatDutchNumber(data.temperature,1)}°`;tempEl.textContent=value;tempEl.setAttribute("aria-label",`${t("weather_temp_label")}: ${value}`);}
     if (humidityEl){const humidity=Number(String(data.humidity).replace(",","."));const value=Number.isFinite(humidity)?`${Math.round(humidity)}%`:"--%";humidityEl.textContent=value;humidityEl.setAttribute("aria-label",`${t("weather_humidity_label")}: ${value}`);}
     if (feelsEl){const value=`${formatDutchNumber(data.feels_like,0)}°`;feelsEl.textContent=value;feelsEl.setAttribute("aria-label",`${t("weather_feels_label")}: ${value}`);}
@@ -1911,14 +2097,19 @@ async function loadWeatherBar() {
 
 // ── Info blocks: force all open on desktop, accordion on mobile ──────────
 function initInfoBlocks() {
-  const blocks = document.querySelectorAll("details.info-block");
+  const blocks = document.querySelectorAll(".info-col-item details.info-block");
   function syncOpen() {
-    if (window.innerWidth > 640) blocks.forEach(d => d.setAttribute("open", ""));
+    if (window.innerWidth > 640) {
+      blocks.forEach(d => d.setAttribute("open", ""));
+    } else {
+      blocks.forEach((d, i) => {
+        if (i === 0) d.setAttribute("open", "");
+        else         d.removeAttribute("open");
+      });
+    }
   }
   syncOpen();
-  window.addEventListener("resize", () => {
-    if (window.innerWidth > 640) blocks.forEach(d => d.setAttribute("open", ""));
-  }, { passive: true });
+  window.addEventListener("resize", syncOpen, { passive: true });
 }
 
 // ── Boot ───────────────────────────────────────────────────────────────────

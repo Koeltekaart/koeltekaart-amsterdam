@@ -25,3 +25,6 @@ Thumbs.db
 
 # Leftover data artefacts
 data/seed/
+
+# Build artefacts
+*.zip
