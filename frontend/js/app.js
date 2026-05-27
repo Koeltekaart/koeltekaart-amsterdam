@@ -202,7 +202,7 @@ const TR = {
     weather_feels_info: "Feels-like temperature is how warm it feels outside, based on temperature, humidity and wind.",
     skip_to_list: "Skip the map and go to the list of cooling locations",
     org: "GGD Amsterdam",
-    title: "Cool Map",
+    title: "Cool Map Amsterdam",
     search_placeholder: "Search street, neighbourhood or place…",
     near_me: "Near me",
     stay_cool: "Stay cool",

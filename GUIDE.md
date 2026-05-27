@@ -150,7 +150,20 @@ De server slaat de data tijdelijk op in het geheugen. Herstart de server om de n
 De banner-status wordt elke 5 minuten automatisch bijgewerkt in de browser. Wacht even of ververs de pagina.
 
 **Ik wil een nieuwe soort locatie toevoegen (niet library/church/supermarket/urban_farm).**  
-Neem contact op met de ontwikkelaar. Een nieuw type vereist een kleine aanpassing in `frontend/js/app.js`.
+Dit vereist aanpassingen in de code. U kunt een nieuwe type toevoegen door het volgende te doen:
+
+1. **Voeg het type in het CSV-bestand in** — vul de kolom `type` in met de nieuwe type-naam (bijvoorbeeld `community_center` of `sports`).
+2. **Neem contact op met de ontwikkelaar** — uw IT-team moet:
+   - Een kleur toevoegen aan `CATEGORY_COLORS` in `frontend/js/app.js`
+   - Het type eventueel toevoegen aan `CATEGORY_DEFS` in `frontend/js/app.js` voor filtering
+
+Voorbeelden van bestaande types en kleuren:
+- `library` (Bibliotheek) → Blauw (#1D5EAD)
+- `church` (Kerk) → Paars (#7B4EA6)
+- `supermarket` (Supermarkt) → Groen-blauw (#0D8A7E)
+- `urban_farm` (Stadsboerderij) → Groen (#2E7A30)
+- `community_center` (Buurtcentrum) → Oranje (#B86520) — niet gebruikt
+- `sports` (Sport) → Rood (#B82030) — niet gebruikt
 
 ---
 

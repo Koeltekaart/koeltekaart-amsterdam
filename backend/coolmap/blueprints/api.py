@@ -167,6 +167,7 @@ def _load_koelteplekken() -> Any:
             "neighborhood": _clean(row.get("neighborhood") or row.get("wijk")),
             "address": _clean(row.get("address")),
             "website_url": _clean(row.get("website_url")),
+            "photo_url": _clean(row.get("photo_url")),
             # 7-element array [Mon…Sun], each "HH:MM-HH:MM" or null.
             "hours": _parse_hours(row),
             "hours_note": _clean(row.get("hours_note") or row.get("note")),
@@ -294,6 +295,23 @@ def meta_layers():
         ],
         "nearest": "/api/v1/nearest",
     })
+
+
+@bp.get("/koelteplekken")
+def koelteplekken():
+    """Backward-compatible endpoint for koelteplekken (cooling shelters) as GeoJSON."""
+    fc = _load_koelteplekken()
+
+    # Optional boolean filters: ?ac=true&wheelchair=true etc.
+    filter_keys = ["ac", "wheelchair", "free_water", "games", "pets_allowed"]
+    active = {k: True for k in filter_keys if request.args.get(k) == "true"}
+    if active:
+        fc = {**fc, "features": [
+            f for f in fc.get("features", [])
+            if all(f.get("properties", {}).get(k) is True for k in active)
+        ]}
+
+    return jsonify(fc)
 
 
 @bp.route("/v1/geojson/koelteplekken")
