@@ -99,6 +99,35 @@ const CATEGORY_COLORS = {
   default:          "#004699",  // Amsterdam dark blue
 };
 
+// Amsterdam brand palette used for auto-assigning colors to new/unknown categories
+const AMSTERDAM_PALETTE = [
+  "#004699", "#a00078", "#00893c", "#bed200", "#ff9100",
+  "#e50082", "#009de6", "#ffe600", "#ec0000", "#202020",
+];
+let _paletteIndex = Object.keys(CATEGORY_COLORS).filter(k => k !== "default").length;
+
+/** Return the color for a given location type. Auto-assigns from Amsterdam palette for unknown types. */
+function getCategoryColor(type) {
+  if (!type) return CATEGORY_COLORS.default;
+  if (CATEGORY_COLORS[type]) return CATEGORY_COLORS[type];
+  // Auto-assign next available palette color
+  const color = AMSTERDAM_PALETTE[_paletteIndex % AMSTERDAM_PALETTE.length];
+  _paletteIndex++;
+  CATEGORY_COLORS[type] = color;
+  return color;
+}
+
+/** Ensure CATEGORY_DEFS contains an entry for the given type (called when loading data). */
+function _ensureCategoryDef(type) {
+  if (!type || CATEGORY_DEFS.find(d => d.key === type)) return;
+  getCategoryColor(type); // ensure color is assigned
+  CATEGORY_DEFS.push({
+    key:      type,
+    label_en: TYPE_DISPLAY_EN[type] || type.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase()),
+    label_nl: TYPE_DISPLAY_NL[type] || type.replace(/_/g, " "),
+  });
+}
+
 // ── Swimming pool sub-types ────────────────────────────────────────────────
 const SWIM_TYPE_DEFS = [
   { key: "Binnenzwembad",  label_en: "Indoor pool",               label_nl: "Binnenzwembad",              color: "#009de6" },
@@ -145,7 +174,7 @@ const TR = {
     weather_feels_info: "Gevoelstemperatuur is hoe warm het buiten aanvoelt, op basis van temperatuur, luchtvochtigheid en wind.",
     skip_to_list: "Sla de kaart over en ga naar de lijst met koelteplekken",
     org: "GGD Amsterdam",
-    title: "Koeltekaart",
+    title: "Koeltekaart Amsterdam",
     search_placeholder: "Zoek straat, buurt of locatie…",
     near_me: "In mijn buurt",
     stay_cool: "Blijf koel",
@@ -263,7 +292,7 @@ const TR = {
     weather_feels_info: "Feels-like temperature is how warm it feels outside, based on temperature, humidity and wind.",
     skip_to_list: "Skip the map and go to the list of cooling locations",
     org: "GGD Amsterdam",
-    title: "Cool map Amsterdam",
+    title: "Koeltekaart Amsterdam",
     search_placeholder: "Search street, neighbourhood or place…",
     near_me: "Near me",
     stay_cool: "Stay cool",
@@ -706,7 +735,8 @@ function csvSlugify(value) {
   return value.toLowerCase().trim().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
 }
 
-const _CSV_DAY_COLS = ["hours_mon","hours_tue","hours_wed","hours_thu","hours_fri","hours_sat","hours_sun"];
+const _CSV_DAY_COLS      = ["hours_mon","hours_tue","hours_wed","hours_thu","hours_fri","hours_sat","hours_sun"];
+const _CSV_HEAT_DAY_COLS = ["heat_mon","heat_tue","heat_wed","heat_thu","heat_fri","heat_sat","heat_sun"];
 
 function _normaliseSlot(raw) {
   const text = (raw || "").trim().replace(/\s/g, "").replace("–", "-");
@@ -716,8 +746,9 @@ function _normaliseSlot(raw) {
   return `${pad(match[1])}-${pad(match[2])}`;
 }
 
-function _parseHoursFromRow(row) {
-  const slots = _CSV_DAY_COLS.map(col => _normaliseSlot(row[col] || ""));
+function _parseHoursFromRow(row, cols) {
+  const daycols = cols || _CSV_DAY_COLS;
+  const slots = daycols.map(col => _normaliseSlot(row[col] || ""));
   return slots.every(s => s === null) ? null : slots;
 }
 
@@ -744,13 +775,16 @@ function _rowToFeature(row) {
   const lat = csvToFloat(row.latitude || row.lat);
   const lon = csvToFloat(row.longitude || row.lon || row.lng);
   if (lat === null || lon === null) return null;
+  const type = (row.type || "").trim();
+  // Auto-register any new category type found in data
+  _ensureCategoryDef(type);
   return {
     type: "Feature",
     geometry: { type: "Point", coordinates: [lon, lat] },
     properties: {
       id:               (row.id || "").trim() || csvSlugify(name),
       name,
-      type:             (row.type || "").trim(),
+      type,
       municipality:     (row.municipality || "").trim() || "Amsterdam",
       district:         (row.district   || row.stadsdeel || "").trim(),
       neighborhood:     (row.neighborhood || row.wijk    || "").trim(),
@@ -758,6 +792,7 @@ function _rowToFeature(row) {
       website_url:      (row.website_url || "").trim(),
       photo_url:        _resolvePhotoUrl((row.photo_url || "").trim()),
       hours:            _parseHoursFromRow(row),
+      hours_heat:       _parseHoursFromRow(row, _CSV_HEAT_DAY_COLS),
       hours_note:       (row.hours_note || row.note        || "").trim(),
       notes:            (row.notes      || row.description  || "").trim(),
       active:           row.active?.trim() ? csvToBool(row.active) : true,
@@ -840,7 +875,7 @@ function _renderKoelteplekkenLayerInner(def, features) {
   state.layers.koelteplekken = L.geoJSON(fc, {
     pointToLayer: (_f, ll) => {
       const isActive = _f.properties?.active !== false;
-      const typeColor = CATEGORY_COLORS[_f.properties?.type] || def.color;
+      const typeColor = getCategoryColor(_f.properties?.type);
       const col = isActive ? typeColor : "#9CA3AF";
       const cls = isActive ? "koelte-marker" : "koelte-marker koelte-marker--inactive";
       const icon = L.divIcon({
@@ -855,7 +890,7 @@ function _renderKoelteplekkenLayerInner(def, features) {
     onEachFeature: (f, l) => {
       const p = f.properties || {};
       const isActive = p.active !== false;
-      const col = isActive ? (CATEGORY_COLORS[p.type] || def.color) : "#9CA3AF";
+      const col = isActive ? getCategoryColor(p.type) : "#9CA3AF";
       const sub = [p.neighborhood, p.district].filter(Boolean).join(" · ");
       // Hover card: skip entirely on touch devices — only show for true mouse hover
       if (!IS_TOUCH_DEVICE) {
@@ -1075,13 +1110,13 @@ function setupCategoryFilter() {
     btn.setAttribute("aria-pressed", String(state.activeCategory===def.key));
     if (def.key !== null) {
       const dot = document.createElement("span"); dot.className="cat-chip-dot";
-      dot.style.background = CATEGORY_COLORS[def.key]||CATEGORY_COLORS.default;
+      dot.style.background = getCategoryColor(def.key);
       btn.appendChild(dot);
     }
     const label = document.createElement("span");
     label.textContent = state.lang==="nl" ? def.label_nl : def.label_en;
     btn.appendChild(label);
-    if (def.key !== null) btn.style.setProperty("--cat-color", CATEGORY_COLORS[def.key]||CATEGORY_COLORS.default);
+    if (def.key !== null) btn.style.setProperty("--cat-color", getCategoryColor(def.key));
     btn.addEventListener("click", () => {
       state.activeCategory = def.key;
       container.querySelectorAll(".cat-chip").forEach(c => {
@@ -1125,116 +1160,78 @@ function toggleFilter(key, btn) {
 }
 
 // ── Mobile filter bar ─────────────────────────────────────────────────────
-// Three-row layout: categories · amenity filters · layer toggles
+// Compact single-row: "Filters" button + scrollable strip of active chips
 function renderMobileFilterBar() {
-  const catsRow      = document.getElementById("mfb-cats");
-  const amenitiesRow = document.getElementById("mfb-amenities");
-  const layersRow    = document.getElementById("mfb-layers");
-  if (!catsRow || !layersRow) return;
-  catsRow.innerHTML    = "";
-  if (amenitiesRow) amenitiesRow.innerHTML = "";
-  layersRow.innerHTML  = "";
+  const countEl = document.getElementById("mfb-active-count");
+  const stripEl = document.getElementById("mfb-active-strip");
+  if (!stripEl) return;
+  stripEl.innerHTML = "";
 
-  // ── Row 1: Category filter chips (radio-style)
-  CATEGORY_DEFS.forEach(def => {
-    const isActive = state.activeCategory === def.key;
-    const btn = document.createElement("button");
-    btn.className = "mfb-chip" + (isActive ? " mfb-chip--active" : "");
-    if (isActive) {
-      const col = def.key ? (CATEGORY_COLORS[def.key] || CATEGORY_COLORS.default) : "var(--navy)";
-      btn.style.background = col;
-      btn.style.borderColor = col;
-    }
-    btn.textContent = state.lang === "nl" ? def.label_nl : def.label_en;
-    btn.addEventListener("click", () => {
-      state.activeCategory = def.key;
-      document.querySelectorAll(".cat-chip").forEach(c => {
-        const isThis = c.dataset.cat === String(def.key);
-        c.classList.toggle("active", isThis);
-        c.setAttribute("aria-pressed", String(isThis));
-      });
-      rebuildKoelteplekkenLayer();
-      renderMobileFilterBar();
-    });
-    catsRow.appendChild(btn);
-  });
+  // Count active filters: active category + active amenities + off-layers
+  let count = 0;
+  if (state.activeCategory !== null) count++;
+  count += Object.values(state.filters).filter(Boolean).length;
+  count += LAYER_DEFS.filter(d => state.on[d.cat] === false).length;
 
-  // ── Row 2: Amenity toggle chips
-  if (amenitiesRow && AMENITY_DEFS.length) {
-    AMENITY_DEFS.filter(d => d.filterable).forEach(def => {
-      const isOn = !!state.filters[def.key];
-      const btn = document.createElement("button");
-      btn.className = "mfb-amenity" + (isOn ? " mfb-amenity--active" : "");
-      btn.setAttribute("aria-pressed", String(isOn));
-      // Checkmark icon (shown only when active)
-      const check = document.createElementNS("http://www.w3.org/2000/svg", "svg");
-      check.setAttribute("viewBox", "0 0 10 10"); check.setAttribute("fill", "none");
-      check.classList.add("mfb-amenity-check");
-      const tick = document.createElementNS("http://www.w3.org/2000/svg", "path");
-      tick.setAttribute("d", "M1.5 5L4 7.5L8.5 2.5");
-      tick.setAttribute("stroke", "white"); tick.setAttribute("stroke-width", "1.6");
-      tick.setAttribute("stroke-linecap", "round"); tick.setAttribute("stroke-linejoin", "round");
-      check.appendChild(tick);
-      const lbl = document.createElement("span");
-      lbl.textContent = state.lang === "nl" ? def.label_nl : def.label_en;
-      btn.append(check, lbl);
-      btn.addEventListener("click", () => {
-        toggleFilter(def.key, btn);
-        renderMobileFilterBar();
-      });
-      amenitiesRow.appendChild(btn);
-    });
-    // Show a placeholder when no amenity data loaded yet
-    if (!AMENITY_DEFS.filter(d => d.filterable).length) {
-      const ph = document.createElement("span");
-      ph.style.cssText = "color:var(--subtle);font-size:11px;padding:0 4px;";
-      ph.textContent = "—";
-      amenitiesRow.appendChild(ph);
+  if (countEl) {
+    if (count > 0) {
+      countEl.textContent = count;
+      countEl.removeAttribute("hidden");
+    } else {
+      countEl.setAttribute("hidden", "");
     }
   }
 
-  // ── Row 3: Layer toggle chips
-  LAYER_DEFS.forEach(def => {
-    const on = state.on[def.cat] !== false;
-    const btn = document.createElement("button");
-    btn.className = "mfb-layer" + (on ? " on" : "");
-    const dot = document.createElement("span"); dot.className = "mfb-dot";
-    dot.style.background = on ? def.color : "var(--subtle)";
-    const lbl = document.createElement("span");
-    lbl.textContent = t(def.cat === "koelteplekken"  ? "koelteplekken_label"
-                      : def.cat === "water_taps"    ? "water_label"
-                      : def.cat === "parks"         ? "parks_label"
-                      : def.cat === "swimming_pools" ? "swimming_pools_label"
-                      : def.label);
-    btn.append(dot, lbl);
-    btn.addEventListener("click", () => {
-      const nowOn = !state.on[def.cat];
-      state.on[def.cat] = nowOn;
+  // Active category chip in strip
+  if (state.activeCategory !== null) {
+    const def = CATEGORY_DEFS.find(d => d.key === state.activeCategory);
+    if (def) {
+      const chip = document.createElement("button");
+      chip.className = "mfb-strip-chip mfb-strip-chip--active";
+      chip.textContent = state.lang === "nl" ? def.label_nl : def.label_en;
+      chip.addEventListener("click", () => {
+        state.activeCategory = null;
+        document.querySelectorAll(".cat-chip").forEach(c => { c.classList.remove("active"); c.setAttribute("aria-pressed","false"); });
+        rebuildKoelteplekkenLayer();
+        renderMobileFilterBar();
+      });
+      stripEl.appendChild(chip);
+    }
+  }
+
+  // Active amenity chips in strip
+  AMENITY_DEFS.filter(d => d.filterable && state.filters[d.key]).forEach(def => {
+    const chip = document.createElement("button");
+    chip.className = "mfb-strip-chip mfb-strip-chip--active";
+    chip.textContent = state.lang === "nl" ? def.label_nl : def.label_en;
+    chip.addEventListener("click", () => { toggleFilter(def.key, chip); renderMobileFilterBar(); });
+    stripEl.appendChild(chip);
+  });
+
+  // Off-layers in strip
+  LAYER_DEFS.filter(d => state.on[d.cat] === false).forEach(def => {
+    const chip = document.createElement("button");
+    chip.className = "mfb-strip-chip";
+    chip.style.opacity = "0.6";
+    const layerKey = def.cat === "koelteplekken" ? "koelteplekken_label"
+                   : def.cat === "water_taps"   ? "water_label"
+                   : def.cat === "parks"        ? "parks_label"
+                   : def.cat === "swimming_pools" ? "swimming_pools_label" : def.cat;
+    chip.textContent = "✕ " + t(layerKey);
+    chip.addEventListener("click", () => {
+      state.on[def.cat] = true;
       const row = document.querySelector(`.layer-row[data-cat="${def.cat}"]`);
-      if (row) { row.classList.toggle("on", nowOn); row.setAttribute("aria-checked", String(nowOn)); }
-      if (state.layers[def.cat]) {
-        if (nowOn) state.map.addLayer(state.layers[def.cat]);
-        else       state.map.removeLayer(state.layers[def.cat]);
-      }
+      if (row) { row.classList.add("on"); row.setAttribute("aria-checked","true"); }
+      if (state.layers[def.cat]) state.map.addLayer(state.layers[def.cat]);
       refreshListIfActive();
       renderMobileFilterBar();
     });
-    layersRow.appendChild(btn);
-  });
-
-  // Header label is always black — no color state change
-}
-
-// ── Mobile filter bar collapse ────────────────────────────────────────────
-function setupMobileFilterCollapse() {
-  const btn     = document.getElementById("mfb-collapse-btn");
-  const section = document.getElementById("map-section");
-  if (!btn || !section) return;
-  btn.addEventListener("click", () => {
-    const collapsed = section.classList.toggle("mfb-collapsed");
-    btn.setAttribute("aria-expanded", String(!collapsed));
+    stripEl.appendChild(chip);
   });
 }
+
+// ── Mobile filter bar collapse — no longer needed (sidebar bottom-sheet used instead)
+function setupMobileFilterCollapse() { /* noop — see setupSidebarToggle */ }
 
 // ── Desktop sidebar collapse tab ──────────────────────────────────────────
 function setupSidebarCollapseDesktop() {
@@ -1253,21 +1250,30 @@ function setupSidebarCollapseDesktop() {
 }
 
 // ── Mobile sidebar ─────────────────────────────────────────────────────────
-function setupSidebarToggle() {
-  const fab      = document.getElementById("btn-filter-fab");
-  const backdrop = document.getElementById("sidebar-backdrop");
-  const closeBtn = document.querySelector(".sidebar-mobile-close");
-  const sidebar  = document.getElementById("sidebar");
-  if (fab)      fab.addEventListener("click",      e => { e.stopPropagation(); const open = document.body.classList.toggle("sidebar-open"); fab.setAttribute("aria-expanded", String(open)); });
-  if (backdrop) backdrop.addEventListener("click",  closeSidebarMobile);
-  if (closeBtn) closeBtn.addEventListener("click",  closeSidebarMobile);
-  // Prevent clicks inside the sidebar from bubbling up to the backdrop and closing the panel
-  if (sidebar)  sidebar.addEventListener("click",   e => e.stopPropagation());
+function openSidebarMobile() {
+  document.body.classList.add("sidebar-open");
+  const sheetBtn = document.getElementById("btn-filter-sheet");
+  if (sheetBtn) sheetBtn.setAttribute("aria-expanded", "true");
 }
 function closeSidebarMobile() {
   document.body.classList.remove("sidebar-open");
+  const sheetBtn = document.getElementById("btn-filter-sheet");
+  if (sheetBtn) sheetBtn.setAttribute("aria-expanded", "false");
   const fab = document.getElementById("btn-filter-fab");
   if (fab) fab.setAttribute("aria-expanded", "false");
+}
+function setupSidebarToggle() {
+  const fab       = document.getElementById("btn-filter-fab");
+  const sheetBtn  = document.getElementById("btn-filter-sheet");
+  const backdrop  = document.getElementById("sidebar-backdrop");
+  const closeBtn  = document.querySelector(".sidebar-mobile-close");
+  const sidebar   = document.getElementById("sidebar");
+  if (sheetBtn) sheetBtn.addEventListener("click", e => { e.stopPropagation(); openSidebarMobile(); });
+  if (fab)      fab.addEventListener("click",      e => { e.stopPropagation(); openSidebarMobile(); });
+  if (backdrop) backdrop.addEventListener("click",  closeSidebarMobile);
+  if (closeBtn) closeBtn.addEventListener("click",  closeSidebarMobile);
+  // Prevent clicks inside the sidebar from bubbling up to the backdrop
+  if (sidebar)  sidebar.addEventListener("click",   e => e.stopPropagation());
 }
 
 // ── User location + Near me ────────────────────────────────────────────────
@@ -1433,22 +1439,30 @@ function openDetailPanel(feature, renderFn) {
 // ── Koelteplek detail — right panel (desktop) ──────────────────────────────
 function renderKoelteDetailContent(feature, container) {
   const p = feature.properties || {};
-  const col = CATEGORY_COLORS[p.type] || "#004699";
+  const col = getCategoryColor(p.type);
   const typeLabels = state.lang === "nl" ? TYPE_DISPLAY_NL : TYPE_DISPLAY_EN;
   const catLabel = typeLabels[p.type] || p.type || "Koelteplek";
   const locationLabel = [p.neighborhood, p.district].filter(Boolean).join(" · ");
 
   const body = document.createElement("div"); body.className = "detail-panel-body";
 
-  // ── Compact header row: info on left, thumbnail on right ──
-  const headerRow = document.createElement("div"); headerRow.className = "detail-header-row";
-  const infoSide  = document.createElement("div"); infoSide.className = "detail-header-info";
+  // ── Full-width 16:9 photo ──
+  if (p.photo_url) {
+    const photoWrap = document.createElement("div"); photoWrap.className = "detail-img-full";
+    const img = document.createElement("img");
+    img.src = p.photo_url; img.alt = p.name || ""; img.loading = "lazy";
+    photoWrap.appendChild(img);
+    body.appendChild(photoWrap);
+  }
+
+  // ── Info section (padded) ──
+  const info = document.createElement("div"); info.className = "detail-panel-info";
+  body.appendChild(info);
 
   if (p.active === false) {
     const notice = document.createElement("div"); notice.className = "inactive-notice";
-    notice.style.marginBottom = "6px";
     notice.textContent = state.lang === "nl" ? "⚠ Tijdelijk gesloten" : "⚠ Temporarily unavailable";
-    infoSide.appendChild(notice);
+    info.appendChild(notice);
   }
 
   const catLbl = document.createElement("div"); catLbl.className = "dp-cat";
@@ -1457,8 +1471,12 @@ function renderKoelteDetailContent(feature, container) {
   const nameEl = document.createElement("div"); nameEl.className = "detail-panel-name";
   nameEl.textContent = p.name || "Koelteplek";
 
+  // Decide which hours to show (heatplan hours override normal hours when plan is active)
+  const useHeat = state.heatPlanActive && p.hours_heat;
+  const hoursToShow = useHeat ? p.hours_heat : p.hours;
+
   // Inline open/closed status tag
-  const openStatus = getOpenStatus(p.hours);
+  const openStatus = getOpenStatus(hoursToShow);
   const statusTag = document.createElement("span");
   if (openStatus.status === "open") {
     statusTag.className = "tag tag--open"; statusTag.style.marginTop = "5px";
@@ -1470,55 +1488,56 @@ function renderKoelteDetailContent(feature, container) {
     statusTag.textContent = txt;
   }
 
-  infoSide.append(catLbl, nameEl);
-  if (statusTag.className) infoSide.appendChild(statusTag);
+  info.append(catLbl, nameEl);
+  if (statusTag.className) info.appendChild(statusTag);
 
-  if (p.photo_url) {
-    const photoWrap = document.createElement("div"); photoWrap.className = "detail-panel-photo";
-    const img = document.createElement("img");
-    img.src = p.photo_url; img.alt = p.name || ""; img.loading = "lazy";
-    photoWrap.appendChild(img);
-    headerRow.append(infoSide, photoWrap);
-  } else {
-    headerRow.appendChild(infoSide);
+  // ── Heat plan hours note (when heatplan hours are being shown) ──
+  if (useHeat) {
+    const heatNote = document.createElement("div"); heatNote.className = "detail-heat-hours-note";
+    heatNote.innerHTML = `<svg width="12" height="12" viewBox="0 0 14 14" fill="none" aria-hidden="true"><circle cx="7" cy="7" r="6" stroke="currentColor" stroke-width="1.5"/><line x1="7" y1="4" x2="7" y2="7.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><circle cx="7" cy="10" r="0.7" fill="currentColor"/></svg>${state.lang === "nl" ? "Hitteplan-openingstijden worden getoond" : "Heat plan opening hours shown"}`;
+    info.appendChild(heatNote);
   }
-  body.appendChild(headerRow);
 
-  // ── Hours block (compact via CSS) ──
-  const hoursBlock = renderHoursBlock(p.hours);
-  // Hide the status row in the hours block — we show it inline above
+  // ── Hours block ──
+  const hoursBlock = renderHoursBlock(hoursToShow);
+  // Hide the status row — shown inline above
   const statusRow = hoursBlock.querySelector(".hours-status");
   if (statusRow) statusRow.style.display = "none";
-  body.appendChild(hoursBlock);
+  info.appendChild(hoursBlock);
 
   if (p.hours_note) {
     const noteEl = document.createElement("div"); noteEl.className = "hours-note";
     noteEl.textContent = p.hours_note;
-    body.appendChild(noteEl);
+    info.appendChild(noteEl);
   }
 
-  // ── Amenity chips — only show present amenities ──
-  const trueAmenities = AMENITY_DEFS.filter(def =>
-    p[def.key] === true && def.filterable
-  );
-  if (trueAmenities.length) {
+  // ── Amenity chips — ALL amenities; present=green, absent=gray with "No" prefix ──
+  if (AMENITY_DEFS.length) {
     const chipsWrap = document.createElement("div"); chipsWrap.className = "filter-chips detail-chips";
-    trueAmenities.forEach(def => {
+    AMENITY_DEFS.filter(d => d.filterable).forEach(def => {
       const label = state.lang === "nl" ? def.label_nl : def.label_en;
-      const chip = document.createElement("button");
-      chip.className = "filter-chip on" + (state.filters[def.key] ? " active" : "");
-      chip.textContent = label;
-      chip.setAttribute("aria-pressed", String(!!state.filters[def.key]));
-      chip.addEventListener("click", () => toggleFilter(def.key, chip));
+      const hasIt = p[def.key] === true;
+      const notHaveIt = p[def.key] === false;
+      if (!hasIt && !notHaveIt) return; // skip nulls (data not specified)
+      const chip = document.createElement(hasIt ? "button" : "span");
+      if (hasIt) {
+        chip.className = "filter-chip on" + (state.filters[def.key] ? " active" : "");
+        chip.textContent = label;
+        chip.setAttribute("aria-pressed", String(!!state.filters[def.key]));
+        chip.addEventListener("click", () => toggleFilter(def.key, chip));
+      } else {
+        chip.className = "filter-chip off";
+        chip.textContent = (state.lang === "nl" ? "Geen " : "No ") + label.toLowerCase();
+      }
       chipsWrap.appendChild(chip);
     });
-    body.appendChild(chipsWrap);
+    if (chipsWrap.children.length) info.appendChild(chipsWrap);
   }
 
   if (p.notes) {
     const notesBox = document.createElement("div"); notesBox.className = "detail-notes";
     notesBox.textContent = p.notes;
-    body.appendChild(notesBox);
+    info.appendChild(notesBox);
   }
 
   // ── Action buttons ──
@@ -1531,7 +1550,7 @@ function renderKoelteDetailContent(feature, container) {
   }
   const [lon, lat] = feature.geometry.coordinates;
   actions.appendChild(makeDirectionsBtn(lat, lon));
-  body.appendChild(actions);
+  info.appendChild(actions);
   container.appendChild(body);
 }
 
@@ -1896,7 +1915,7 @@ function getListItems() {
 
 function buildListItem(feature) {
   const p = feature.properties || {};
-  const color = CATEGORY_COLORS[p.type] || CATEGORY_COLORS.default;
+  const color = getCategoryColor(p.type);
   const typeLabels = state.lang === "nl" ? TYPE_DISPLAY_NL : TYPE_DISPLAY_EN;
   const typeLabel = typeLabels[p.type] || p.type || "";
 

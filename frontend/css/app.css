@@ -41,12 +41,12 @@
 :root {
   --font:      'AmsterdamSans', system-ui, -apple-system, sans-serif;
   --font-serif: 'AmsterdamSans', system-ui, sans-serif; /* ExtraBold (800) used for display */
-  --top:       80px;   /* height of main nav row */
+  --top:       88px;   /* height of main nav row */
   --banner-h:  44px;   /* heat plan status strip */
-  --sidebar-w: 320px;
-  --panel-w:   420px;
-  --contact-h: 80px;   /* contact footer height — map shrinks by this amount */
-  --offset:    calc(var(--top) + var(--banner-h)); /* 124px total header */
+  --sidebar-w: 340px;
+  --panel-w:   440px;
+  --contact-h: 84px;   /* contact footer height — map shrinks by this amount */
+  --offset:    calc(var(--top) + var(--banner-h)); /* 132px total header */
 
   --black:   #202020;
   --white:   #FFFFFF;
@@ -76,7 +76,7 @@ body {
   min-height: 100%;
   overflow-y: auto;
   font-family: var(--font);
-  font-size: 19px;
+  font-size: 21px;
   color: var(--text);
   background: var(--bg);
   -webkit-font-smoothing: antialiased;
@@ -129,18 +129,21 @@ body {
   flex-shrink: 0;
 }
 
-.logo { display: flex; align-items: center; gap: 10px; flex-shrink: 0; text-decoration: none; }
+.logo-img-link { display: flex; align-items: center; flex-shrink: 0; text-decoration: none; }
 .logo-img {
-  height: 36px; width: auto; display: block;
+  height: 40px; width: auto; display: block;
 }
-.logo-title { font-size: 15px; font-weight: 700; color: #fff; letter-spacing: -0.02em; }
-.topbar-actions { display: flex; align-items: center; gap: 5px; margin-left: auto; flex-shrink: 0; }
+.topbar-title {
+  flex: 1; min-width: 0;
+  font-size: 17px; font-weight: 700; color: #fff; letter-spacing: -0.02em;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.topbar-actions { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
 
 /* ── Search ──────────────────────────────────────────────────────────────── */
-/* order: 1 places the search bar before the logo visually (logo has order: 2) */
-#search-wrap { flex: 1; min-width: 0; max-width: 340px; position: relative; }
+#search-wrap { flex: 1; min-width: 0; max-width: 380px; position: relative; }
 #search-input {
-  width: 100%; height: 38px; background: #ffffff;
+  width: 100%; height: 40px; background: #ffffff;
   border: 1px solid rgba(0,0,0,0.12); border-radius: 19px;
   color: #202020; font-family: var(--font); font-size: 13.5px;
   padding: 0 14px 0 38px; outline: none;
@@ -173,9 +176,9 @@ body {
 /* ── Topbar controls ─────────────────────────────────────────────────────── */
 .ctrl-btn {
   display: flex; align-items: center; gap: 6px;
-  height: 40px; padding: 0 15px;
+  height: 42px; padding: 0 16px;
   background: transparent; border: 1px solid rgba(255,255,255,0.18); border-radius: 8px;
-  color: rgba(255,255,255,0.75); font-family: var(--font); font-size: 13px; font-weight: 500;
+  color: rgba(255,255,255,0.75); font-family: var(--font); font-size: 13.5px; font-weight: 500;
   cursor: pointer; transition: background 0.12s, border-color 0.12s, color 0.12s;
   white-space: nowrap;
 }
@@ -354,23 +357,18 @@ body {
   }
   .banner-pulse { width: 6px; height: 6px; flex-shrink: 0; align-self: center; }
 
-  /* Filter bar heights: open = header + 3 rows + 2 dividers, closed = header only */
-  :root { --mfb-h-open: 142px; --mfb-h-closed: 32px; }
+  /* Map section: column flex */
+  #map-section { flex-direction: column; }
 
-  /* Map section owns --mfb-h so descendants (bar + list) respond to collapse */
-  #map-section {
-    flex-direction: column;
-    --mfb-h: var(--mfb-h-open);
-  }
-  #map-section.mfb-collapsed { --mfb-h: var(--mfb-h-closed); }
-
-  /* Filter bar — always visible in both map and list view */
+  /* ── Compact filter bar — single row with Filters button + active chips ── */
   #mobile-filter-bar {
     display: flex !important;
-    flex-direction: column;
-    height: var(--mfb-h);
-    transition: height 0.22s cubic-bezier(0.4, 0, 0.2, 1);
+    flex-direction: row;
+    align-items: center;
+    height: 50px;
     flex-shrink: 0;
+    padding: 0 12px;
+    gap: 10px;
     background: var(--surface);
     border-bottom: 1px solid var(--border);
     box-shadow: 0 2px 10px rgba(0,0,0,0.07);
@@ -378,70 +376,99 @@ body {
     overflow: hidden;
   }
 
-  /* Collapse handle row */
-  .mfb-header {
-    display: flex; align-items: center;
-    height: 32px; flex-shrink: 0;
-    padding: 0 14px 0 16px; gap: 8px;
-    border-bottom: 1px solid var(--border);
-    background: var(--surface);
+  /* "Filters" button */
+  .mfb-filters-btn {
+    display: inline-flex; align-items: center; gap: 7px;
+    height: 34px; padding: 0 14px;
+    background: var(--navy); color: #fff;
+    border: none; border-radius: 100px;
+    font-family: var(--font); font-size: 13px; font-weight: 600;
+    cursor: pointer; flex-shrink: 0;
+    -webkit-tap-highlight-color: transparent;
+    transition: background 0.12s;
   }
-  .mfb-header-label {
-    flex: 1;
-    font-size: 10.5px; font-weight: 700;
-    text-transform: uppercase; letter-spacing: 0.09em;
-    color: var(--text); /* always black — no active state color change */
-  }
+  .mfb-filters-btn:active { background: #003580; }
 
-  .mfb-collapse-btn {
-    width: 26px; height: 26px;
-    display: flex; align-items: center; justify-content: center;
-    border: none; background: none; padding: 0;
-    color: var(--subtle); cursor: pointer; border-radius: 6px;
-    transition: background 0.12s, color 0.12s, transform 0.22s cubic-bezier(0.4,0,0.2,1);
-    flex-shrink: 0;
+  /* Active filter count badge */
+  .mfb-count {
+    display: inline-flex; align-items: center; justify-content: center;
+    min-width: 18px; height: 18px; padding: 0 4px;
+    background: #fff; color: var(--navy);
+    border-radius: 100px; font-size: 10px; font-weight: 700;
   }
-  .mfb-collapse-btn:hover { background: var(--border); color: var(--text); }
-  #map-section.mfb-collapsed .mfb-collapse-btn { transform: rotate(180deg); }
+  .mfb-count[hidden] { display: none; }
 
-  /* Body: the three scrollable rows */
-  .mfb-body {
-    flex: 1; display: flex; flex-direction: column;
-    overflow: hidden;
-  }
-
-  /* Each row: horizontally scrollable chip strip */
-  .mfb-row {
-    display: flex; align-items: center;
-    gap: 6px; padding: 0 14px;
+  /* Scrollable strip of active filter chips */
+  .mfb-active-strip {
+    flex: 1; min-width: 0;
+    display: flex; align-items: center; gap: 6px;
     overflow-x: auto; -webkit-overflow-scrolling: touch;
     scrollbar-width: none;
-    flex: 1;
   }
-  .mfb-row::-webkit-scrollbar { display: none; }
+  .mfb-active-strip::-webkit-scrollbar { display: none; }
 
-  /* Thin divider between rows */
-  .mfb-row-divider {
-    height: 1px; background: var(--border);
-    flex-shrink: 0; margin: 0 12px;
+  /* Active chips in the strip (mirrors .cat-chip but smaller) */
+  .mfb-strip-chip {
+    display: inline-flex; align-items: center; gap: 5px;
+    height: 26px; padding: 0 10px;
+    border-radius: 100px;
+    border: 1.5px solid var(--border);
+    background: var(--surface);
+    color: var(--muted);
+    font-family: var(--font); font-size: 11.5px; font-weight: 500;
+    white-space: nowrap; flex-shrink: 0;
+  }
+  .mfb-strip-chip--active {
+    background: var(--navy); border-color: var(--navy); color: #fff;
   }
 
-  /* Map fills remaining height in the column (list view handled in its own block below) */
+  /* Map fills remaining height */
   #map {
     width: 100%;
-    height: 100% !important; /* Forces Leaflet to fill its grid cell space completely */
+    height: 100% !important;
   }
 
-  #map-contact-wrap > footer {
-    flex-shrink: 0;
-    width: 100%;
-  }
+  #map-contact-wrap > footer { flex-shrink: 0; width: 100%; }
 
-  /* Sidebar replaced by filter bar — hide everything related */
-  #sidebar          { display: none !important; }
-  #sidebar-backdrop { display: none !important; }
-  .sidebar-mobile-header { display: none !important; }
-  #btn-filter-fab   { display: none !important; }
+  /* ── Sidebar as bottom-sheet on mobile ───────────────────────────────────── */
+  #sidebar {
+    display: flex !important; /* override any desktop hiding */
+    position: fixed !important;
+    bottom: 0; left: 0; right: 0;
+    width: auto !important;
+    max-height: 85vh;
+    height: auto;
+    border-radius: 20px 20px 0 0;
+    border-right: none !important;
+    box-shadow: 0 -4px 32px rgba(0,0,0,0.18);
+    z-index: 620;
+    transform: translateY(110%);
+    transition: transform 0.32s cubic-bezier(0.2,0,0,1);
+    overflow-y: auto;
+    overflow-x: hidden;
+  }
+  body.sidebar-open #sidebar {
+    transform: translateY(0);
+  }
+  /* Backdrop visible when sidebar is open */
+  #sidebar-backdrop {
+    display: block !important;
+    position: fixed; inset: 0; z-index: 610;
+    background: rgba(0,0,0,0.42);
+    backdrop-filter: blur(2px);
+    opacity: 0; pointer-events: none;
+    transition: opacity 0.3s;
+  }
+  body.sidebar-open #sidebar-backdrop {
+    opacity: 1; pointer-events: auto;
+  }
+  /* Show mobile header inside sidebar */
+  .sidebar-mobile-header { display: flex !important; }
+
+  /* Sidebar-open drags the filter FAB out — FAB stays hidden */
+  #btn-filter-fab { display: none !important; }
+  /* Sidebar-collapse-btn hidden on mobile */
+  #sidebar-collapse-btn { display: none !important; }
 }
 
 /* ── Sidebar sections (minimal/flat) ─────────────────────────────────────── */
@@ -452,29 +479,15 @@ body {
   border-top: 1px solid rgba(0,0,0,0.05);
 }
 
-/* ── Accordion filter groups ─────────────────────────────────────────────── */
+/* ── Filter groups — static (non-collapsible) ────────────────────────────── */
 .filter-group { border-top: 1px solid var(--border); }
 .filter-group:first-child { border-top: none; }
-.filter-group-summary {
-  display: flex; align-items: center; justify-content: space-between;
-  padding: 10px 14px; cursor: pointer; user-select: none;
+.filter-group--static .filter-group-label {
+  display: flex; align-items: center;
+  padding: 11px 14px 8px;
   font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.07em;
-  color: var(--muted); list-style: none;
+  color: var(--muted); user-select: none;
 }
-.filter-group-summary::marker,
-.filter-group-summary::-webkit-details-marker { display: none; }
-.filter-group[open] .filter-group-summary { color: var(--text); }
-.filter-group-summary::after {
-  content: '';
-  display: inline-block;
-  width: 0; height: 0;
-  border-left: 4px solid transparent;
-  border-right: 4px solid transparent;
-  border-top: 5px solid currentColor;
-  transition: transform 0.2s;
-  flex-shrink: 0;
-}
-.filter-group[open] .filter-group-summary::after { transform: rotate(180deg); }
 .filter-group-body { padding-bottom: 4px; }
 .sidebar-section-title {
   padding: 6px 14px 5px;
@@ -520,6 +533,8 @@ body.mode-user #sidebar-policy { display: none; }
 .cat-chip.active .cat-chip-dot { opacity: 1; background: rgba(255,255,255,0.85) !important; }
 /* Sub-filter strip nested below a layer row */
 .layer-subfilter { padding-left: 36px !important; padding-top: 2px !important; border-top: 1px solid var(--border); }
+/* Amenity sub-filter — slightly different visual separation */
+.amenity-subfilter { border-top-style: dashed; margin-bottom: 4px; }
 
 /* ── Layer rows ──────────────────────────────────────────────────────────── */
 .layer-row {
@@ -624,39 +639,48 @@ body.mode-user #sidebar-policy { display: none; }
 .detail-photo { height: 100%; width: auto; max-width: 160px; display: block; object-fit: cover; }
 
 /* ── Detail (right panel) ────────────────────────────────────────────────── */
-.detail-panel-body { padding: 14px 16px 16px; display: flex; flex-direction: column; gap: 10px; }
+.detail-panel-body { padding: 0 0 16px; display: flex; flex-direction: column; gap: 10px; }
 
-/* Compact header: name/info on left, optional thumbnail on right */
-.detail-header-row {
-  display: flex; align-items: flex-start; gap: 12px;
-}
-.detail-header-info { flex: 1; min-width: 0; }
-.detail-panel-photo {
-  flex-shrink: 0;
-  width: 96px; height: 96px;
-  border-radius: var(--radius);
+/* Full-width 16:9 photo at the top of the detail panel */
+.detail-img-full {
+  width: 100%;
+  aspect-ratio: 16 / 9;
   overflow: hidden;
   background: var(--bg);
-  border: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
 }
-.detail-panel-photo img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.detail-img-full img { width: 100%; height: 100%; object-fit: cover; display: block; }
+
+/* Info section padding */
+.detail-panel-info { padding: 14px 16px 0; display: flex; flex-direction: column; gap: 10px; }
+.detail-header-row { display: flex; align-items: flex-start; gap: 12px; }
+.detail-header-info { flex: 1; min-width: 0; }
 .detail-panel-name {
   font-size: 18px; font-weight: 700; letter-spacing: -0.02em;
   color: var(--text); line-height: 1.25; margin: 3px 0 5px;
   white-space: normal;
 }
 /* Compact hours in detail panel */
-.detail-panel-body .hours-wrap { margin-bottom: 0; }
-.detail-panel-body .hours-table { padding: 2px 0; }
-.detail-panel-body .hours-row { padding: 3px 10px; }
-.detail-panel-body .hours-day  { font-size: 11px; width: 24px; }
-.detail-panel-body .hours-time { font-size: 11.5px; }
-.detail-panel-body .hours-status { padding: 7px 12px; font-size: 11.5px; }
-.detail-panel-body .filter-chips.detail-chips { padding: 0; }
-.detail-panel-body .detail-notes { padding: 8px 0; font-size: 12px; }
-.detail-panel-body .detail-actions { margin-top: 4px; gap: 6px; }
-.detail-panel-body .btn-website,
-.detail-panel-body .btn-directions { height: 40px; font-size: 12.5px; }
+.detail-panel-info .hours-wrap { margin-bottom: 0; }
+.detail-panel-info .hours-table { padding: 2px 0; }
+.detail-panel-info .hours-row { padding: 3px 10px; }
+.detail-panel-info .hours-day  { font-size: 11px; width: 24px; }
+.detail-panel-info .hours-time { font-size: 11.5px; }
+.detail-panel-info .hours-status { padding: 7px 12px; font-size: 11.5px; }
+.detail-panel-info .filter-chips.detail-chips { padding: 0; }
+.detail-panel-info .detail-notes { padding: 8px 0; font-size: 12px; }
+.detail-panel-info .detail-actions { margin-top: 4px; gap: 6px; padding: 0; }
+.detail-panel-info .btn-website,
+.detail-panel-info .btn-directions { height: 42px; font-size: 13px; }
+/* Heat plan hours note */
+.detail-heat-hours-note {
+  display: flex; align-items: center; gap: 6px;
+  background: rgba(236,0,0,0.06); border: 1px solid rgba(236,0,0,0.15);
+  border-radius: 7px; padding: 6px 11px;
+  font-size: 11.5px; color: #b80000;
+}
+.detail-heat-hours-note svg { flex-shrink: 0; }
 
 /* Legacy namesec — keep for sheet/mobile compat */
 .detail-panel-namesec { margin-bottom: 14px; }
@@ -1230,8 +1254,10 @@ body.mode-user #sidebar-policy { display: none; }
 .skip-link { position: fixed; top: 8px; left: 8px; z-index: 9999; background: var(--black); color: var(--white); padding: 10px 14px; border-radius: 6px; transform: translateY(-140%); text-decoration: none; font-weight: 700; }
 .skip-link:focus { transform: translateY(0); }
 
-/* ── Mobile filter bar chips ─────────────────────────────────────────────── */
+/* ── Mobile filter bar ───────────────────────────────────────────────────── */
 #mobile-filter-bar { display: none; } /* shown only in mobile media query */
+/* Filters button — hidden on desktop */
+.mfb-filters-btn { display: none; }
 
 /* Shared chip base — matches .cat-chip exactly */
 .mfb-chip,
@@ -1336,27 +1362,22 @@ body.mode-user #sidebar-policy { display: none; }
 
 /* ── Mobile topbar ───────────────────────────────────────────────────────── */
 @media (max-width: 768px) {
-  /* Banner stays 36px. Nav row wraps to 2 rows:
-     Row 1 (logo + btns): ~46px  ·  Row 2 (search): 44px  → --top: 90px
-     --offset = 90 + 36 = 126px                                           */
-  :root {
-    /* Slightly taller header to create more breathing room under the search bar */
-    --top:       122px;
-    /* contact-h overridden to 48px in the mobile contact media query below */
-  }
+  /* Nav row wraps: Row 1 (logo + actions), Row 2 (search) */
+  :root { --top: 122px; }
 
   .topbar-main {
     height: var(--top);
     padding: 6px 12px 8px; gap: 8px;
     flex-wrap: wrap; align-content: flex-start;
   }
-  .logo { order: 1; flex: 0 0 auto; gap: 8px; }
-  .logo-img { height: 26px; }
-  .logo-title { font-size: 14px; }
+  .logo-img-link { order: 1; flex: 0 0 auto; }
+  .logo-img { height: 28px; }
+  /* Hide title on mobile — space is limited */
+  .topbar-title { display: none; }
 
   .topbar-actions { order: 2; margin-left: auto; flex: 0 0 auto; display: flex; gap: 5px; }
 
-  /* Search bar fills full second row, with a bit of space below */
+  /* Search bar fills full second row */
   #search-wrap {
     order: 3;
     flex: 1 1 100%;
@@ -1673,7 +1694,7 @@ html[lang="en"] div.lang-en, html[lang="en"] h2.lang-en, html[lang="en"] h3.lang
     gap: 14px;
     flex: unset;
   }
-  .cs-expanded-body .cs-group-label { flex-shrink: 0; }
+  .cs-expanded-body .cs-group-label { flex-shrink: 0; min-width: 130px; }
   .cs-expanded-body .cs-group-values { flex: 1; min-width: 0; }
   .cs-expanded-body .cs-div { display: none; }
   .cs-expanded-body .cs-group--brand { display: none; }

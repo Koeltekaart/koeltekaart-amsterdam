@@ -31,9 +31,8 @@
 
   <!-- Main nav row -->
   <div class="topbar-main">
-    <a class="logo" href="#landing-intro" aria-label="Koeltekaart homepage">
+    <a class="logo-img-link" href="#landing-intro" aria-label="Koeltekaart homepage">
       <img src="images/Default_web_rgb.svg" class="logo-img" alt="GGD Amsterdam logo" width="auto" height="36" />
-      <span class="logo-title" data-i18n="title">Koeltekaart</span>
     </a>
 
     <div id="search-wrap" role="search">
@@ -45,6 +44,8 @@
              data-i18n-placeholder="search_placeholder" aria-label="Search" />
       <div id="search-results" role="listbox" hidden></div>
     </div>
+
+    <span class="topbar-title" data-i18n="title">Koeltekaart Amsterdam</span>
 
     <div class="topbar-actions">
       <button id="btn-near" class="ctrl-btn">
@@ -221,23 +222,18 @@
     <!-- Mobile scroll handle — tap/swipe UP to return to landing section -->
     <div class="map-scroll-handle" id="map-scroll-up" aria-hidden="true"></div>
 
-    <!-- Mobile filter bar -->
+    <!-- Mobile filter bar — compact single row -->
     <div id="mobile-filter-bar" role="group" aria-label="Filters">
-      <div class="mfb-header">
-        <span class="mfb-header-label" data-i18n="filter_panel_title">Soorten locaties</span>
-        <button class="mfb-collapse-btn" id="mfb-collapse-btn" aria-label="Filters in- of uitklappen" aria-expanded="true">
-          <svg width="11" height="11" viewBox="0 0 11 11" fill="none" aria-hidden="true">
-            <path d="M1.5 3.5L5.5 7.5L9.5 3.5" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
-          </svg>
-        </button>
-      </div>
-      <div class="mfb-body">
-        <div id="mfb-layers"    class="mfb-row" aria-label="Kaartlagen"></div>
-        <div class="mfb-row-divider" aria-hidden="true"></div>
-        <div id="mfb-cats"      class="mfb-row" aria-label="Soort locatie"></div>
-        <div class="mfb-row-divider" aria-hidden="true"></div>
-        <div id="mfb-amenities" class="mfb-row" aria-label="Voorzieningen"></div>
-      </div>
+      <button id="btn-filter-sheet" class="mfb-filters-btn" aria-expanded="false">
+        <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+          <line x1="2" y1="4"  x2="14" y2="4"  stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+          <line x1="4" y1="8"  x2="12" y2="8"  stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+          <line x1="6" y1="12" x2="10" y2="12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+        </svg>
+        <span>Filters</span>
+        <span class="mfb-count" id="mfb-active-count" hidden></span>
+      </button>
+      <div class="mfb-active-strip" id="mfb-active-strip" aria-label="Actieve filters"></div>
     </div>
 
     <!-- Filter FAB — hidden -->
@@ -290,8 +286,11 @@
         </button>
       </div>
 
-      <details class="filter-group" open>
-        <summary class="filter-group-summary" data-i18n-label="layers">Lagen</summary>
+      <div class="filter-group filter-group--static">
+        <div class="filter-group-label">
+          <span class="lang-nl">Lagen</span>
+          <span class="lang-en">Layers</span>
+        </div>
         <div class="filter-group-body">
           <div class="layer-row on" data-cat="koelteplekken" role="switch" aria-checked="true" tabindex="0">
             <span class="l-dot"></span>
@@ -301,6 +300,8 @@
           </div>
           <!-- Koelteplek type filter chips — directly below koelteplekken row -->
           <div id="category-chips" class="category-chips layer-subfilter" role="group" aria-label="Filter by category"></div>
+          <!-- Amenity filter chips — below category chips, still under koelteplekken -->
+          <div id="filter-chips" class="filter-chips layer-subfilter amenity-subfilter" role="group" aria-label="Filter amenities"></div>
           <div class="layer-row on" data-cat="water_taps" role="switch" aria-checked="true" tabindex="0">
             <span class="l-dot" style="background:#009de6;"></span>
             <span class="l-name" data-i18n="water_label">Drinkwaterkranen</span>
@@ -321,16 +322,7 @@
           </div>
           <!-- Zwemplek type chips are inserted here by JS (rebuildSwimmingPoolChips) -->
         </div>
-      </details>
-
-      <details class="filter-group">
-        <summary class="filter-group-summary">Voorzieningen</summary>
-        <div class="filter-group-body">
-          <div id="koelte-controls">
-            <div id="filter-chips" class="filter-chips" role="group" aria-label="Filter amenities"></div>
-          </div>
-        </div>
-      </details>
+      </div>
 
     </aside>
 
@@ -417,10 +409,7 @@
       <div class="cs-div" aria-hidden="true"></div>
       <div class="cs-group cs-group--brand">
         <div class="cs-group-label">
-          <span class="cs-label">GGD Amsterdam</span>
-        </div>
-        <div class="cs-group-values">
-          <span class="cs-value cs-value--muted">Koeltekaart Amsterdam</span>
+          <span class="cs-label">GGD Amsterdam 2026</span>
         </div>
       </div>
     </div>
