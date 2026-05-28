@@ -417,6 +417,7 @@ body {
   /* FAB sits at top-left — push title/count to right edge, both right-aligned */
   .panel-hdr { padding-left: 72px; }
   #panel-hdr-list { margin-left: auto; align-items: flex-end; }
+  .lv-other-hdr-list { margin-left: auto; align-items: flex-end; }
 
   /* ── Sidebar — covers only the map area (below scroll handle, above contact) */
   #sidebar {
@@ -509,6 +510,7 @@ body {
   display: flex; align-items: center; gap: 6px;
   padding: 8px 14px;
   cursor: pointer; user-select: none; list-style: none;
+  font-weight: 400;
   font-size: 12px; font-weight: 600;
   color: var(--muted);
   -webkit-tap-highlight-color: transparent;
@@ -589,7 +591,7 @@ body.mode-user #sidebar-policy { display: none; }
     #ff9100 180deg 240deg, #bed200 240deg 300deg, #e50082 300deg 360deg
   ) !important;
 }
-.l-name { flex: 1; font-size: 13.5px; font-weight: 500; letter-spacing: -0.01em; color: var(--text); transition: color 0.15s; }
+.l-name { flex: 1; font-size: 13.5px; font-weight: 700; letter-spacing: -0.01em; color: var(--text); transition: color 0.15s; }
 .layer-row:not(.on) .l-name { color: var(--muted); }
 .l-count { font-size: 11.5px; font-weight: 500; color: var(--subtle); font-variant-numeric: tabular-nums; min-width: 24px; text-align: right; }
 .layer-row.on .l-count { color: var(--green); font-weight: 600; }
@@ -1009,12 +1011,20 @@ body.mode-user #sidebar-policy { display: none; }
 }
 #panel-hdr-count { font-size: 11.5px; color: var(--subtle); }
 
-/* Near-me two-stat header */
-#panel-hdr-list.near-mode { flex-direction: row; align-items: stretch; gap: 0; }
-.ph-stat { display: flex; flex-direction: column; align-items: flex-end; gap: 1px; }
-.ph-stat-label { font-size: 13px; font-weight: 700; color: var(--text); letter-spacing: -0.01em; }
-.ph-stat-count { font-size: 11.5px; color: var(--subtle); }
-.ph-sep { width: 1px; background: var(--border); margin: 2px 12px; align-self: stretch; }
+/* "Other locations" divider inside the list — matches panel-hdr style */
+.lv-other-hdr {
+  padding: 14px 16px 12px;
+  border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+  background: var(--surface);
+  min-height: 56px;
+  display: flex;
+  align-items: center;
+}
+.lv-other-hdr-list { display: flex; flex-direction: column; gap: 1px; }
+.lv-other-hdr-title { font-size: 13px; font-weight: 700; color: var(--text); letter-spacing: -0.01em; }
+.lv-other-hdr-count { font-size: 11.5px; color: var(--subtle); }
+
 .panel-hdr-back {
   display: flex; align-items: center; justify-content: center;
   width: 32px; height: 32px; border-radius: 50%;
@@ -1143,6 +1153,13 @@ body.mode-user #sidebar-policy { display: none; }
 .li-hl-accent::after {
   content: ''; position: absolute; left: 0; bottom: 0;
   width: 60%; height: 5px; background: var(--red); border-radius: 3px;
+}
+/* Dutch: underline drawn by .li-hl-u span injected via JS */
+:lang(nl) .li-hl-accent::after { display: none; }
+.li-hl-u { display: inline-block; position: relative; }
+.li-hl-u::after {
+  content: ''; position: absolute; left: 0; bottom: -8px;
+  width: 100%; height: 5px; background: var(--red); border-radius: 3px;
 }
 .li-hero-sub {
   font-size: clamp(14px, 1.5vw, 16px);

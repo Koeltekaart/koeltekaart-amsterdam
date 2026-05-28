@@ -5,7 +5,8 @@ const LAYER_DEFS = [
   { cat: "koelteplekken",  label: "Koelteplekken",   color: "#004699",   type: "geojson", radius: 8 },
   { cat: "water_taps",     label: "Water fountains",  color: "#009de6",   src: "data/raw/water_taps.geojson",  type: "geojson", radius: 4 },
   { cat: "parks",          label: "Parks",            color: "#00893c",   src: "data/raw/parks.json",          type: "polygon" },
-  { cat: "swimming_pools", label: "Swimming spots",   color: "#009de6",   src: "data/raw/zwemwater.geojson",   type: "geojson", radius: 6 },
+  { cat: "swimming_pools", label: "Swimming spots",   color: "#00b4c8",   src: "data/raw/zwemwater.geojson",   type: "geojson", radius: 6 },
+  { cat: "shade",          label: "Sidewalk shade",   color: "#1a56db",   type: "shade" },
 ];
 
 // ── Google Sheets data sources ─────────────────────────────────────────────
@@ -79,15 +80,17 @@ function initAmenities(features) {
 }
 
 const CATEGORY_DEFS = [
-  { key: null,           label_en: "All",          label_nl: "Alles" },
-  { key: "library",      label_en: "Library",      label_nl: "Bibliotheek" },
-  { key: "church",       label_en: "Church",       label_nl: "Kerk" },
-  { key: "supermarket",  label_en: "Supermarket",  label_nl: "Supermarkt" },
-  { key: "urban_farm",   label_en: "Urban farm",   label_nl: "Stadsboerderij" },
+  { key: null,               label_en: "All",              label_nl: "Alles" },
+  { key: "library",          label_en: "Library",          label_nl: "Bibliotheek" },
+  { key: "church",           label_en: "Church",           label_nl: "Kerk" },
+  { key: "supermarket",      label_en: "Supermarket",      label_nl: "Supermarkt" },
+  { key: "urban_farm",       label_en: "Urban farm",       label_nl: "Stadsboerderij" },
+  { key: "community_center", label_en: "Community centre", label_nl: "Buurtcentrum" },
+  { key: "theater",          label_en: "Theater",          label_nl: "Theater" },
 ];
 
-const TYPE_DISPLAY_NL = { library: "Bibliotheek", church: "Kerk", supermarket: "Supermarkt", urban_farm: "Stadsboerderij", community_center: "Buurtcentrum", sports: "Sport" };
-const TYPE_DISPLAY_EN = { library: "Library", church: "Church", supermarket: "Supermarket", urban_farm: "Urban farm", community_center: "Community centre", sports: "Sports" };
+const TYPE_DISPLAY_NL = { library: "Bibliotheek", church: "Kerk", supermarket: "Supermarkt", urban_farm: "Stadsboerderij", community_center: "Buurtcentrum", sports: "Sport", theater: "Theater" };
+const TYPE_DISPLAY_EN = { library: "Library", church: "Church", supermarket: "Supermarket", urban_farm: "Urban farm", community_center: "Community centre", sports: "Sports", theater: "Theater" };
 
 const CATEGORY_COLORS = {
   library:          "#004699",  // Amsterdam dark blue
@@ -96,6 +99,7 @@ const CATEGORY_COLORS = {
   urban_farm:       "#bed200",  // Amsterdam lime green
   community_center: "#ff9100",  // Amsterdam orange
   sports:           "#e50082",  // Amsterdam magenta
+  theater:          "#009de6",  // Amsterdam light blue
   default:          "#004699",  // Amsterdam dark blue
 };
 
@@ -188,6 +192,7 @@ const TR = {
     water_label: "Drinkwaterkranen",
     parks_label: "Parken",
     swimming_pools_label: "Zwemplekken",
+    shade_label: "Loopschaduw",
     mode_user: "Bewoners",
     mode_policy: "Beleid",
     lp_headline: "Vind verkoeling in Amsterdam",
@@ -307,6 +312,7 @@ const TR = {
     water_label: "Water fountains",
     parks_label: "Parks",
     swimming_pools_label: "Swimming spots",
+    shade_label: "Sidewalk shade",
     mode_user: "Residents",
     mode_policy: "Policy",
     lp_headline: "Find cooling spots in Amsterdam",
@@ -412,7 +418,7 @@ function t(key) { return TR[state.lang]?.[key] ?? TR.en[key] ?? key; }
 const state = {
   map: null,
   layers: {},
-  on: { koelteplekken: true, water_taps: true, parks: true, swimming_pools: true },
+  on: { koelteplekken: true, water_taps: true, parks: true, swimming_pools: true, shade: false },
   features: { koelteplekken: [], water_taps: [], parks: [], swimming_pools: [] },
   userMarker: null,
   userPos: null,
@@ -421,7 +427,7 @@ const state = {
   swimTypes: Object.fromEntries(SWIM_TYPE_DEFS.map(d => [d.key, false])),
   search: "",
   lang: localStorage.getItem("koeltekaart_lang") || "nl",
-  activeCategory: null,
+  activeCategories: new Set(),
   heatPlanActive: false,
   panelMode: "list",    // "list" | "detail"
   mobileView: "map",    // "map"  | "list"   — mobile only
@@ -447,6 +453,12 @@ function applyLanguage() {
     const key = el.dataset.i18n;
     if (key) el.textContent = t(key);
   });
+  // Dutch tagline: wrap all letters except "g." in an underline span so the
+  // descender of "g" doesn't collide with the decorative underline.
+  const hlAccent = document.querySelector(".li-hl-accent");
+  if (hlAccent && state.lang === "nl") {
+    hlAccent.innerHTML = '<span class="li-hl-u">Vind verkoelin</span>g.';
+  }
   document.querySelectorAll("[data-tooltip-i18n]").forEach(el => {
     const key = el.dataset.tooltipI18n;
     if (key) { el.setAttribute("data-tooltip", t(key)); el.setAttribute("aria-label", t(key)); }
@@ -504,27 +516,64 @@ function updateBannerText() {
   applyHeatPlanToMap();
 }
 
-// ── Heat plan status (read from Google Sheets settings tab) ───────────────
-// Settings tab must have columns: key, value
-// Add a row:  heat_plan_active, TRUE   (or FALSE)
-async function fetchHeatPlanStatus() {
+// ── Google Sheets settings ─────────────────────────────────────────────────
+// Settings tab columns: key, value
+// Supported keys:
+//   heat_plan_active       TRUE / FALSE
+//   category.<type>.en     English label  e.g. category.museum.en, Museum
+//   category.<type>.nl     Dutch label    e.g. category.museum.nl, Museum
+//   amenity.<key>.en       English label  e.g. amenity.lockers.en, Lockers
+//   amenity.<key>.nl       Dutch label    e.g. amenity.lockers.nl, Kluisjes
+//
+// Colors are assigned automatically from the Amsterdam palette — no color row needed.
+
+let _settingsPromise = null;
+
+async function fetchSettings() {
   if (!_sheetsReady()) return;
   try {
     const r = await fetch(_sheetsUrl(SHEETS_CONFIG.settingsGid));
     if (!r.ok) return;
     const rows = parseCsv(await r.text());
-    const row  = rows.find(r => (r.key || "").trim().toLowerCase() === "heat_plan_active");
-    if (!row) return;
-    const was = state.heatPlanActive;
-    state.heatPlanActive = csvToBool(row.value) === true;
-    if (was !== state.heatPlanActive) updateBannerText();
+    rows.forEach(row => {
+      const key = (row.key || "").trim().toLowerCase();
+      const val = (row.value || "").trim();
+      if (!key || !val) return;
+
+      if (key === "heat_plan_active") {
+        const was = state.heatPlanActive;
+        state.heatPlanActive = csvToBool(val) === true;
+        if (was !== state.heatPlanActive) updateBannerText();
+        return;
+      }
+
+      const parts = key.split(".");
+      if (parts.length === 3 && parts[0] === "category") {
+        const [, type, lang] = parts;
+        if (lang === "en") TYPE_DISPLAY_EN[type] = val;
+        if (lang === "nl") TYPE_DISPLAY_NL[type] = val;
+        return;
+      }
+
+      if (parts.length === 3 && parts[0] === "amenity") {
+        const [, akey, lang] = parts;
+        if (!AMENITY_LABELS[akey]) AMENITY_LABELS[akey] = {};
+        if (lang === "en") AMENITY_LABELS[akey].en = val;
+        if (lang === "nl") AMENITY_LABELS[akey].nl = val;
+      }
+    });
   } catch (_) { /* sheets may be unreachable */ }
+}
+
+function _ensureSettingsLoaded() {
+  if (!_settingsPromise) _settingsPromise = fetchSettings();
+  return _settingsPromise;
 }
 
 function setupBanner() {
   updateBannerText();
-  fetchHeatPlanStatus(); // sync state from backend on load
-  setInterval(fetchHeatPlanStatus, 5 * 60 * 1000); // poll every 5 min
+  _ensureSettingsLoaded();
+  setInterval(fetchSettings, 5 * 60 * 1000); // poll every 5 min
 }
 
 // Detect touch-primary devices — hover card is skipped on these
@@ -671,6 +720,7 @@ function initMap() {
   L.control.zoom({ position: "topright" }).addTo(state.map);
   state.map.on("click", () => { closeSidebarMobile(); });
   state.map.on("mousemove", e => HC.move(e.originalEvent.clientX, e.originalEvent.clientY));
+  // shade tiles are prefetched at load — no viewport tracking needed
 
   // Resize whenever the map container changes size (orientation change, sidebar toggle, etc.)
   if (typeof ResizeObserver !== "undefined") {
@@ -822,6 +872,7 @@ async function _loadKoelteplekkenFromSheets(def) {
     buildKoelteplekkenLayer(def, { type: "FeatureCollection", features: [] });
     return;
   }
+  await _ensureSettingsLoaded(); // labels/translations must be ready before building markers
   const r = await fetch(_sheetsUrl(SHEETS_CONFIG.locationsGid));
   if (!r.ok) throw new Error(`Sheets locations fetch failed: ${r.status}`);
   const features = parseCsv(await r.text()).map(_rowToFeature).filter(Boolean);
@@ -836,6 +887,8 @@ function loadAllLayers() {
       _loadKoelteplekkenFromSheets(def)
         .catch(e => console.error("koelteplekken", e))
         .finally(() => setLoading(false));
+    } else if (def.cat === "shade") {
+      setLoading(false); // loaded on-demand when toggled on
     } else {
       fetch(def.src)
         .then(r => r.json())
@@ -848,7 +901,7 @@ function loadAllLayers() {
 
 // ── Koelteplekken layer ────────────────────────────────────────────────────
 function koelteplekPassesFilters(p) {
-  if (state.activeCategory && p.type !== state.activeCategory) return false;
+  if (state.activeCategories.size > 0 && !state.activeCategories.has(p.type)) return false;
   for (const def of AMENITY_DEFS) {
     if (def.filterable && state.filters[def.key] && p[def.key] !== true) return false;
   }
@@ -866,7 +919,8 @@ function buildKoelteplekkenLayer(def, data) {
   initAmenities(features);
   _renderKoelteplekkenLayer(def, features);
   refreshListIfActive();
-  renderMobileFilterBar(); // add amenity chips once data is available
+  setupCategoryFilter(); // rebuild chips so dynamically-added types appear
+  renderMobileFilterBar();
 }
 
 function _renderKoelteplekkenLayer(def, features) {
@@ -954,6 +1008,12 @@ function buildStaticLayer(def, data) {
     return;
   }
 
+  // Shade overlay gets its own time-aware renderer
+  if (def.cat === "shade") {
+    _renderShadeLayer();
+    return;
+  }
+
   const fc = { type:"FeatureCollection", features };
   if (def.type === "polygon") {
     const parkGroups = {};
@@ -990,6 +1050,64 @@ function buildStaticLayer(def, data) {
     });
   }
   if (state.on[def.cat]) state.layers[def.cat].addTo(state.map);
+}
+
+// ── Shade overlay — one merged file per time slot, prefetched at load ────────
+const SHADE_SLOTS = [
+  { key: "1000", hour: 10.00 },
+  { key: "1300", hour: 13.00 },
+  { key: "1530", hour: 15.50 },
+  { key: "1800", hour: 18.00 },
+];
+
+function _nearestShadeSlot() {
+  const hour = new Date().getHours() + new Date().getMinutes() / 60;
+  let best = SHADE_SLOTS[0], bestDist = Infinity;
+  for (const s of SHADE_SLOTS) {
+    const d = Math.abs(hour - s.hour);
+    if (d < bestDist) { bestDist = d; best = s; }
+  }
+  return best.key;
+}
+
+function _shadeStyle(feature) {
+  const pct = feature.properties?.s ?? 0;
+  const t   = Math.min(1, Math.max(0, pct / 100));
+  // Red (hot, no shade) → blue (cool, full shade)
+  const hue = Math.round(t * 220);
+  return {
+    fillColor:   `hsl(${hue},80%,48%)`,
+    fillOpacity: 0.25 + t * 0.50,
+    color:       "transparent",
+    weight:      0,
+  };
+}
+
+// Prefetch promise — resolved with the GeoJSON or null on error
+const _shadePromise = {};
+
+function _prefetchShade() {
+  const key = _nearestShadeSlot();
+  if (_shadePromise[key]) return;
+  _shadePromise[key] = fetch(`data/shade_${key}.geojson`)
+    .then(r => r.json())
+    .catch(() => null);
+}
+
+async function _renderShadeLayer() {
+  if (state.layers.shade) { state.map.removeLayer(state.layers.shade); state.layers.shade = null; }
+  if (!state.on.shade) return;
+
+  const key = _nearestShadeSlot();
+  _prefetchShade(); // no-op if already started
+  const gj = await _shadePromise[key];
+  if (!gj || !state.on.shade) return;
+
+  state.layers.shade = L.geoJSON(gj, {
+    pane:     "parksPane",
+    renderer: L.canvas({ padding: 0.5 }),
+    style:    _shadeStyle,
+  }).addTo(state.map);
 }
 
 // ── Swimming pools layer (filtered by sub-type) ────────────────────────────
@@ -1116,6 +1234,11 @@ function setupToggles() {
       row.setAttribute("aria-checked",String(on));
       state.on[cat]=on;
       refreshListIfActive();
+      if (cat === "shade") {
+        if (on) _renderShadeLayer();
+        else if (state.layers.shade) state.map.removeLayer(state.layers.shade);
+        return;
+      }
       if (!state.layers[cat]) return;
       if (on) state.map.addLayer(state.layers[cat]);
       else    state.map.removeLayer(state.layers[cat]);
@@ -1130,9 +1253,10 @@ function setupCategoryFilter() {
   container.innerHTML = "";
   CATEGORY_DEFS.forEach(def => {
     const btn = document.createElement("button");
-    btn.className = "cat-chip" + (state.activeCategory===def.key ? " active" : "");
+    const isActive = def.key === null ? state.activeCategories.size === 0 : state.activeCategories.has(def.key);
+    btn.className = "cat-chip" + (isActive ? " active" : "");
     btn.dataset.cat = String(def.key);
-    btn.setAttribute("aria-pressed", String(state.activeCategory===def.key));
+    btn.setAttribute("aria-pressed", String(isActive));
     if (def.key !== null) {
       const dot = document.createElement("span"); dot.className="cat-chip-dot";
       dot.style.background = getCategoryColor(def.key);
@@ -1143,13 +1267,20 @@ function setupCategoryFilter() {
     btn.appendChild(label);
     if (def.key !== null) btn.style.setProperty("--cat-color", getCategoryColor(def.key));
     btn.addEventListener("click", () => {
-      state.activeCategory = def.key;
+      if (def.key === null) {
+        state.activeCategories.clear();
+      } else {
+        if (state.activeCategories.has(def.key)) state.activeCategories.delete(def.key);
+        else state.activeCategories.add(def.key);
+      }
       container.querySelectorAll(".cat-chip").forEach(c => {
-        const isThis = (c.dataset.cat===String(def.key));
-        c.classList.toggle("active",isThis);
-        c.setAttribute("aria-pressed",String(isThis));
+        const k = c.dataset.cat === "null" ? null : c.dataset.cat;
+        const on = k === null ? state.activeCategories.size === 0 : state.activeCategories.has(k);
+        c.classList.toggle("active", on);
+        c.setAttribute("aria-pressed", String(on));
       });
       rebuildKoelteplekkenLayer();
+      renderMobileFilterBar();
     });
     container.appendChild(btn);
   });
@@ -1190,9 +1321,9 @@ function renderMobileFilterBar() {
   const stripEl = document.getElementById("mfb-active-strip");
   const fabCount = document.getElementById("fab-active-count");
 
-  // Count active filters: active category + active amenities + off-layers
+  // Count active filters: active categories + active amenities + off-layers
   let count = 0;
-  if (state.activeCategory !== null) count++;
+  count += state.activeCategories.size;
   count += Object.values(state.filters).filter(Boolean).length;
   count += LAYER_DEFS.filter(d => state.on[d.cat] === false).length;
 
@@ -1209,22 +1340,27 @@ function renderMobileFilterBar() {
   if (!stripEl) return;
   stripEl.innerHTML = "";
 
-  // Active category chip in strip
-  if (state.activeCategory !== null) {
-    const def = CATEGORY_DEFS.find(d => d.key === state.activeCategory);
-    if (def) {
-      const chip = document.createElement("button");
-      chip.className = "mfb-strip-chip mfb-strip-chip--active";
-      chip.textContent = state.lang === "nl" ? def.label_nl : def.label_en;
-      chip.addEventListener("click", () => {
-        state.activeCategory = null;
-        document.querySelectorAll(".cat-chip").forEach(c => { c.classList.remove("active"); c.setAttribute("aria-pressed","false"); });
-        rebuildKoelteplekkenLayer();
-        renderMobileFilterBar();
+  // Active category chips in strip
+  state.activeCategories.forEach(catKey => {
+    const def = CATEGORY_DEFS.find(d => d.key === catKey);
+    if (!def) return;
+    const chip = document.createElement("button");
+    chip.className = "mfb-strip-chip mfb-strip-chip--active";
+    chip.textContent = state.lang === "nl" ? def.label_nl : def.label_en;
+    chip.addEventListener("click", () => {
+      state.activeCategories.delete(catKey);
+      const container = document.getElementById("category-chips");
+      if (container) container.querySelectorAll(".cat-chip").forEach(c => {
+        const k = c.dataset.cat === "null" ? null : c.dataset.cat;
+        const on = k === null ? state.activeCategories.size === 0 : state.activeCategories.has(k);
+        c.classList.toggle("active", on);
+        c.setAttribute("aria-pressed", String(on));
       });
-      stripEl.appendChild(chip);
-    }
-  }
+      rebuildKoelteplekkenLayer();
+      renderMobileFilterBar();
+    });
+    stripEl.appendChild(chip);
+  });
 
   // Active amenity chips in strip
   AMENITY_DEFS.filter(d => d.filterable && state.filters[d.key]).forEach(def => {
@@ -1240,10 +1376,11 @@ function renderMobileFilterBar() {
     const chip = document.createElement("button");
     chip.className = "mfb-strip-chip";
     chip.style.opacity = "0.6";
-    const layerKey = def.cat === "koelteplekken" ? "koelteplekken_label"
-                   : def.cat === "water_taps"   ? "water_label"
-                   : def.cat === "parks"        ? "parks_label"
-                   : def.cat === "swimming_pools" ? "swimming_pools_label" : def.cat;
+    const layerKey = def.cat === "koelteplekken"  ? "koelteplekken_label"
+                   : def.cat === "water_taps"    ? "water_label"
+                   : def.cat === "parks"         ? "parks_label"
+                   : def.cat === "swimming_pools" ? "swimming_pools_label"
+                   : def.cat === "shade"          ? "shade_label" : def.cat;
     chip.textContent = "✕ " + t(layerKey);
     chip.addEventListener("click", () => {
       state.on[def.cat] = true;
@@ -1369,16 +1506,9 @@ function placeDistanceRings(lat, lon) {
 
 // ── Panel navigation ───────────────────────────────────────────────────────
 function updatePanelTitle() {
-  if (state.panelMode !== "list") return;
-  const listHdr = document.getElementById("panel-hdr-list");
-  if (!listHdr) return;
-  if (listHdr.classList.contains("near-mode")) {
-    const labels = listHdr.querySelectorAll(".ph-stat-label");
-    if (labels[0]) labels[0].textContent = t("near_you");
-    if (labels[1]) labels[1].textContent = t("other_locations");
-  } else {
-    const titleEl = document.getElementById("panel-hdr-title");
-    if (titleEl) titleEl.textContent = t("lv_title");
+  const titleEl = document.getElementById("panel-hdr-title");
+  if (titleEl && state.panelMode === "list") {
+    titleEl.textContent = state.userPos ? t("near_you") : t("lv_title");
   }
 }
 
@@ -2080,25 +2210,10 @@ function renderListView() {
   }
 
   // Update panel header
-  const listHdr = document.getElementById("panel-hdr-list");
-  if (listHdr) {
-    if (state.userPos) {
-      listHdr.classList.add("near-mode");
-      listHdr.innerHTML = `
-        <span class="ph-stat">
-          <span class="ph-stat-label">${t("near_you")}</span>
-          <span class="ph-stat-count">${nearItems.length}</span>
-        </span>
-        <span class="ph-sep" aria-hidden="true"></span>
-        <span class="ph-stat">
-          <span class="ph-stat-label">${t("other_locations")}</span>
-          <span class="ph-stat-count">${farItems.length}</span>
-        </span>`;
-    } else {
-      listHdr.classList.remove("near-mode");
-      listHdr.innerHTML = `<div id="panel-hdr-title">${t("lv_title")}</div><div id="panel-hdr-count">${items.length} ${t("lv_found")}</div>`;
-    }
-  }
+  const titleEl = document.getElementById("panel-hdr-title");
+  const countEl = document.getElementById("panel-hdr-count");
+  if (titleEl) titleEl.textContent = state.userPos ? t("near_you") : t("lv_title");
+  if (countEl) countEl.textContent = `${state.userPos ? nearItems.length : items.length} ${t("lv_found")}`;
 
   const statusEl = document.getElementById("a11y-status");
   if (statusEl) statusEl.textContent = `${items.length} ${t("lv_found")}`;
@@ -2128,8 +2243,27 @@ function renderListView() {
   }
 
   if (state.userPos) {
-    appendSection(nearItems, state.lang === "nl" ? "In uw buurt" : "Near you");
-    appendSection(farItems,  state.lang === "nl" ? "Alle koelteplekken" : "All cooling spots");
+    // Near items directly (panel header IS the "In jouw buurt" label)
+    if (nearItems.length) {
+      const list = document.createElement("ul"); list.className = "lv-list";
+      nearItems.forEach(({ feature }) => list.appendChild(buildListItem(feature)));
+      inner.appendChild(list);
+    }
+    // Other locations: same-style header as panel header, then its items
+    if (farItems.length) {
+      const div = document.createElement("div"); div.className = "lv-other-hdr";
+      const hdrList = document.createElement("div"); hdrList.className = "lv-other-hdr-list";
+      const title = document.createElement("div"); title.className = "lv-other-hdr-title";
+      title.textContent = t("other_locations");
+      const count = document.createElement("div"); count.className = "lv-other-hdr-count";
+      count.textContent = `${farItems.length} ${t("lv_found")}`;
+      hdrList.append(title, count);
+      div.appendChild(hdrList);
+      inner.appendChild(div);
+      const list = document.createElement("ul"); list.className = "lv-list";
+      farItems.forEach(({ feature }) => list.appendChild(buildListItem(feature)));
+      inner.appendChild(list);
+    }
   } else {
     appendSection(items, null);
   }
@@ -2283,6 +2417,7 @@ document.addEventListener("DOMContentLoaded", () => {
   setupLandingIntro();
   initMap();
   loadAllLayers();
+  _prefetchShade(); // start download in background before user toggles it
   setupBanner();
   setupLang();
   setupModeToggle();
