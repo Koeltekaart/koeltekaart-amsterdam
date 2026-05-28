@@ -41,11 +41,11 @@
 :root {
   --font:      'AmsterdamSans', system-ui, -apple-system, sans-serif;
   --font-serif: 'AmsterdamSans', system-ui, sans-serif; /* ExtraBold (800) used for display */
-  --top:       88px;   /* height of main nav row */
+  --top:       64px;   /* height of main nav row */
   --banner-h:  44px;   /* heat plan status strip */
   --sidebar-w: 340px;
   --panel-w:   440px;
-  --contact-h: 84px;   /* contact footer height — map shrinks by this amount */
+  --contact-h: 54px;   /* used as min-height reference; actual height is auto */
   --offset:    calc(var(--top) + var(--banner-h)); /* 132px total header */
 
   --black:   #202020;
@@ -122,7 +122,7 @@ body {
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
 
-/* Main nav row: logo · search · actions */
+/* Main nav row: logo · title · search · actions */
 .topbar-main {
   height: var(--top);
   display: flex; align-items: center; padding: 0 20px; gap: 14px;
@@ -130,14 +130,16 @@ body {
 }
 
 .logo-img-link { display: flex; align-items: center; flex-shrink: 0; text-decoration: none; }
-.logo-img {
-  height: 40px; width: auto; display: block;
-}
+.logo-img { height: 40px; width: auto; display: block; }
+
 .topbar-title {
   flex: 1; min-width: 0;
   font-size: 17px; font-weight: 700; color: #fff; letter-spacing: -0.02em;
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
+/* " Amsterdam" span — hidden at narrower widths (see responsive breakpoints) */
+.title-city { }
+
 .topbar-actions { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
 
 /* ── Search ──────────────────────────────────────────────────────────────── */
@@ -176,7 +178,7 @@ body {
 /* ── Topbar controls ─────────────────────────────────────────────────────── */
 .ctrl-btn {
   display: flex; align-items: center; gap: 6px;
-  height: 42px; padding: 0 16px;
+  height: 36px; padding: 0 14px;
   background: transparent; border: 1px solid rgba(255,255,255,0.18); border-radius: 8px;
   color: rgba(255,255,255,0.75); font-family: var(--font); font-size: 13.5px; font-weight: 500;
   cursor: pointer; transition: background 0.12s, border-color 0.12s, color 0.12s;
@@ -207,10 +209,8 @@ body {
   top: var(--offset);
   height: calc(100vh - var(--offset));
   height: calc(100dvh - var(--offset));
-  
-  /* FORCE A GRID LAYER: Stacks map on top, footer below */
   display: grid;
-  grid-template-rows: 1fr var(--contact-h); 
+  grid-template-rows: 1fr auto;  /* contact row is auto-height — wraps to fit */
   overflow: hidden;
 }
 
@@ -314,8 +314,16 @@ body {
 
 /* ── Filter FAB (mobile only) ────────────────────────────────────────────── */
 #btn-filter-fab {
-  display: none; /* hidden on desktop */
+  display: none; /* shown via @media (max-width: 768px) */
 }
+.fab-count {
+  display: inline-flex; align-items: center; justify-content: center;
+  min-width: 18px; height: 18px; padding: 0 4px;
+  background: var(--navy); color: #fff;
+  border-radius: 100px; font-size: 10px; font-weight: 700;
+  border: 1.5px solid rgba(255,255,255,0.4);
+}
+.fab-count[hidden] { display: none; }
 
 /* Mobile-only scroll handle — hidden on desktop */
 .map-scroll-handle { display: none; }
@@ -357,117 +365,115 @@ body {
   }
   .banner-pulse { width: 6px; height: 6px; flex-shrink: 0; align-self: center; }
 
+  /* Elevate the sticky wrapper's stacking context above the topbar (z-index 500).
+     Without this, the topbar always paints above the sidebar (which lives inside
+     this stacking context) regardless of the sidebar's own z-index value. */
+  #map-contact-wrap { z-index: 600; }
+
   /* Map section: column flex */
   #map-section { flex-direction: column; }
 
-  /* ── Compact filter bar — single row with Filters button + active chips ── */
-  #mobile-filter-bar {
-    display: flex !important;
-    flex-direction: row;
-    align-items: center;
-    height: 50px;
-    flex-shrink: 0;
-    padding: 0 12px;
-    gap: 10px;
-    background: var(--surface);
-    border-bottom: 1px solid var(--border);
-    box-shadow: 0 2px 10px rgba(0,0,0,0.07);
-    z-index: 10;
-    overflow: hidden;
-  }
+  /* Hide the separate filter bar — FAB overlay is used instead */
+  #mobile-filter-bar { display: none !important; }
 
-  /* "Filters" button */
-  .mfb-filters-btn {
-    display: inline-flex; align-items: center; gap: 7px;
-    height: 34px; padding: 0 14px;
-    background: var(--navy); color: #fff;
-    border: none; border-radius: 100px;
-    font-family: var(--font); font-size: 13px; font-weight: 600;
-    cursor: pointer; flex-shrink: 0;
-    -webkit-tap-highlight-color: transparent;
-    transition: background 0.12s;
-  }
-  .mfb-filters-btn:active { background: #003580; }
+  /* Map fills remaining height in column flex */
+  #map { width: 100%; flex: 1; min-height: 0; }
 
-  /* Active filter count badge */
-  .mfb-count {
-    display: inline-flex; align-items: center; justify-content: center;
-    min-width: 18px; height: 18px; padding: 0 4px;
-    background: #fff; color: var(--navy);
-    border-radius: 100px; font-size: 10px; font-weight: 700;
-  }
-  .mfb-count[hidden] { display: none; }
-
-  /* Scrollable strip of active filter chips */
-  .mfb-active-strip {
-    flex: 1; min-width: 0;
-    display: flex; align-items: center; gap: 6px;
-    overflow-x: auto; -webkit-overflow-scrolling: touch;
-    scrollbar-width: none;
-  }
-  .mfb-active-strip::-webkit-scrollbar { display: none; }
-
-  /* Active chips in the strip (mirrors .cat-chip but smaller) */
-  .mfb-strip-chip {
-    display: inline-flex; align-items: center; gap: 5px;
-    height: 26px; padding: 0 10px;
-    border-radius: 100px;
-    border: 1.5px solid var(--border);
-    background: var(--surface);
-    color: var(--muted);
-    font-family: var(--font); font-size: 11.5px; font-weight: 500;
-    white-space: nowrap; flex-shrink: 0;
-  }
-  .mfb-strip-chip--active {
-    background: var(--navy); border-color: var(--navy); color: #fff;
-  }
-
-  /* Map fills remaining height */
-  #map {
-    width: 100%;
-    height: 100% !important;
-  }
+  /* Near-me button: icon only on mobile to save row space */
+  #btn-near span[data-i18n] { display: none; }
 
   #map-contact-wrap > footer { flex-shrink: 0; width: 100%; }
 
-  /* ── Sidebar as bottom-sheet on mobile ───────────────────────────────────── */
-  #sidebar {
-    display: flex !important; /* override any desktop hiding */
-    position: fixed !important;
-    bottom: 0; left: 0; right: 0;
-    width: auto !important;
-    max-height: 85vh;
-    height: auto;
-    border-radius: 20px 20px 0 0;
-    border-right: none !important;
-    box-shadow: 0 -4px 32px rgba(0,0,0,0.18);
-    z-index: 620;
-    transform: translateY(110%);
-    transition: transform 0.32s cubic-bezier(0.2,0,0,1);
-    overflow-y: auto;
-    overflow-x: hidden;
+  /* ── Filter FAB — floating pill, top-left of map/list ──────────────────── */
+  #btn-filter-fab {
+    display: flex !important;
+    align-items: center;
+    gap: 7px;
+    position: absolute;     /* anchored to #map-section (position:relative) */
+    top: 40px;              /* below the 28px scroll handle + 12px gap */
+    left: 12px;
+    z-index: 420;
+    height: 38px;
+    padding: 0 16px;
+    background: rgba(13,13,13,0.88);
+    backdrop-filter: blur(14px) saturate(1.4);
+    -webkit-backdrop-filter: blur(14px) saturate(1.4);
+    border: 1px solid rgba(255,255,255,0.10);
+    border-radius: 100px;
+    color: rgba(255,255,255,0.90);
+    font-family: var(--font); font-size: 13px; font-weight: 600;
+    letter-spacing: -0.01em;
+    cursor: pointer;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.32);
+    -webkit-tap-highlight-color: transparent;
+    transition: background 0.15s;
+    pointer-events: auto;
   }
-  body.sidebar-open #sidebar {
-    transform: translateY(0);
-  }
-  /* Backdrop visible when sidebar is open */
-  #sidebar-backdrop {
-    display: block !important;
-    position: fixed; inset: 0; z-index: 610;
-    background: rgba(0,0,0,0.42);
-    backdrop-filter: blur(2px);
-    opacity: 0; pointer-events: none;
-    transition: opacity 0.3s;
-  }
-  body.sidebar-open #sidebar-backdrop {
-    opacity: 1; pointer-events: auto;
-  }
-  /* Show mobile header inside sidebar */
-  .sidebar-mobile-header { display: flex !important; }
+  #btn-filter-fab:active { background: rgba(0,50,120,0.92); }
 
-  /* Sidebar-open drags the filter FAB out — FAB stays hidden */
-  #btn-filter-fab { display: none !important; }
-  /* Sidebar-collapse-btn hidden on mobile */
+  /* Hide FAB while the sidebar is open (sidebar covers the screen) */
+  body.sidebar-open #btn-filter-fab { display: none !important; }
+
+  /* FAB sits at top-left — push title/count to right edge, both right-aligned */
+  .panel-hdr { padding-left: 72px; }
+  #panel-hdr-list { margin-left: auto; align-items: flex-end; }
+
+  /* ── Sidebar — covers only the map area (below scroll handle, above contact) */
+  #sidebar {
+    display: flex !important;
+    position: absolute !important;  /* relative to #map-section, not viewport */
+    top: 28px; left: 0; right: 0; bottom: 0;
+    width: auto !important;
+    max-height: none; height: auto;
+    border-radius: 0; border-right: none !important; box-shadow: none;
+    z-index: 620;
+    transform: translateX(-100%);   /* off-screen to the left */
+    transition: transform 0.30s cubic-bezier(0.2,0,0,1);
+    overflow-y: auto; overflow-x: hidden;
+  }
+  body.sidebar-open #sidebar { transform: translateX(0); }
+
+  #sidebar-backdrop { display: none !important; }
+
+  /* ── Sidebar mobile header — full-width navy bar ────────────────────────── */
+  .sidebar-mobile-header {
+    display: flex !important;
+    position: sticky;
+    top: 0;
+    z-index: 10;             /* above scrolling content inside the sidebar */
+    background: var(--navy) !important;
+    border-bottom: 1px solid rgba(255,255,255,0.10) !important;
+    padding: 0 16px;
+    height: 56px;
+    flex-shrink: 0;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .sidebar-mobile-title {
+    font-size: 15px !important;
+    font-weight: 700 !important;
+    color: #fff !important;
+    letter-spacing: -0.01em;
+  }
+  .sidebar-mobile-close {
+    display: flex !important;
+    align-items: center;
+    gap: 5px;
+    padding: 7px 14px 7px 10px !important;
+    border-radius: 100px !important;
+    border: 1.5px solid rgba(255,255,255,0.35) !important;
+    background: rgba(255,255,255,0.14) !important;
+    color: #fff !important;
+    font-family: var(--font);
+    font-size: 13px; font-weight: 600;
+    width: auto !important; height: auto !important;
+    line-height: 1 !important;
+    cursor: pointer;
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+  .sidebar-mobile-close:active { background: rgba(255,255,255,0.26) !important; }
+
   #sidebar-collapse-btn { display: none !important; }
 }
 
@@ -489,6 +495,36 @@ body {
   color: var(--muted); user-select: none;
 }
 .filter-group-body { padding-bottom: 4px; }
+
+/* ── Collapsible filter section accordions ───────────────────────────────── */
+.filter-section-accordion {
+  border-top: none;  /* no border between a layer and its own sub-filters */
+}
+/* Strong separator: end of one layer's sub-filters → next layer */
+.filter-section-accordion + .layer-row {
+  border-top: 1px solid rgba(0,0,0,0.12);
+  margin-top: 4px;
+}
+.filter-section-summary {
+  display: flex; align-items: center; gap: 6px;
+  padding: 8px 14px;
+  cursor: pointer; user-select: none; list-style: none;
+  font-size: 12px; font-weight: 600;
+  color: var(--muted);
+  -webkit-tap-highlight-color: transparent;
+}
+.filter-section-summary::-webkit-details-marker,
+.filter-section-summary::marker { display: none; }
+.filter-section-summary:hover { color: var(--text); }
+.filter-section-chevron {
+  margin-left: auto; flex-shrink: 0; color: var(--subtle);
+  transition: transform 0.2s ease;
+}
+details.filter-section-accordion[open] .filter-section-chevron {
+  transform: rotate(180deg);
+}
+/* Hide accordion when its chip container is empty */
+.filter-section-accordion:has(> summary + div:empty) { display: none; }
 .sidebar-section-title {
   padding: 6px 14px 5px;
   font-size: 10px; font-weight: 700;
@@ -543,7 +579,7 @@ body.mode-user #sidebar-policy { display: none; }
   transition: background 0.1s; user-select: none;
 }
 .layer-row:hover { background: rgba(0,0,0,0.02); }
-.layer-row + .layer-row { border-top: 1px solid rgba(0,0,0,0.04); }
+.layer-row + .layer-row { border-top: 1px solid rgba(0,0,0,0.12); margin-top: 4px; }
 .l-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; transition: opacity 0.2s; }
 .layer-row:not(.on) .l-dot { opacity: 0.20; }
 /* Koelteplekken uses per-type colors — show as multi-color gradient dot */
@@ -651,6 +687,15 @@ body.mode-user #sidebar-policy { display: none; }
   flex-shrink: 0;
 }
 .detail-img-full img { width: 100%; height: 100%; object-fit: cover; display: block; }
+
+/* Fallback link when Drive image can't load */
+.detail-photo-fallback {
+  display: flex; align-items: center; justify-content: center;
+  width: 100%; height: 100%;
+  color: rgba(255,255,255,0.85); font-size: 13px; font-weight: 500;
+  text-decoration: none; background: rgba(0,70,153,0.6);
+}
+.detail-photo-fallback:hover { color: #fff; text-decoration: underline; }
 
 /* Info section padding */
 .detail-panel-info { padding: 14px 16px 0; display: flex; flex-direction: column; gap: 10px; }
@@ -963,6 +1008,13 @@ body.mode-user #sidebar-policy { display: none; }
   color: var(--text); letter-spacing: -0.01em;
 }
 #panel-hdr-count { font-size: 11.5px; color: var(--subtle); }
+
+/* Near-me two-stat header */
+#panel-hdr-list.near-mode { flex-direction: row; align-items: stretch; gap: 0; }
+.ph-stat { display: flex; flex-direction: column; align-items: flex-end; gap: 1px; }
+.ph-stat-label { font-size: 13px; font-weight: 700; color: var(--text); letter-spacing: -0.01em; }
+.ph-stat-count { font-size: 11.5px; color: var(--subtle); }
+.ph-sep { width: 1px; background: var(--border); margin: 2px 12px; align-self: stretch; }
 .panel-hdr-back {
   display: flex; align-items: center; justify-content: center;
   width: 32px; height: 32px; border-radius: 50%;
@@ -1256,8 +1308,10 @@ body.mode-user #sidebar-policy { display: none; }
 
 /* ── Mobile filter bar ───────────────────────────────────────────────────── */
 #mobile-filter-bar { display: none; } /* shown only in mobile media query */
-/* Filters button — hidden on desktop */
-.mfb-filters-btn { display: none; }
+/* .mfb-filters-btn intentionally has no default display:none here —
+   its parent #mobile-filter-bar is already hidden on desktop, and
+   adding display:none after the media query would silently override
+   the inline-flex set inside @media (max-width: 768px). */
 
 /* Shared chip base — matches .cat-chip exactly */
 .mfb-chip,
@@ -1362,28 +1416,31 @@ body.mode-user #sidebar-policy { display: none; }
 
 /* ── Mobile topbar ───────────────────────────────────────────────────────── */
 @media (max-width: 768px) {
-  /* Nav row wraps: Row 1 (logo + actions), Row 2 (search) */
-  :root { --top: 122px; }
+  /* Nav row wraps: Row 1 (logo + title + actions), Row 2 (search) */
+  :root { --top: 100px; }
 
   .topbar-main {
     height: var(--top);
-    padding: 6px 12px 8px; gap: 8px;
+    padding: 8px 12px 6px; gap: 8px;
     flex-wrap: wrap; align-content: flex-start;
   }
   .logo-img-link { order: 1; flex: 0 0 auto; }
   .logo-img { height: 28px; }
-  /* Hide title on mobile — space is limited */
-  .topbar-title { display: none; }
+  /* Title: responsive, between logo and actions in row 1 — don't grow, margin-left:auto on actions handles spacing */
+  .topbar-title {
+    order: 2; flex: 0 1 auto; min-width: 0; max-width: 200px;
+    font-size: 13px;
+  }
 
-  .topbar-actions { order: 2; margin-left: auto; flex: 0 0 auto; display: flex; gap: 5px; }
+  .topbar-actions { order: 3; margin-left: auto; flex: 0 0 auto; display: flex; gap: 5px; }
 
   /* Search bar fills full second row */
   #search-wrap {
-    order: 3;
+    order: 4;
     flex: 1 1 100%;
     max-width: none;
+    min-width: 0;
     width: 100%;
-    margin-bottom: 6px;
   }
   #search-input { height: 40px; border-radius: 20px; font-size: 14px; background: #ffffff; }
 
@@ -1415,6 +1472,15 @@ body.mode-user #sidebar-policy { display: none; }
     border-radius: 2px;
   }
   .map-scroll-handle:active::after { background: rgba(0,0,0,0.28); }
+}
+
+/* ── Responsive topbar title ─────────────────────────────────────────────── */
+/* At narrow widths: hide "Amsterdam", then hide entire title */
+@media (max-width: 380px) {
+  .title-city { display: none; }
+}
+@media (max-width: 295px) {
+  .topbar-title { display: none !important; }
 }
 
 /* ── Landing hero responsive (handled by clamp above) ────────────────────── */
@@ -1556,33 +1622,32 @@ html[lang="en"] div.lang-en, html[lang="en"] h2.lang-en, html[lang="en"] h3.lang
 }
 
 
-/* ── Contact strip mobile elements — hidden on desktop ──────────────────── */
+/* ── Contact strip — flex child of #map-contact-wrap ────────────────────── */
+/* Mobile-only elements hidden on desktop; desktop inner always shown */
 .cs-collapsed-summary { display: none; }
 .cs-expanded-body { display: none; }
 
-/* ── Contact strip — flex child of #map-contact-wrap ────────────────────── */
-/* No position:fixed, no z-index tricks. It simply sits as the last row
-   of the sticky wrapper, always below the map, always in view.             */
 #map-contact-wrap > footer,
 .contact-strip {
   width: 100%;
-  height: var(--contact-h);
+  height: auto;
+  min-height: 52px;
   background-color: #004699 !important; /* Amsterdam dark blue */
   border-top: 1px solid rgba(255, 255, 255, 0.07);
-  overflow: hidden;
+  overflow: visible;
   position: relative;
   z-index: 10;
 }
 
 .contact-strip-inner {
-  height: 100%;
+  min-height: 52px;
   max-width: min(1120px, 100%);
   margin: 0 auto;
-  padding: 0 clamp(20px, 5vw, 48px);
+  padding: 10px clamp(20px, 5vw, 48px);
   display: flex;
   flex-wrap: nowrap;
   gap: 0;
-  align-items: center;          /* vertically centre within fixed height */
+  align-items: center;
 }
 .cs-group {
   flex: 1 1 0;
@@ -1600,10 +1665,14 @@ html[lang="en"] div.lang-en, html[lang="en"] h2.lang-en, html[lang="en"] h3.lang
 }
 .cs-group-values {
   display: flex;
-  flex-direction: column;
-  gap: 2px;
+  flex-direction: row;
+  gap: 6px 14px;   /* row-gap col-gap — wraps when values don't fit side-by-side */
   min-width: 0;
+  align-items: baseline;
+  flex-wrap: wrap;
 }
+
+/* (Narrow-desktop stacking removed — flex-wrap on .cs-group-values handles it automatically) */
 .cs-label {
   font-size: 10px; font-weight: 700;
   letter-spacing: 0.06em; text-transform: uppercase;
@@ -1614,6 +1683,7 @@ html[lang="en"] div.lang-en, html[lang="en"] h2.lang-en, html[lang="en"] h3.lang
   color: rgba(255,255,255,0.90);
   text-decoration: none; font-family: var(--font);
   transition: color 0.15s;
+  min-width: 0;
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
 .cs-value:hover { color: #fff; text-decoration: underline; }
@@ -1678,24 +1748,23 @@ html[lang="en"] div.lang-en, html[lang="en"] h2.lang-en, html[lang="en"] h3.lang
     padding: 2px;
   }
   .contact-strip.cs-expanded .cs-collapsed-chevron { transform: rotate(180deg); }
-  /* Expanded body */
+  /* Expanded body — grid aligns phone numbers across both groups */
   .cs-expanded-body {
     display: none;
     padding: 12px clamp(14px, 5vw, 20px) 16px;
-    flex-direction: column;
-    gap: 12px;
     border-top: 1px solid rgba(255,255,255,0.08);
   }
-  .contact-strip.cs-expanded .cs-expanded-body { display: flex; }
-  /* In expanded state, each group is horizontal (label + values) */
-  .cs-expanded-body .cs-group {
-    flex-direction: row;
-    align-items: flex-start;
-    gap: 14px;
-    flex: unset;
+  .contact-strip.cs-expanded .cs-expanded-body { display: grid; grid-template-columns: auto 1fr; gap: 12px 14px; }
+  /* Groups become transparent to the grid so label + values align across rows */
+  .cs-expanded-body .cs-group { display: contents; }
+  .cs-expanded-body .cs-group-label {
+    display: flex; flex-direction: column; gap: 0;
+    align-self: center;
   }
-  .cs-expanded-body .cs-group-label { flex-shrink: 0; min-width: 130px; }
-  .cs-expanded-body .cs-group-values { flex: 1; min-width: 0; }
+  .cs-expanded-body .cs-group-values {
+    flex-direction: column; gap: 2px; align-items: flex-start;
+    align-self: center;
+  }
   .cs-expanded-body .cs-div { display: none; }
   .cs-expanded-body .cs-group--brand { display: none; }
   .cs-expanded-body .cs-label { font-size: 9.5px; }

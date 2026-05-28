@@ -35,6 +35,10 @@
       <img src="images/Default_web_rgb.svg" class="logo-img" alt="GGD Amsterdam logo" width="auto" height="36" />
     </a>
 
+    <span class="topbar-title">
+      <span class="lang-nl">Koeltekaart </span><span class="lang-en">Cool Map </span><span class="title-city">  Amsterdam</span>
+    </span>
+
     <div id="search-wrap" role="search">
       <svg class="search-icon" width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
         <circle cx="5.5" cy="5.5" r="4" stroke="currentColor" stroke-width="1.5"/>
@@ -44,8 +48,6 @@
              data-i18n-placeholder="search_placeholder" aria-label="Search" />
       <div id="search-results" role="listbox" hidden></div>
     </div>
-
-    <span class="topbar-title" data-i18n="title">Koeltekaart Amsterdam</span>
 
     <div class="topbar-actions">
       <button id="btn-near" class="ctrl-btn">
@@ -236,14 +238,15 @@
       <div class="mfb-active-strip" id="mfb-active-strip" aria-label="Actieve filters"></div>
     </div>
 
-    <!-- Filter FAB — hidden -->
-    <button id="btn-filter-fab" aria-label="Soorten locaties en lagen" aria-expanded="false" style="display:none">
+    <!-- Filter FAB — floating pill over map/list on mobile -->
+    <button id="btn-filter-fab" aria-label="Filters openen" aria-expanded="false">
       <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true">
         <line x1="2" y1="4"  x2="14" y2="4"  stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
         <line x1="4" y1="8"  x2="12" y2="8"  stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
         <line x1="6" y1="12" x2="10" y2="12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
       </svg>
-      <span data-i18n="filter_fab">Soorten locaties</span>
+      <span>Filters</span>
+      <span class="fab-count" id="fab-active-count" hidden></span>
     </button>
 
     <!-- View toggle (mobile floating pill) -->
@@ -279,10 +282,12 @@
       <div class="sidebar-mobile-header">
         <span class="sidebar-mobile-title" data-i18n="filter_panel_title">Soorten locaties</span>
         <button class="sidebar-mobile-close" aria-label="Sluit filters">
-          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+          <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true">
             <line x1="3" y1="3"  x2="13" y2="13" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
             <line x1="13" y1="3" x2="3"  y2="13" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
           </svg>
+          <span class="lang-nl">Sluiten</span>
+          <span class="lang-en">Close</span>
         </button>
       </div>
 
@@ -298,10 +303,24 @@
             <span class="l-count" id="cnt-koelteplekken"></span>
             <span class="l-sw" aria-hidden="true"></span>
           </div>
-          <!-- Koelteplek type filter chips — directly below koelteplekken row -->
-          <div id="category-chips" class="category-chips layer-subfilter" role="group" aria-label="Filter by category"></div>
-          <!-- Amenity filter chips — below category chips, still under koelteplekken -->
-          <div id="filter-chips" class="filter-chips layer-subfilter amenity-subfilter" role="group" aria-label="Filter amenities"></div>
+          <!-- Collapsible: Location categories -->
+          <details class="filter-section-accordion" open>
+            <summary class="filter-section-summary">
+              <span class="lang-nl">Soorten locaties</span>
+              <span class="lang-en">Location categories</span>
+              <svg class="filter-section-chevron" width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true"><path d="M2 4.5l4 3 4-3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </summary>
+            <div id="category-chips" class="category-chips" role="group" aria-label="Filter by category"></div>
+          </details>
+          <!-- Collapsible: Amenities -->
+          <details class="filter-section-accordion" id="amenity-accordion">
+            <summary class="filter-section-summary">
+              <span class="lang-nl">Voorzieningen</span>
+              <span class="lang-en">Amenities</span>
+              <svg class="filter-section-chevron" width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true"><path d="M2 4.5l4 3 4-3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </summary>
+            <div id="filter-chips" class="filter-chips" role="group" aria-label="Filter amenities"></div>
+          </details>
           <div class="layer-row on" data-cat="water_taps" role="switch" aria-checked="true" tabindex="0">
             <span class="l-dot" style="background:#009de6;"></span>
             <span class="l-name" data-i18n="water_label">Drinkwaterkranen</span>
@@ -320,7 +339,15 @@
             <span class="l-count" id="cnt-swimming_pools"></span>
             <span class="l-sw" aria-hidden="true"></span>
           </div>
-          <!-- Zwemplek type chips are inserted here by JS (rebuildSwimmingPoolChips) -->
+          <!-- Collapsible: Swimming spot types (JS populates #swimming-filter-chips) -->
+          <details class="filter-section-accordion" id="swim-type-accordion">
+            <summary class="filter-section-summary">
+              <span class="lang-nl">Soorten zwemplekken</span>
+              <span class="lang-en">Swimming spot types</span>
+              <svg class="filter-section-chevron" width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true"><path d="M2 4.5l4 3 4-3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </summary>
+            <div id="swimming-filter-chips" class="filter-chips swimming-filter-chips" role="group" aria-label="Filter swimming spot types"></div>
+          </details>
         </div>
       </div>
 

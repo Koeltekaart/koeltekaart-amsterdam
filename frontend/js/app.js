@@ -223,6 +223,7 @@ const TR = {
     get_directions: "Routebeschrijving",
     website_hours: "Website & openingstijden",
     near_you: "In jouw buurt",
+    other_locations: "Andere locaties",
     no_near_results: "Geen locaties gevonden, probeer het later opnieuw.",
     no_search_results: "Geen resultaten gevonden in Amsterdam",
     tips_page_title: "Blijf koel",
@@ -273,11 +274,11 @@ const TR = {
     owner: "Eigenaar",
     type_label: "Type",
     installed: "Aangelegd",
-    filter_fab: "Soorten locaties",
-    filter_panel_title: "Soorten locaties",
+    filter_fab: "Filters",
+    filter_panel_title: "Filters",
     view_map: "Kaart",
     view_list: "Lijst",
-    lv_title: "Koellocaties",
+    lv_title: "Koelteplekken",
     lv_found: "locaties",
     lv_no_results: "Geen resultaten",
     lv_no_results_sub: "Pas de filters aan om locaties te zien.",
@@ -292,7 +293,7 @@ const TR = {
     weather_feels_info: "Feels-like temperature is how warm it feels outside, based on temperature, humidity and wind.",
     skip_to_list: "Skip the map and go to the list of cooling locations",
     org: "GGD Amsterdam",
-    title: "Koeltekaart Amsterdam",
+    title: "Cool Map Amsterdam",
     search_placeholder: "Search street, neighbourhood or place…",
     near_me: "Near me",
     stay_cool: "Stay cool",
@@ -341,6 +342,7 @@ const TR = {
     get_directions: "Get directions",
     website_hours: "Website & opening hours",
     near_you: "Near you",
+    other_locations: "Other locations",
     no_near_results: "No locations found — wait a moment and try again.",
     no_search_results: "No results found in Amsterdam",
     tips_page_title: "Stay cool",
@@ -391,8 +393,8 @@ const TR = {
     owner: "Owner",
     type_label: "Type",
     installed: "Installed",
-    filter_fab: "Location types",
-    filter_panel_title: "Location types",
+    filter_fab: "Filters",
+    filter_panel_title: "Filters",
     view_map: "Map",
     view_list: "List",
     lv_title: "Cooling spots",
@@ -757,6 +759,7 @@ function _parseHoursFromRow(row, cols) {
  * Partners can paste any of these into the photo_url column:
  *   https://drive.google.com/file/d/FILE_ID/view?usp=sharing
  *   https://drive.google.com/uc?id=FILE_ID
+ *   https://drive.google.com/open?id=FILE_ID  (tab-shortcut link from Drive)
  * Other URLs (direct image links, local paths) pass through unchanged.
  */
 function _resolvePhotoUrl(url) {
@@ -765,6 +768,8 @@ function _resolvePhotoUrl(url) {
   if (fileMatch) return `https://lh3.googleusercontent.com/d/${fileMatch[1]}`;
   const ucMatch = url.match(/drive\.google\.com\/uc\?.*[?&]id=([^&]+)/);
   if (ucMatch) return `https://lh3.googleusercontent.com/d/${ucMatch[1]}`;
+  const openMatch = url.match(/drive\.google\.com\/open\?.*[?&]id=([^&]+)/);
+  if (openMatch) return `https://lh3.googleusercontent.com/d/${openMatch[1]}`;
   return url;
 }
 
@@ -1162,10 +1167,8 @@ function toggleFilter(key, btn) {
 // ── Mobile filter bar ─────────────────────────────────────────────────────
 // Compact single-row: "Filters" button + scrollable strip of active chips
 function renderMobileFilterBar() {
-  const countEl = document.getElementById("mfb-active-count");
   const stripEl = document.getElementById("mfb-active-strip");
-  if (!stripEl) return;
-  stripEl.innerHTML = "";
+  const fabCount = document.getElementById("fab-active-count");
 
   // Count active filters: active category + active amenities + off-layers
   let count = 0;
@@ -1173,14 +1176,18 @@ function renderMobileFilterBar() {
   count += Object.values(state.filters).filter(Boolean).length;
   count += LAYER_DEFS.filter(d => state.on[d.cat] === false).length;
 
-  if (countEl) {
+  // Update the floating FAB badge
+  if (fabCount) {
     if (count > 0) {
-      countEl.textContent = count;
-      countEl.removeAttribute("hidden");
+      fabCount.textContent = count;
+      fabCount.removeAttribute("hidden");
     } else {
-      countEl.setAttribute("hidden", "");
+      fabCount.setAttribute("hidden", "");
     }
   }
+
+  if (!stripEl) return;
+  stripEl.innerHTML = "";
 
   // Active category chip in strip
   if (state.activeCategory !== null) {
@@ -1252,8 +1259,8 @@ function setupSidebarCollapseDesktop() {
 // ── Mobile sidebar ─────────────────────────────────────────────────────────
 function openSidebarMobile() {
   document.body.classList.add("sidebar-open");
-  const sheetBtn = document.getElementById("btn-filter-sheet");
-  if (sheetBtn) sheetBtn.setAttribute("aria-expanded", "true");
+  const fab = document.getElementById("btn-filter-fab");
+  if (fab) fab.setAttribute("aria-expanded", "true");
 }
 function closeSidebarMobile() {
   document.body.classList.remove("sidebar-open");
@@ -1342,9 +1349,16 @@ function placeDistanceRings(lat, lon) {
 
 // ── Panel navigation ───────────────────────────────────────────────────────
 function updatePanelTitle() {
-  const titleEl = document.getElementById("panel-hdr-title");
-  if (titleEl && state.panelMode === "list") {
-    titleEl.textContent = state.userPos ? t("near_you") : t("lv_title");
+  if (state.panelMode !== "list") return;
+  const listHdr = document.getElementById("panel-hdr-list");
+  if (!listHdr) return;
+  if (listHdr.classList.contains("near-mode")) {
+    const labels = listHdr.querySelectorAll(".ph-stat-label");
+    if (labels[0]) labels[0].textContent = t("near_you");
+    if (labels[1]) labels[1].textContent = t("other_locations");
+  } else {
+    const titleEl = document.getElementById("panel-hdr-title");
+    if (titleEl) titleEl.textContent = t("lv_title");
   }
 }
 
@@ -1451,6 +1465,15 @@ function renderKoelteDetailContent(feature, container) {
     const photoWrap = document.createElement("div"); photoWrap.className = "detail-img-full";
     const img = document.createElement("img");
     img.src = p.photo_url; img.alt = p.name || ""; img.loading = "lazy";
+    img.onerror = () => {
+      // Image failed (e.g. Drive file not publicly shared) — show a fallback link
+      photoWrap.innerHTML = "";
+      const link = document.createElement("a");
+      link.href = p.photo_url; link.target = "_blank"; link.rel = "noopener noreferrer";
+      link.className = "detail-photo-fallback";
+      link.textContent = state.lang === "nl" ? "Foto bekijken ↗" : "View photo ↗";
+      photoWrap.appendChild(link);
+    };
     photoWrap.appendChild(img);
     body.appendChild(photoWrap);
   }
@@ -2020,18 +2043,23 @@ function renderListView() {
   }
 
   // Update panel header
-  const titleEl = document.getElementById("panel-hdr-title");
-  const countEl = document.getElementById("panel-hdr-count");
-  if (titleEl) titleEl.textContent = state.userPos ? t("near_you") : t("lv_title");
-  if (countEl) {
+  const listHdr = document.getElementById("panel-hdr-list");
+  if (listHdr) {
     if (state.userPos) {
-      // Counts are shown in section headers — just show total here
-      const nearCount = nearItems.length;
-      countEl.textContent = state.lang === "nl"
-        ? `${nearCount} dichtbij · ${items.length} totaal`
-        : `${nearCount} nearby · ${items.length} total`;
+      listHdr.classList.add("near-mode");
+      listHdr.innerHTML = `
+        <span class="ph-stat">
+          <span class="ph-stat-label">${t("near_you")}</span>
+          <span class="ph-stat-count">${nearItems.length}</span>
+        </span>
+        <span class="ph-sep" aria-hidden="true"></span>
+        <span class="ph-stat">
+          <span class="ph-stat-label">${t("other_locations")}</span>
+          <span class="ph-stat-count">${farItems.length}</span>
+        </span>`;
     } else {
-      countEl.textContent = `${items.length} ${t("lv_found")}`;
+      listHdr.classList.remove("near-mode");
+      listHdr.innerHTML = `<div id="panel-hdr-title">${t("lv_title")}</div><div id="panel-hdr-count">${items.length} ${t("lv_found")}</div>`;
     }
   }
 
