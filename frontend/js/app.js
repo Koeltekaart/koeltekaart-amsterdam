@@ -921,6 +921,25 @@ function rebuildKoelteplekkenLayer() {
   refreshListIfActive();
 }
 
+function tapDisplayName(p) {
+  const raw = p?.display_name || p?.["Dichtstbijzijnde adres binnen 100 meter"] || "";
+  const value = String(raw).trim();
+
+  const badNames = new Set([
+    "",
+    "None",
+    "null",
+    "Geen adres binnen 100 m.",
+  ]);
+
+  if (badNames.has(value)) {
+    return state.lang === "nl" ? "Drinkwaterkraan" : "Water fountain";
+  }
+
+  return value;
+}
+
+
 // ── Static layers ──────────────────────────────────────────────────────────
 function buildStaticLayer(def, data) {
   const features = data.features || [];
@@ -956,7 +975,8 @@ function buildStaticLayer(def, data) {
       pane: "pointsPane",
       pointToLayer: (_f,ll) => L.circleMarker(ll,{radius:def.radius,fillColor:def.color,color:"#fff",weight:2,opacity:1,fillOpacity:0.88}),
       onEachFeature: (f,l) => {
-        const name=f.properties?.["Dichtstbijzijnde adres binnen 100 meter"]||"Drinkwaterkraan";
+        const name = tapDisplayName(f.properties || {});
+
         const sub=state.lang==="nl"?"Drinkwaterkraan":"Drinking water";
         l.on("mouseover",e=>HC.show(e.originalEvent.clientX,e.originalEvent.clientY,name,sub,def.color));
         l.on("mouseout",()=>HC.hide());
@@ -1644,6 +1664,23 @@ function translateTapType(value) {
   return map[v]?.[state.lang] || value;
 }
 
+function tapDisplayName(p) {
+  const raw = p?.display_name || p?.["Dichtstbijzijnde adres binnen 100 meter"] || "";
+  const value = String(raw).trim();
+
+  const badNames = new Set([
+    "",
+    "None",
+    "null",
+    "Geen adres binnen 100 m.",
+  ]);
+
+  if (badNames.has(value)) {
+    return state.lang === "nl" ? "Drinkwaterkraan" : "Water fountain";
+  }
+
+  return value;
+}
 
 
 function renderTapDetailContent(feature, container) {
@@ -1652,7 +1689,7 @@ function renderTapDetailContent(feature, container) {
   const nameSec = document.createElement("div"); nameSec.className = "detail-panel-namesec";
   const catLbl = document.createElement("div"); catLbl.className = "dp-cat"; catLbl.textContent = t("water_label");
   const nameEl = document.createElement("div"); nameEl.className = "sheet-name";
-  nameEl.textContent = p["Dichtstbijzijnde adres binnen 100 meter"] || "Drinkwaterkraan";
+  nameEl.textContent = tapDisplayName(p);
   nameSec.append(catLbl, nameEl); body.appendChild(nameSec);
   const grid = document.createElement("div"); grid.className = "prop-grid";
   grid.append(
