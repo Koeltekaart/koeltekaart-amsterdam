@@ -1124,16 +1124,14 @@ function _renderSwimmingPoolsLayerInner(def, features) {
   state.layers.swimming_pools = L.geoJSON(fc, {
     pane: "pointsPane",
     pointToLayer: (f, ll) => {
-      const swimType = getSwimTypeDef(swimCategory(f.properties || {}));
-      return L.circleMarker(ll, {
-        radius: def.radius,
-        fillColor: swimType.color,
-        color: "#fff",
-        weight: 2,
-        opacity: 1,
-        fillOpacity: 0.9,
-      });
-    },
+  const swimType = getSwimTypeDef(swimCategory(f.properties || {}));
+
+  return L.marker(ll, {
+    icon: makeSwimmingSquareIcon(swimType.color),
+    keyboard: false,
+  });
+},
+
     onEachFeature: (f, l) => {
       const p = f.properties || {};
       const swimType = getSwimTypeDef(swimCategory(p));
@@ -1152,6 +1150,29 @@ function _renderSwimmingPoolsLayerInner(def, features) {
   const countEl = document.getElementById("cnt-swimming_pools");
   if (countEl) countEl.textContent = filtered.length.toLocaleString();
 }
+
+function makeSwimmingSquareIcon(color = "#00b4c8") {
+  return L.divIcon({
+    className: "swim-square-marker",
+    html: `
+      <span style="
+        display:block;
+        width:14px;
+        height:14px;
+        background:${color};
+        border:2px solid #fff;
+        border-radius:3px;
+        box-shadow:0 2px 4px rgba(0,0,0,0.22);
+        box-sizing:border-box;
+      "></span>
+    `,
+    iconSize: [18, 18],
+    iconAnchor: [9, 9],
+    popupAnchor: [0, -9],
+  });
+}
+
+
 
 function rebuildSwimmingPoolsLayer() {
   const def = LAYER_DEFS.find(d => d.cat === "swimming_pools");
