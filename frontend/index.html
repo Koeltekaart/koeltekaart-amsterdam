@@ -13,6 +13,7 @@
 <body class="mode-user">
 <div data-app-start="">
 
+
 <a class="skip-link" href="#list-view-inner" data-i18n="skip_to_list">
   Sla de kaart over en ga naar de lijst met koelteplekken
 </a>
@@ -220,7 +221,13 @@
 
   <!-- ── Map section (flex:1 inside wrapper) ────────────────────────────── -->
   <div id="map-section">
-
+    
+    <button id="right-panel-toggle" aria-label="Locatiepaneel inklappen" aria-expanded="true">
+  <svg width="8" height="13" viewBox="0 0 8 13" fill="none" aria-hidden="true">
+    <path d="M1.5 1.5L6.5 6.5L1.5 11.5" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+  </svg>
+</button>
+    
     <!-- Mobile scroll handle — tap/swipe UP to return to landing section -->
     <div class="map-scroll-handle" id="map-scroll-up" aria-hidden="true"></div>
 
@@ -272,10 +279,11 @@
 
     <!-- Desktop sidebar collapse tab -->
     <button id="sidebar-collapse-btn" aria-label="Filter zijbalk inklappen" aria-expanded="true">
-      <svg width="8" height="13" viewBox="0 0 8 13" fill="none" aria-hidden="true">
-        <path d="M6.5 1.5L1.5 6.5L6.5 11.5" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
-      </svg>
-    </button>
+  <svg width="8" height="13" viewBox="0 0 8 13" fill="none" aria-hidden="true">
+    <path d="M6.5 1.5L1.5 6.5L6.5 11.5" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+  </svg>
+</button>
+
 
     <!-- Sidebar -->
     <aside id="sidebar" aria-label="Map controls and filters">

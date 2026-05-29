@@ -138,7 +138,6 @@ body {
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
 /* " Amsterdam" span — hidden at narrower widths (see responsive breakpoints) */
-.title-city { }
 
 .topbar-actions { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
 
@@ -150,7 +149,7 @@ body {
   color: #202020; font-family: var(--font); font-size: 13.5px;
   padding: 0 14px 0 38px; outline: none;
   transition: background 0.12s, border-color 0.12s, box-shadow 0.12s;
-  -webkit-appearance: none; letter-spacing: 0.01em;
+  -webkit-appearance: none; appearance: none; letter-spacing: 0.01em;
 }
 #search-input::placeholder { color: rgba(0,0,0,0.38); }
 #search-input:focus { background: #ffffff; border-color: rgba(0,70,153,0.5); box-shadow: 0 0 0 2px rgba(0,70,153,0.12); }
@@ -262,52 +261,93 @@ body {
 #sidebar::-webkit-scrollbar { width: 3px; }
 #sidebar::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.08); border-radius: 2px; }
 
-/* ── Desktop sidebar collapse tab ─────────────────────────────────────────── */
-#sidebar-collapse-btn {
-  display: none; /* mobile: hidden (filter bar is used instead) */
+/* ── Desktop collapse tabs — shared left + right styling ─────────────────── */
+#sidebar-collapse-btn,
+#right-panel-toggle {
+  display: none; /* mobile: hidden */
 }
 
 @media (min-width: 769px) {
-  #sidebar-collapse-btn {
-    display: flex; align-items: center; justify-content: center;
+  #sidebar-collapse-btn,
+  #right-panel-toggle {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
     position: absolute;
-    /* sits right at the sidebar's right edge */
-    left: var(--sidebar-w);
     top: 50%;
     transform: translateY(-50%);
+
     z-index: 450;
-    width: 18px; height: 52px;
+    width: 22px;
+    height: 110px;
     padding: 0;
+
     background: var(--surface);
     border: 1px solid var(--border);
-    border-left: none;
-    border-radius: 0 8px 8px 0;
-    box-shadow: 3px 0 8px rgba(0,0,0,0.06);
     color: var(--subtle);
+
     cursor: pointer;
-    transition: left 0.24s cubic-bezier(0.4,0,0.2,1),
-                background 0.12s, color 0.12s;
-  }
-  #sidebar-collapse-btn:hover { background: var(--bg); color: var(--text); }
+    box-shadow: 0 2px 8px rgba(0,0,0,0.06);
 
-  #sidebar-collapse-btn svg {
-    transition: transform 0.24s cubic-bezier(0.4,0,0.2,1);
+    transition:
+      left 0.24s cubic-bezier(0.4,0,0.2,1),
+      right 0.24s cubic-bezier(0.4,0,0.2,1),
+      background 0.12s,
+      color 0.12s;
+  }
+
+  #sidebar-collapse-btn:hover,
+  #right-panel-toggle:hover {
+    background: var(--bg);
+    color: var(--text);
+  }
+
+  #sidebar-collapse-btn svg,
+  #right-panel-toggle svg {
+    width: 8px;
+    height: 13px;
     flex-shrink: 0;
+    transition: transform 0.24s cubic-bezier(0.4,0,0.2,1);
   }
 
-  /* ── Collapsed state ─────────────────────────────────────────────────── */
+  /* Left sidebar collapse tab */
+  #sidebar-collapse-btn {
+    left: var(--sidebar-w);
+    border-left: none;
+    border-radius: 0 10px 10px 0;
+  }
+
   #map-section.sidebar-collapsed #sidebar {
     width: 0;
     min-width: 0;
     border-right-color: transparent;
   }
+
   #map-section.sidebar-collapsed #sidebar-collapse-btn {
     left: 0;
-    border-radius: 0 8px 8px 0;
-    border-left: none;
   }
-  /* Flip the chevron to point right when collapsed */
+
   #map-section.sidebar-collapsed #sidebar-collapse-btn svg {
+    transform: rotate(180deg);
+  }
+
+  /* Right panel collapse tab */
+  #right-panel-toggle {
+    right: var(--panel-w);
+    border-right: none;
+    border-radius: 10px 0 0 10px;
+  }
+
+  #map-section.detail-open #right-panel-toggle {
+    right: 520px;
+  }
+
+  #map-section.right-panel-collapsed #right-panel-toggle {
+    right: 0;
+  }
+
+  #map-section.right-panel-collapsed #right-panel-toggle svg {
     transform: rotate(180deg);
   }
 }
@@ -952,7 +992,9 @@ body.mode-user #sidebar-policy { display: none; }
 /* ── Right panel (list + detail) ─────────────────────────────────────────── */
 #list-view {
   position: absolute;
-  top: 0; right: 0; bottom: 0;
+  top: 0;
+  right: 0;
+  bottom: 0;
   width: var(--panel-w);
   background: var(--surface);
   border-left: 1px solid var(--border);
@@ -961,16 +1003,10 @@ body.mode-user #sidebar-policy { display: none; }
   overflow: hidden;
   z-index: 5;
 }
-/* Ensure the hidden attribute actually hides the panel (CSS display:flex overrides the native hidden attribute) */
-#list-view[hidden] { display: none !important; }
 
-/* Always show on desktop regardless of hidden attribute */
-@media (min-width: 769px) {
-  #list-view[hidden] { display: flex !important; }
-  /* Offset Leaflet zoom buttons so they don't overlap the list panel */
-  .leaflet-top.leaflet-right { right: calc(var(--panel-w) + 8px); }
-  /* When detail is open, widen the right panel */
-  #map-section.detail-open #list-view { width: 520px; }
+/* Ensure the hidden attribute actually hides the panel */
+#list-view[hidden] {
+  display: none !important;
 }
 
 #list-view-inner {
@@ -979,19 +1015,76 @@ body.mode-user #sidebar-policy { display: none; }
   overflow-x: hidden;
   padding: 0 0 48px;
 }
-#list-view-inner::-webkit-scrollbar { width: 3px; }
-#list-view-inner::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.09); border-radius: 2px; }
 
-/* Mobile: list view is in the flex column flow — filter bar pushes it down naturally */
+#list-view-inner::-webkit-scrollbar {
+  width: 3px;
+}
+
+#list-view-inner::-webkit-scrollbar-thumb {
+  background: rgba(0,0,0,0.09);
+  border-radius: 2px;
+}
+
+@media (min-width: 769px) {
+  /* Right panel is always visible on desktop unless visually collapsed */
+  #list-view[hidden] {
+    display: flex !important;
+  }
+
+  #list-view {
+    transition:
+      transform 0.24s cubic-bezier(0.4,0,0.2,1),
+      border-color 0.24s ease;
+  }
+
+  /* Offset Leaflet zoom buttons so they do not overlap the right panel */
+  .leaflet-top.leaflet-right {
+    right: calc(var(--panel-w) + 8px);
+  }
+
+  /* Detail mode makes the right panel wider */
+  #map-section.detail-open #list-view {
+    width: 520px;
+  }
+
+  #map-section.detail-open .leaflet-top.leaflet-right {
+    right: 528px;
+  }
+
+  /* Hide the right panel by sliding it out of the map area */
+  #map-section.right-panel-collapsed #list-view {
+    transform: translateX(100%);
+    border-left-color: transparent;
+  }
+
+  /* When the right panel is hidden, return Leaflet controls to the map edge */
+  #map-section.right-panel-collapsed .leaflet-top.leaflet-right {
+    right: 8px;
+  }
+}
+
+/* Mobile: list/detail panel participates in the column layout */
 @media (max-width: 768px) {
   #list-view {
     position: static;
-    top: auto; left: auto; right: auto; bottom: auto;
-    width: 100%; flex: 1; min-height: 0;
-    border-left: none; box-shadow: none;
+    top: auto;
+    left: auto;
+    right: auto;
+    bottom: auto;
+    width: 100%;
+    flex: 1;
+    min-height: 0;
+    border-left: none;
+    box-shadow: none;
   }
-  /* Hide map when the list/detail panel is open */
-  body.mobile-panel-open #map { display: none; }
+
+  body.mobile-panel-open #map {
+    display: none;
+  }
+
+  #right-panel-toggle {
+    display: none !important;
+  }
 }
 
 /* ── Panel header ─────────────────────────────────────────────────────────── */
@@ -1078,7 +1171,6 @@ body.mode-user #sidebar-policy { display: none; }
   justify-content: center;
 }
 .lv-photo img { width: 100%; height: 100%; object-fit: cover; display: block; }
-.lv-photo--placeholder { }
 .lv-photo--placeholder span {
   font-size: 20px; font-weight: 800;
   letter-spacing: -0.02em; line-height: 1;

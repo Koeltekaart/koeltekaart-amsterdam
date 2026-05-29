@@ -1193,6 +1193,29 @@ function rebuildSwimmingPoolChips() {
   });
 }
 
+function setupRightPanelToggle() {
+  const btn     = document.getElementById("right-panel-toggle");
+  const section = document.getElementById("map-section");
+  if (!btn || !section) return;
+
+  btn.addEventListener("click", () => {
+    const collapsed = section.classList.toggle("right-panel-collapsed");
+
+    btn.setAttribute("aria-expanded", String(!collapsed));
+    btn.setAttribute(
+      "aria-label",
+      collapsed ? "Locatiepaneel uitklappen" : "Locatiepaneel inklappen"
+    );
+
+    // Redraw map tiles once the CSS transition has finished
+    setTimeout(() => {
+      if (state.map) state.map.invalidateSize();
+    }, 260);
+  });
+}
+
+
+
 // ── Count-up animation ─────────────────────────────────────────────────────
 function animateCount(cat, target) {
   // Update sidebar count AND the hero landing stat (li-count-*)
@@ -2436,6 +2459,7 @@ document.addEventListener("DOMContentLoaded", () => {
   applyLanguage();
   applyHeatPlanToMap();
   loadWeatherBar();
+  setupRightPanelToggle();
   setInterval(loadWeatherBar, 10 * 60 * 1000);
 
   // Panel back button
