@@ -99,14 +99,14 @@ const CATEGORY_COLORS = {
   urban_farm:       "#bed200",  // Amsterdam lime green
   community_center: "#ff9100",  // Amsterdam orange
   sports:           "#e50082",  // Amsterdam magenta
-  theater:          "#009de6",  // Amsterdam light blue
+  theater:          "#ffa0d7",  // Amsterdam light blue
   default:          "#004699",  // Amsterdam dark blue
 };
 
 // Amsterdam brand palette used for auto-assigning colors to new/unknown categories
 const AMSTERDAM_PALETTE = [
   "#004699", "#a00078", "#00893c", "#bed200", "#ff9100",
-  "#e50082", "#009de6", "#ffe600", "#ec0000", "#202020",
+  "#e50082", "#ffa0d7", "#ffe600", "#ec0000", "#202020",
 ];
 let _paletteIndex = Object.keys(CATEGORY_COLORS).filter(k => k !== "default").length;
 
