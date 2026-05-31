@@ -7,6 +7,7 @@ const LAYER_DEFS = [
   { cat: "parks",          label: "Parks",            color: "#00893c",   src: "data/raw/parks.json",          type: "polygon" },
   { cat: "swimming_pools", label: "Swimming spots",   color: "#00b4c8",   src: "data/raw/zwemwater.geojson",   type: "geojson", radius: 6 },
   { cat: "shade",          label: "Sidewalk shade",   color: "#1a56db",   type: "shade" },
+  { cat: "hvi",            label: "Kwetsbaarheidskaart", color: "#CA0020", src: "data/hvi_map.geojson", type: "choropleth" },
 ];
 
 // ── Google Sheets data sources ─────────────────────────────────────────────
@@ -418,8 +419,8 @@ function t(key) { return TR[state.lang]?.[key] ?? TR.en[key] ?? key; }
 const state = {
   map: null,
   layers: {},
-  on: { koelteplekken: true, water_taps: true, parks: true, swimming_pools: true, shade: false },
-  features: { koelteplekken: [], water_taps: [], parks: [], swimming_pools: [] },
+  on: { koelteplekken: true, water_taps: true, parks: true, swimming_pools: true, shade: false, hvi: false },
+  features: { koelteplekken: [], water_taps: [], parks: [], swimming_pools: [], hvi: [] },
   userMarker: null,
   userPos: null,
   rings: [],
@@ -707,7 +708,9 @@ function _withoutHeatPulse(fn) {
 function initMap() {
   state.map = L.map("map", { zoomControl: false }).setView([52.368, 4.827], 13);
 
-  // Custom panes so park polygons never obscure point markers
+  // Custom panes: hvi (choropleth) < parks < points
+  state.map.createPane("hviPane");
+  state.map.getPane("hviPane").style.zIndex = 320;
   state.map.createPane("parksPane");
   state.map.getPane("parksPane").style.zIndex = 350;
   state.map.createPane("pointsPane");
@@ -879,6 +882,401 @@ async function _loadKoelteplekkenFromSheets(def) {
   buildKoelteplekkenLayer(def, { type: "FeatureCollection", features });
 }
 
+// ── HVI choropleth layer ───────────────────────────────────────────────────
+const HVI_TIER_COLORS = ["#2166AC", "#92C5DE", "#FFFFBF", "#F4A582", "#CA0020"];
+
+function _hviTierColor(tier) {
+  const t = parseInt(tier);
+  if (!t || t < 1 || t > 5) return "#D1D5DB";
+  return HVI_TIER_COLORS[t - 1];
+}
+
+function buildHviLayer(def, data) {
+  state.features.hvi = data.features || [];
+  _hviStats = null; // invalidate cache
+  _renderHviLayer(def, state.features.hvi);
+}
+
+function _renderHviLayer(def, features) {
+  if (state.layers.hvi) state.map.removeLayer(state.layers.hvi);
+  const fc = { type: "FeatureCollection", features };
+  state.layers.hvi = L.geoJSON(fc, {
+    pane: "hviPane",
+    style: f => {
+      const tier = f.properties?.hvi_tier;
+      const color = _hviTierColor(tier);
+      const hasData = tier && tier !== "nan" && tier !== "None";
+      return { fillColor: color, fillOpacity: hasData ? 0.65 : 0.12, color: "#fff", weight: 0.5, opacity: 0.5 };
+    },
+    onEachFeature: (f, l) => {
+      const p = f.properties || {};
+      const name = p.buurtnaam || "Buurt";
+      const score = p.hvi != null ? "HVI: " + (p.hvi * 100).toFixed(0) + " / 100" : "Geen data";
+      if (!IS_TOUCH_DEVICE) {
+        l.on("mouseover", e => {
+          l.setStyle({ fillOpacity: 0.85, weight: 1.5, color: "#333" });
+          HC.show(e.originalEvent.clientX, e.originalEvent.clientY, name, score, _hviTierColor(p.hvi_tier));
+        });
+        l.on("mouseout", () => { state.layers.hvi.resetStyle(l); HC.hide(); });
+        l.on("mousemove", e => HC.move(e.originalEvent.clientX, e.originalEvent.clientY));
+      }
+      l.on("click", e => { HC.hide(); L.DomEvent.stopPropagation(e); openDetailPanel(f, renderHviDetailContent); });
+    },
+  });
+  if (state.on.hvi) state.layers.hvi.addTo(state.map);
+}
+
+// ── HVI analytics — statistics, charts, spatial helpers ───────────────────
+let _hviStats = null;
+
+function _getHviStats() {
+  if (_hviStats) return _hviStats;
+  const feats = (state.features.hvi || []).map(f => f.properties).filter(p => p.hvi != null);
+  if (!feats.length) return null;
+  const sorted = feats.map(p => p.hvi).sort((a, b) => a - b);
+  const median = arr => { const s = [...arr].sort((a, b) => a - b); const m = Math.floor(s.length / 2); return s.length % 2 ? s[m] : (s[m-1]+s[m])/2; };
+  const pct = q => sorted[Math.max(0, Math.min(sorted.length - 1, Math.floor(q * sorted.length)))];
+  _hviStats = {
+    total:      feats.length,
+    hvi:        median(feats.map(p => p.hvi)),
+    hi_norm:    median(feats.filter(p => p.hi_norm != null).map(p => p.hi_norm)),
+    svi:        median(feats.filter(p => p.svi_pca != null).map(p => p.svi_pca)),
+    access:     median(feats.filter(p => p.cooling_access != null).map(p => p.cooling_access)),
+    sortedDesc: [...sorted].reverse(),
+    allHvi:     sorted,
+    thresholds: [pct(0.2), pct(0.4), pct(0.6), pct(0.8)],
+  };
+  return _hviStats;
+}
+
+function _hviRank(hvi) {
+  const s = _getHviStats(); if (!s) return null;
+  return s.sortedDesc.findIndex(v => v <= hvi) + 1;
+}
+
+function _hviGetTier(hvi) {
+  const s = _getHviStats(); if (!s) return null;
+  for (let i = 0; i < 4; i++) { if (hvi <= s.thresholds[i]) return i + 1; }
+  return 5;
+}
+
+// Compute polygon centroid for distance calculations
+function _featureCentroid(feature) {
+  const geom = feature.geometry; if (!geom) return null;
+  let ring;
+  if (geom.type === "Polygon") ring = geom.coordinates[0];
+  else if (geom.type === "MultiPolygon") ring = geom.coordinates[0][0];
+  else return null;
+  return { lat: ring.reduce((s,c)=>s+c[1],0)/ring.length, lon: ring.reduce((s,c)=>s+c[0],0)/ring.length };
+}
+
+// Nearest koelteplek from buurt centroid
+function _nearestKoelteplek(centroid) {
+  if (!centroid || !state.features.koelteplekken?.length) return null;
+  let best = null, bestDist = Infinity;
+  state.features.koelteplekken.forEach(f => {
+    if (f.geometry?.type !== "Point") return;
+    const [lon, lat] = f.geometry.coordinates;
+    const d = haversine(centroid.lat, centroid.lon, lat, lon);
+    if (d < bestDist) { bestDist = d; best = { name: f.properties?.name || "Koelteplek", dist: d }; }
+  });
+  return best;
+}
+
+// Top-N most similar buurten by Euclidean distance in [hi_norm, svi_pca, cooling_access]
+function _similarBuurten(p, n = 5) {
+  return (state.features.hvi || [])
+    .map(f => f.properties)
+    .filter(q => q.buurtnaam !== p.buurtnaam && q.hi_norm != null && q.svi_pca != null && q.cooling_access != null)
+    .map(q => ({
+      buurtnaam: q.buurtnaam,
+      hvi: q.hvi,
+      hvi_tier: q.hvi_tier,
+      dist: Math.sqrt((q.hi_norm-p.hi_norm)**2 + (q.svi_pca-p.svi_pca)**2 + (q.cooling_access-p.cooling_access)**2),
+    }))
+    .sort((a, b) => a.dist - b.dist)
+    .slice(0, n);
+}
+
+// What-if: how much does each intervention shift the HVI and tier?
+function _whatIf(p, stats) {
+  const W_H = 0.40, W_S = 0.40, W_A = 0.20;
+  const hvi = (h, s, a) => W_H * h + W_S * s + W_A * (1 - a);
+  const cur = hvi(p.hi_norm ?? stats.hi_norm, p.svi_pca ?? stats.svi, p.cooling_access ?? stats.access);
+  return [
+    { key: "access",  label_nl: "Koeltoegang → stadsmed.",        label_en: "Cooling access → median",     newHvi: hvi(p.hi_norm, p.svi_pca, Math.max(p.cooling_access, stats.access)) },
+    { key: "social",  label_nl: "Sociale kwetsb. → stadsmed.",    label_en: "Social vulnerability → med.", newHvi: hvi(p.hi_norm, Math.min(p.svi_pca, stats.svi), p.cooling_access) },
+    { key: "heat",    label_nl: "Hitteblootstelling → stadsmed.", label_en: "Heat exposure → median",      newHvi: hvi(Math.min(p.hi_norm, stats.hi_norm), p.svi_pca, p.cooling_access) },
+  ].map(s => ({
+    ...s,
+    delta:    Math.round((s.newHvi - cur) * 100),
+    newTier:  _hviGetTier(s.newHvi),
+    curTier:  _hviGetTier(cur),
+  }));
+}
+
+// Dominant driver: which component contributes most above city median
+function _dominantDriver(p, stats, isNL) {
+  const excess = [
+    { label: isNL ? "Hitteblootstelling" : "Heat exposure",        val: Math.max(0, (p.hi_norm ?? 0) - stats.hi_norm) * 0.40 },
+    { label: isNL ? "Sociale kwetsbaarheid" : "Social vulnerability", val: Math.max(0, (p.svi_pca ?? 0) - stats.svi) * 0.40 },
+    { label: isNL ? "Slechte koeltoegang" : "Poor cooling access",  val: Math.max(0, stats.access - (p.cooling_access ?? 0)) * 0.20 },
+  ].sort((a, b) => b.val - a.val);
+  return excess[0].val > 0 ? excess[0].label : null;
+}
+
+// ── Chart.js helpers (destroy before recreate to avoid canvas reuse error) ─
+const _charts = {};
+function _destroyChart(id) { if (_charts[id]) { _charts[id].destroy(); delete _charts[id]; } }
+
+function _renderRadarChart(canvasId, buurtVals, medianVals, isNL) {
+  _destroyChart(canvasId);
+  const ctx = document.getElementById(canvasId)?.getContext("2d");
+  if (!ctx || typeof Chart === "undefined") return;
+  const labels = isNL
+    ? ["Hitteblootstelling", "Sociale kwetsbaarheid", "Koelplaatsentekort"]
+    : ["Heat exposure", "Social vulnerability", "Cooling gap"];
+  _charts[canvasId] = new Chart(ctx, {
+    type: "radar",
+    data: {
+      labels,
+      datasets: [
+        { label: isNL ? "Deze buurt" : "This buurt", data: buurtVals,  borderColor: "#CA0020", backgroundColor: "rgba(202,0,32,0.15)",   borderWidth: 2, pointBackgroundColor: "#CA0020", pointRadius: 3 },
+        { label: isNL ? "Stadsmed." : "City median", data: medianVals, borderColor: "#004699", backgroundColor: "rgba(0,70,153,0.07)",   borderWidth: 1.5, borderDash: [4,3], pointBackgroundColor: "#004699", pointRadius: 2 },
+      ],
+    },
+    options: {
+      responsive: true, maintainAspectRatio: true,
+      plugins: {
+        legend: { position: "bottom", labels: { font: { size: 10 }, padding: 8, boxWidth: 10 } },
+        tooltip: { callbacks: { label: c => `${c.dataset.label}: ${c.parsed.r.toFixed(0)}/100` } },
+      },
+      scales: {
+        r: {
+          min: 0, max: 100,
+          ticks: { stepSize: 25, font: { size: 8 }, color: "#9CA3AF", backdropColor: "transparent" },
+          grid: { color: "rgba(0,0,0,0.07)" },
+          angleLines: { color: "rgba(0,0,0,0.07)" },
+          pointLabels: { font: { size: 10 }, color: "#374151" },
+        },
+      },
+    },
+  });
+}
+
+function _renderDistributionChart(canvasId, allHvi, thisHvi, isNL) {
+  _destroyChart(canvasId);
+  const ctx = document.getElementById(canvasId)?.getContext("2d");
+  if (!ctx || typeof Chart === "undefined") return;
+  const bins = Array(10).fill(0);
+  allHvi.forEach(v => { bins[Math.min(9, Math.floor(v * 10))]++; });
+  const thisBin = Math.min(9, Math.floor(thisHvi * 10));
+  const labels = ["0–10","10–20","20–30","30–40","40–50","50–60","60–70","70–80","80–90","90–100"];
+  _charts[canvasId] = new Chart(ctx, {
+    type: "bar",
+    data: {
+      labels,
+      datasets: [{
+        data: bins,
+        backgroundColor: bins.map((_, i) => i === thisBin ? "#CA0020" : "rgba(0,70,153,0.2)"),
+        borderRadius: 3, borderWidth: 0,
+      }],
+    },
+    options: {
+      responsive: true, maintainAspectRatio: true,
+      plugins: {
+        legend: { display: false },
+        tooltip: { callbacks: {
+          title: c => `HVI ${c[0].label}`,
+          label: c => `${c.parsed.y} ${isNL ? "buurten" : "neighbourhoods"}`,
+        }},
+      },
+      scales: {
+        x: { ticks: { font: { size: 8 }, maxRotation: 45 }, grid: { display: false } },
+        y: { ticks: { font: { size: 8 } }, grid: { color: "rgba(0,0,0,0.06)" },
+             title: { display: true, text: isNL ? "Buurten" : "Neighbourhoods", font: { size: 8 }, color: "#9CA3AF" } },
+      },
+    },
+  });
+}
+
+// ── HVI dashboard ──────────────────────────────────────────────────────────
+function renderHviDetailContent(feature, container) {
+  const p = feature.properties || {};
+  const tier = parseInt(p.hvi_tier) || null;
+  const color = _hviTierColor(p.hvi_tier);
+  const isNL = state.lang === "nl";
+  const stats = _getHviStats();
+
+  const body = document.createElement("div"); body.className = "detail-panel-body";
+  const dash = document.createElement("div"); dash.className = "hvi-dash";
+
+  // ── Header ──
+  const hdr = document.createElement("div"); hdr.className = "hvi-dash-hdr";
+  const catLbl = document.createElement("div"); catLbl.className = "dp-cat";
+  catLbl.textContent = isNL ? "Hittekwetsbaarheidsindex" : "Heat Vulnerability Index";
+  const nameEl = document.createElement("div"); nameEl.className = "detail-panel-name";
+  nameEl.textContent = p.buurtnaam || "Buurt";
+  hdr.append(catLbl, nameEl);
+  dash.appendChild(hdr);
+
+  if (!tier || p.hvi == null) {
+    const noData = document.createElement("p"); noData.className = "hvi-no-data";
+    noData.textContent = isNL ? "Geen data beschikbaar voor deze buurt." : "No data available for this neighbourhood.";
+    dash.appendChild(noData);
+    body.appendChild(dash); container.appendChild(body); return;
+  }
+
+  const tierNames = isNL
+    ? ["Laag", "Laag-gemiddeld", "Gemiddeld", "Hoog-gemiddeld", "Hoog"]
+    : ["Low", "Low-medium", "Medium", "High-medium", "High"];
+
+  // ── Tier badge ──
+  const tierBadge = document.createElement("div"); tierBadge.className = "hvi-tier-badge";
+  tierBadge.style.setProperty("--tier-color", color);
+  const tierDot = document.createElement("span"); tierDot.className = "hvi-tier-dot";
+  const tierTxt = document.createElement("span");
+  tierTxt.textContent = `Tier ${tier} — ${tierNames[tier - 1]}`;
+  tierBadge.append(tierDot, tierTxt);
+  dash.appendChild(tierBadge);
+
+  // ── Score + rank ──
+  const rank = stats ? _hviRank(p.hvi) : null;
+  const scoreRow = document.createElement("div"); scoreRow.className = "hvi-score-row";
+  const scoreBig = document.createElement("div"); scoreBig.className = "hvi-score-big";
+  scoreBig.innerHTML = `<span class="hvi-score-num">${Math.round(p.hvi * 100)}</span><span class="hvi-score-denom">/100</span>`;
+  const rankEl = document.createElement("div"); rankEl.className = "hvi-rank";
+  if (rank && stats) rankEl.innerHTML = `<span class="hvi-rank-num">#${rank}</span> ${isNL ? "van" : "of"} ${stats.total}`;
+  scoreRow.append(scoreBig, rankEl);
+  dash.appendChild(scoreRow);
+  dash.appendChild(_makeBar(p.hvi, color, null));
+
+  // ── Key findings ──
+  const centroid = _featureCentroid(feature);
+  const nearest  = _nearestKoelteplek(centroid);
+  const driver   = stats ? _dominantDriver(p, stats, isNL) : null;
+  const findings = [];
+  if (driver) findings.push({ icon: "⚠", text: (isNL ? "Belangrijkste factor: " : "Main driver: ") + driver });
+  if (nearest) findings.push({ icon: "📍", text: (isNL ? "Dichtstbijzijnde koelteplek: " : "Nearest cooling spot: ") + nearest.name + " — " + fmtDist(nearest.dist) });
+  if (p.lisa_cluster && !["Not significant","Not computed"].includes(p.lisa_cluster))
+    findings.push({ icon: "🔴", text: "LISA: " + p.lisa_cluster });
+
+  if (findings.length) {
+    const findSec = document.createElement("div"); findSec.className = "hvi-section";
+    const findTitle = document.createElement("div"); findTitle.className = "hvi-section-title";
+    findTitle.textContent = isNL ? "Kernbevindingen" : "Key findings";
+    findSec.appendChild(findTitle);
+    findings.forEach(f => {
+      const row = document.createElement("div"); row.className = "hvi-finding";
+      row.innerHTML = `<span class="hvi-finding-icon">${f.icon}</span><span>${f.text}</span>`;
+      findSec.appendChild(row);
+    });
+    if (p.quadrant) {
+      const qdiv = document.createElement("div"); qdiv.className = "hvi-quadrant";
+      qdiv.textContent = p.quadrant;
+      findSec.appendChild(qdiv);
+    }
+    dash.appendChild(findSec);
+  }
+
+  // ── Charts (only rendered if city-wide stats are available) ──
+  let radarId, distId;
+  if (stats) {
+    const radarSec = document.createElement("div"); radarSec.className = "hvi-section";
+    const radarTitle = document.createElement("div"); radarTitle.className = "hvi-section-title";
+    radarTitle.textContent = isNL ? "Componentenprofiel" : "Component profile";
+    radarId = "hvi-radar-" + Date.now();
+    const radarCanvas = document.createElement("canvas");
+    radarCanvas.id = radarId; radarCanvas.className = "hvi-chart-canvas";
+    radarSec.append(radarTitle, radarCanvas);
+    dash.appendChild(radarSec);
+
+    const distSec = document.createElement("div"); distSec.className = "hvi-section";
+    const distTitle = document.createElement("div"); distTitle.className = "hvi-section-title";
+    distTitle.textContent = isNL ? "Verdeling over de stad (rood = deze buurt)" : "City distribution (red = this buurt)";
+    distId = "hvi-dist-" + Date.now();
+    const distCanvas = document.createElement("canvas");
+    distCanvas.id = distId; distCanvas.className = "hvi-chart-canvas hvi-chart-dist";
+    distSec.append(distTitle, distCanvas);
+    dash.appendChild(distSec);
+  }
+
+  // ── What-if analysis ──
+  if (stats) {
+    const whatIf = _whatIf(p, stats);
+    const wiSec = document.createElement("div"); wiSec.className = "hvi-section";
+    const wiTitle = document.createElement("div"); wiTitle.className = "hvi-section-title";
+    wiTitle.textContent = isNL ? "Wat als...? (interventie-effect)" : "What if...? (intervention impact)";
+    wiSec.appendChild(wiTitle);
+    whatIf.forEach(s => {
+      const row = document.createElement("div"); row.className = "hvi-wi-row";
+      const lbl = document.createElement("span"); lbl.className = "hvi-wi-label";
+      lbl.textContent = isNL ? s.label_nl : s.label_en;
+      const right = document.createElement("div"); right.className = "hvi-wi-right";
+      const pts = document.createElement("span");
+      pts.className = "hvi-wi-pts hvi-wi-pts--" + (s.delta <= 0 ? "better" : "worse");
+      pts.textContent = (s.delta <= 0 ? "−" : "+") + Math.abs(s.delta) + " pts";
+      right.appendChild(pts);
+      if (s.newTier < s.curTier) {
+        const tierChg = document.createElement("span"); tierChg.className = "hvi-wi-tier";
+        tierChg.textContent = `Tier ${s.curTier} → ${s.newTier}`;
+        right.appendChild(tierChg);
+      }
+      row.append(lbl, right);
+      wiSec.appendChild(row);
+    });
+    dash.appendChild(wiSec);
+  }
+
+  // ── Similar buurten ──
+  const similar = _similarBuurten(p);
+  if (similar.length) {
+    const simSec = document.createElement("div"); simSec.className = "hvi-section";
+    const simTitle = document.createElement("div"); simTitle.className = "hvi-section-title";
+    simTitle.textContent = isNL ? "Vergelijkbare buurten" : "Similar neighbourhoods";
+    simSec.appendChild(simTitle);
+    similar.forEach(s => {
+      const row = document.createElement("div"); row.className = "hvi-sim-row";
+      const dot = document.createElement("span"); dot.className = "hvi-tier-dot";
+      dot.style.cssText = `background:${_hviTierColor(s.hvi_tier)};flex-shrink:0;`;
+      const name = document.createElement("span"); name.className = "hvi-sim-name"; name.textContent = s.buurtnaam;
+      const score = document.createElement("span"); score.className = "hvi-sim-score";
+      score.textContent = Math.round((s.hvi || 0) * 100) + "/100";
+      row.append(dot, name, score);
+      simSec.appendChild(row);
+    });
+    dash.appendChild(simSec);
+  }
+
+  body.appendChild(dash);
+  container.appendChild(body);
+
+  // Render charts after DOM is inserted — only if city stats are available
+  if (stats) {
+    requestAnimationFrame(() => {
+      const buurtVals  = [Math.round((p.hi_norm || 0) * 100), Math.round((p.svi_pca || 0) * 100), Math.round((1 - (p.cooling_access || 0)) * 100)];
+      const medianVals = [Math.round(stats.hi_norm * 100), Math.round(stats.svi * 100), Math.round((1 - stats.access) * 100)];
+      _renderRadarChart(radarId, buurtVals, medianVals, isNL);
+      _renderDistributionChart(distId, stats.allHvi, p.hvi, isNL);
+    });
+  }
+}
+
+function _makeBar(value, color, labelNum) {
+  const wrap = document.createElement("div"); wrap.className = "hvi-bar-wrap";
+  const track = document.createElement("div"); track.className = "hvi-bar-track";
+  const fill = document.createElement("div"); fill.className = "hvi-bar-fill";
+  fill.style.width = Math.round((value || 0) * 100) + "%";
+  fill.style.background = color;
+  track.appendChild(fill); wrap.appendChild(track);
+  if (labelNum != null) {
+    const num = document.createElement("span"); num.className = "hvi-bar-num";
+    num.textContent = labelNum;
+    wrap.appendChild(num);
+  }
+  return wrap;
+}
+
 // ── Layer loading ──────────────────────────────────────────────────────────
 function loadAllLayers() {
   LAYER_DEFS.forEach(def => {
@@ -889,6 +1287,12 @@ function loadAllLayers() {
         .finally(() => setLoading(false));
     } else if (def.cat === "shade") {
       setLoading(false); // loaded on-demand when toggled on
+    } else if (def.type === "choropleth") {
+      fetch(def.src)
+        .then(r => r.json())
+        .then(data => buildHviLayer(def, data))
+        .catch(e => console.error(def.cat, e))
+        .finally(() => setLoading(false));
     } else {
       fetch(def.src)
         .then(r => r.json())
@@ -938,8 +1342,8 @@ function _renderKoelteplekkenLayerInner(def, features) {
       const col = isActive ? typeColor : "#9CA3AF";
       const cls = isActive ? "koelte-marker" : "koelte-marker koelte-marker--inactive";
       const icon = L.divIcon({
-        className: "",   // suppress Leaflet's default white box
-        html: `<div class="${cls}" style="--mc:${col}"><div class="koelte-marker-dot"></div></div>`,
+        className: "",
+        html: `<div class="${cls}" style="--mc:${col}"><div class="koelte-marker-dot"><svg class="koelte-marker-icon" width="10" height="10" viewBox="0 0 14 14" fill="none" aria-hidden="true"><line x1="7" y1="1" x2="7" y2="13" stroke="white" stroke-width="2" stroke-linecap="round"/><line x1="1" y1="7" x2="13" y2="7" stroke="white" stroke-width="2" stroke-linecap="round"/><line x1="2.9" y1="2.9" x2="11.1" y2="11.1" stroke="white" stroke-width="2" stroke-linecap="round"/><line x1="11.1" y1="2.9" x2="2.9" y2="11.1" stroke="white" stroke-width="2" stroke-linecap="round"/></svg></div></div>`,
         iconSize:    [28, 28],
         iconAnchor:  [14, 14],
         popupAnchor: [0, -14],
@@ -1073,11 +1477,11 @@ function _nearestShadeSlot() {
 function _shadeStyle(feature) {
   const pct = feature.properties?.s ?? 0;
   const t   = Math.min(1, Math.max(0, pct / 100));
-  // Red (hot, no shade) → blue (cool, full shade)
-  const hue = Math.round(t * 220);
+  // Dark shadow overlay: opacity proportional to shade coverage.
+  // Transparent where there is no shade, dark navy-shadow where fully shaded.
   return {
-    fillColor:   `hsl(${hue},80%,48%)`,
-    fillOpacity: 0.25 + t * 0.50,
+    fillColor:   "#1a2744",
+    fillOpacity: t * 0.60,
     color:       "transparent",
     weight:      0,
   };
@@ -1153,22 +1557,11 @@ function _renderSwimmingPoolsLayerInner(def, features) {
 
 function makeSwimmingSquareIcon(color = "#00b4c8") {
   return L.divIcon({
-    className: "swim-square-marker",
-    html: `
-      <span style="
-        display:block;
-        width:14px;
-        height:14px;
-        background:${color};
-        border:2px solid #fff;
-        border-radius:3px;
-        box-shadow:0 2px 4px rgba(0,0,0,0.22);
-        box-sizing:border-box;
-      "></span>
-    `,
-    iconSize: [18, 18],
-    iconAnchor: [9, 9],
-    popupAnchor: [0, -9],
+    className: "swim-icon-marker",
+    html: `<div style="width:22px;height:22px;background:${color};border:2.5px solid rgba(255,255,255,0.92);border-radius:50%;display:flex;align-items:center;justify-content:center;box-shadow:0 1px 5px rgba(0,0,0,0.28);box-sizing:border-box;"><svg width="11" height="9" viewBox="0 0 20 14" fill="none" aria-hidden="true"><path d="M1 4c2.4-2.8 5-2.8 7.5 0s5 2.8 7.5 0" stroke="white" stroke-width="2.5" stroke-linecap="round"/><path d="M1 10c2.4-2.8 5-2.8 7.5 0s5 2.8 7.5 0" stroke="white" stroke-width="2.5" stroke-linecap="round"/></svg></div>`,
+    iconSize:    [22, 22],
+    iconAnchor:  [11, 11],
+    popupAnchor: [0, -11],
   });
 }
 
@@ -1279,8 +1672,18 @@ function setupToggles() {
       state.on[cat]=on;
       refreshListIfActive();
       if (cat === "shade") {
+        const shadeLegend = document.getElementById("shade-legend");
+        if (shadeLegend) shadeLegend.hidden = !on;
         if (on) _renderShadeLayer();
         else if (state.layers.shade) state.map.removeLayer(state.layers.shade);
+        return;
+      }
+      if (cat === "hvi") {
+        const legend = document.getElementById("hvi-legend");
+        if (legend) legend.hidden = !on;
+        if (!state.layers.hvi) return;
+        if (on) state.map.addLayer(state.layers.hvi);
+        else state.map.removeLayer(state.layers.hvi);
         return;
       }
       if (!state.layers[cat]) return;
@@ -1860,42 +2263,71 @@ function tapDisplayName(p) {
 function renderTapDetailContent(feature, container) {
   const p = feature.properties || {}, col = "#009de6";
   const body = document.createElement("div"); body.className = "detail-panel-body";
-  const nameSec = document.createElement("div"); nameSec.className = "detail-panel-namesec";
+
+  const accent = document.createElement("div"); accent.className = "detail-panel-accent"; accent.style.background = col;
+  body.appendChild(accent);
+
+  const info = document.createElement("div"); info.className = "detail-panel-info";
+
+  const hdrRow = document.createElement("div"); hdrRow.className = "detail-header-row";
+  const hdrInfo = document.createElement("div"); hdrInfo.className = "detail-header-info";
   const catLbl = document.createElement("div"); catLbl.className = "dp-cat"; catLbl.textContent = t("water_label");
-  const nameEl = document.createElement("div"); nameEl.className = "sheet-name";
-  nameEl.textContent = tapDisplayName(p);
-  nameSec.append(catLbl, nameEl); body.appendChild(nameSec);
+  const nameEl = document.createElement("div"); nameEl.className = "detail-panel-name"; nameEl.textContent = tapDisplayName(p);
+  const iconBadge = document.createElement("div"); iconBadge.className = "detail-icon-badge";
+  iconBadge.style.cssText = `background:${col}1a;border-color:${col}33;`;
+  iconBadge.innerHTML = `<svg width="22" height="16" viewBox="0 0 22 16" fill="none" aria-hidden="true" style="color:${col}"><path d="M7 1C7 1 1 8 1 11a6 6 0 0 0 12 0C13 8 7 1 7 1Z" stroke="currentColor" stroke-width="1.5" fill="none"/><circle cx="17" cy="6" r="3" stroke="currentColor" stroke-width="1.5" fill="none"/><line x1="17" y1="9" x2="17" y2="15" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>`;
+  hdrInfo.append(catLbl, nameEl);
+  hdrRow.append(hdrInfo, iconBadge);
+  info.appendChild(hdrRow);
+
   const grid = document.createElement("div"); grid.className = "prop-grid";
   grid.append(
-  cell(t("status"),     translateTapStatus(p.Status)),
-  cell(t("type_label"), translateTapType(p["Subtype afnamepunt"])),
-  cell(t("district"),   p.District),
-);
-
+    cell(t("status"),     translateTapStatus(p.Status)),
+    cell(t("type_label"), translateTapType(p["Subtype afnamepunt"])),
+    cell(t("district"),   p.District),
+  );
   if (p.Aanlegjaar) grid.appendChild(cell(t("installed"), String(p.Aanlegjaar).replace(".0", "")));
-  body.appendChild(grid);
+  info.appendChild(grid);
+
   if (feature.geometry?.type === "Point") {
     const [lon, lat] = feature.geometry.coordinates;
     const actions = document.createElement("div"); actions.className = "detail-actions";
     actions.appendChild(makeDirectionsBtn(lat, lon));
-    body.appendChild(actions);
+    info.appendChild(actions);
   }
+
+  body.appendChild(info);
   container.appendChild(body);
 }
 
 function renderParkDetailContent(feature, container) {
   const p = feature.properties || {}, col = "#00893c";
   const body = document.createElement("div"); body.className = "detail-panel-body";
-  const nameSec = document.createElement("div"); nameSec.className = "detail-panel-namesec";
-  const catLbl = document.createElement("div"); catLbl.className = "dp-cat"; catLbl.textContent = p.Stadsdeel || t("parks_label");
-  const nameEl = document.createElement("div"); nameEl.className = "sheet-name"; nameEl.textContent = p.Naam || "Park";
-  nameSec.append(catLbl, nameEl); body.appendChild(nameSec);
+
+  const accent = document.createElement("div"); accent.className = "detail-panel-accent"; accent.style.background = col;
+  body.appendChild(accent);
+
+  const info = document.createElement("div"); info.className = "detail-panel-info";
+
+  const hdrRow = document.createElement("div"); hdrRow.className = "detail-header-row";
+  const hdrInfo = document.createElement("div"); hdrInfo.className = "detail-header-info";
+  const catLbl = document.createElement("div"); catLbl.className = "dp-cat"; catLbl.textContent = t("parks_label");
+  const nameEl = document.createElement("div"); nameEl.className = "detail-panel-name"; nameEl.textContent = p.Naam || "Park";
+  const iconBadge = document.createElement("div"); iconBadge.className = "detail-icon-badge";
+  iconBadge.style.cssText = `background:${col}1a;border-color:${col}33;`;
+  iconBadge.innerHTML = `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true" style="color:${col}"><path d="M12 3C9 3 6 6 6 9c0 4 6 12 6 12s6-8 6-12c0-3-3-6-6-6Z" stroke="currentColor" stroke-width="1.5" fill="none"/><circle cx="12" cy="9" r="2.5" stroke="currentColor" stroke-width="1.5" fill="none"/></svg>`;
+  hdrInfo.append(catLbl, nameEl);
+  hdrRow.append(hdrInfo, iconBadge);
+  info.appendChild(hdrRow);
+
   const grid = document.createElement("div"); grid.className = "prop-grid";
   const area = p.Oppervlakte_m2
     ? (p.Oppervlakte_m2 >= 10000 ? (p.Oppervlakte_m2 / 10000).toFixed(1) + " ha" : p.Oppervlakte_m2.toLocaleString() + " m²")
     : null;
   grid.append(cell(t("district"), p.Stadsdeel), cell(t("area"), area), cell(t("city_park"), p.Stadspark === "J" ? t("yes") : t("no")));
-  body.appendChild(grid);
+  info.appendChild(grid);
+
+  body.appendChild(info);
   container.appendChild(body);
 }
 
@@ -1906,38 +2338,41 @@ function showParkDetail(feature) { openDetailPanel(feature, renderParkDetailCont
 function renderSwimmingPoolDetailContent(feature, container) {
   const p = feature.properties || {};
   const swimType = getSwimTypeDef(swimCategory(p));
+  const col = "#00b4c8";
 
-  const body = document.createElement("div");
-  body.className = "detail-panel-body";
+  const body = document.createElement("div"); body.className = "detail-panel-body";
 
-  const nameSec = document.createElement("div");
-  nameSec.className = "detail-panel-namesec";
+  const accent = document.createElement("div"); accent.className = "detail-panel-accent"; accent.style.background = col;
+  body.appendChild(accent);
 
-  const catLbl = document.createElement("div");
-  catLbl.className = "dp-cat";
+  const info = document.createElement("div"); info.className = "detail-panel-info";
+
+  const hdrRow = document.createElement("div"); hdrRow.className = "detail-header-row";
+  const hdrInfo = document.createElement("div"); hdrInfo.className = "detail-header-info";
+  const catLbl = document.createElement("div"); catLbl.className = "dp-cat";
   catLbl.textContent = state.lang === "nl" ? swimType.label_nl : swimType.label_en;
-
-  const nameEl = document.createElement("div");
-  nameEl.className = "sheet-name";
+  const nameEl = document.createElement("div"); nameEl.className = "detail-panel-name";
   nameEl.textContent = p.name || p.Naam_locatie || p.Naam || "Zwemplek";
+  const iconBadge = document.createElement("div"); iconBadge.className = "detail-icon-badge";
+  iconBadge.style.cssText = `background:${col}1a;border-color:${col}33;`;
+  iconBadge.innerHTML = `<svg width="24" height="18" viewBox="0 0 24 18" fill="none" aria-hidden="true" style="color:${col}"><path d="M1 6c2.4-3.2 5-3.2 7.5 0s5 3.2 7.5 0 5-3.2 7.5 0" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"/><path d="M1 13c2.4-3.2 5-3.2 7.5 0s5 3.2 7.5 0 5-3.2 7.5 0" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"/></svg>`;
+  hdrInfo.append(catLbl, nameEl);
+  hdrRow.append(hdrInfo, iconBadge);
+  info.appendChild(hdrRow);
 
-  nameSec.append(catLbl, nameEl);
-  body.appendChild(nameSec);
-
-  const grid = document.createElement("div");
-  grid.className = "prop-grid";
+  const grid = document.createElement("div"); grid.className = "prop-grid";
   grid.append(cell(t("type_label"), state.lang === "nl" ? swimType.label_nl : swimType.label_en));
   if (p.id) grid.appendChild(cell("ID", String(p.id)));
-  body.appendChild(grid);
+  info.appendChild(grid);
 
   if (feature.geometry?.type === "Point") {
     const [lon, lat] = feature.geometry.coordinates;
-    const actions = document.createElement("div");
-    actions.className = "detail-actions";
+    const actions = document.createElement("div"); actions.className = "detail-actions";
     actions.appendChild(makeDirectionsBtn(lat, lon));
-    body.appendChild(actions);
+    info.appendChild(actions);
   }
 
+  body.appendChild(info);
   container.appendChild(body);
 }
 

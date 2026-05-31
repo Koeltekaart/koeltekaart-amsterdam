@@ -33,7 +33,9 @@
   <!-- Main nav row -->
   <div class="topbar-main">
     <a class="logo-img-link" href="#landing-intro" aria-label="Koeltekaart homepage">
-      <img src="images/Default_web_rgb.svg" class="logo-img" alt="GGD Amsterdam logo" width="auto" height="36" />
+      <div class="logo-badge">
+        <img src="images/Default_web_rgb.svg" class="logo-img" alt="GGD Amsterdam logo" width="auto" height="36" />
+      </div>
     </a>
 
     <span class="topbar-title">
@@ -302,7 +304,9 @@
       <div class="filter-group filter-group--static">
         <div class="filter-group-body">
           <div class="layer-row on" data-cat="koelteplekken" role="switch" aria-checked="true" tabindex="0">
-            <span class="l-dot"></span>
+            <span class="l-dot" style="display:flex;align-items:center;justify-content:center;background:#004699;">
+              <svg width="9" height="9" viewBox="0 0 14 14" fill="none" aria-hidden="true"><line x1="7" y1="1" x2="7" y2="13" stroke="white" stroke-width="2" stroke-linecap="round"/><line x1="1" y1="7" x2="13" y2="7" stroke="white" stroke-width="2" stroke-linecap="round"/><line x1="2.9" y1="2.9" x2="11.1" y2="11.1" stroke="white" stroke-width="2" stroke-linecap="round"/><line x1="11.1" y1="2.9" x2="2.9" y2="11.1" stroke="white" stroke-width="2" stroke-linecap="round"/></svg>
+            </span>
             <span class="l-name" data-i18n="koelteplekken_label">Koelteplekken</span>
             <span class="l-count" id="cnt-koelteplekken"></span>
             <span class="l-sw" aria-hidden="true"></span>
@@ -332,7 +336,9 @@
             <span class="l-sw" aria-hidden="true"></span>
           </div>
           <div class="layer-row on" data-cat="swimming_pools" role="switch" aria-checked="true" tabindex="0">
-            <span class="l-dot" style="background:#00b4c8;"></span>
+            <span class="l-dot" style="display:flex;align-items:center;justify-content:center;background:#00b4c8;">
+              <svg width="10" height="8" viewBox="0 0 20 14" fill="none" aria-hidden="true"><path d="M1 4c2.4-2.8 5-2.8 7.5 0s5 2.8 7.5 0" stroke="white" stroke-width="2.2" stroke-linecap="round"/><path d="M1 10c2.4-2.8 5-2.8 7.5 0s5 2.8 7.5 0" stroke="white" stroke-width="2.2" stroke-linecap="round"/></svg>
+            </span>
             <span class="l-name" data-i18n="swimming_pools_label">Zwemplekken</span>
             <span class="l-count" id="cnt-swimming_pools"></span>
             <span class="l-sw" aria-hidden="true"></span>
@@ -353,10 +359,51 @@
             <span class="l-sw" aria-hidden="true"></span>
           </div>
           <div class="layer-row" data-cat="shade" role="switch" aria-checked="false" tabindex="0">
-            <span class="l-dot" style="background:#6b21a8;"></span>
+            <span class="l-dot" style="background:#1a2744;"></span>
             <span class="l-name" data-i18n="shade_label">Loopschaduw</span>
             <span class="l-count" id="cnt-shade"></span>
             <span class="l-sw" aria-hidden="true"></span>
+          </div>
+          <div class="shade-legend" id="shade-legend" hidden>
+            <div class="shade-legend-row">
+              <span class="shade-swatch shade-swatch--dark"></span>
+              <span class="lang-nl">In schaduw</span><span class="lang-en">In shade</span>
+            </div>
+            <div class="shade-legend-row">
+              <span class="shade-swatch shade-swatch--light"></span>
+              <span class="lang-nl">Volle zon</span><span class="lang-en">Full sunlight</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="filter-group filter-group--static">
+        <div class="filter-group-label">
+          <span class="lang-nl">Analyse</span>
+          <span class="lang-en">Analysis</span>
+        </div>
+        <div class="filter-group-body">
+          <div class="layer-row" data-cat="hvi" role="switch" aria-checked="false" tabindex="0">
+            <span class="l-dot" style="background:#CA0020;"></span>
+            <span class="l-name">
+              <span class="lang-nl">Kwetsbaarheidskaart</span>
+              <span class="lang-en">Vulnerability map</span>
+            </span>
+            <span class="l-sw" aria-hidden="true"></span>
+          </div>
+          <div class="hvi-legend" id="hvi-legend" hidden>
+            <div class="hvi-legend-scale">
+              <span class="hvi-legend-swatch" style="background:#2166AC"></span>
+              <span class="hvi-legend-swatch" style="background:#92C5DE"></span>
+              <span class="hvi-legend-swatch" style="background:#FFFFBF"></span>
+              <span class="hvi-legend-swatch" style="background:#F4A582"></span>
+              <span class="hvi-legend-swatch" style="background:#CA0020"></span>
+            </div>
+            <div class="hvi-legend-labels">
+              <span class="lang-nl">Laag</span><span class="lang-en">Low</span>
+              <span class="hvi-legend-spacer"></span>
+              <span class="lang-nl">Hoog</span><span class="lang-en">High</span>
+            </div>
           </div>
         </div>
       </div>
@@ -476,6 +523,7 @@
 </div>
 
 <script src="libs/leaflet/leaflet.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
 <script src="js/app.js"></script>
 
 </div><!-- /data-app-start -->
