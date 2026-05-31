@@ -43,7 +43,10 @@
     </span>
 
     <div id="search-wrap" role="search">
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" class="search-icon"><path d="M16.1585 14.7266C17.1537 13.4471 17.7325 11.8528 17.7325 10.1162C17.7325 5.91208 14.3204 2.5 10.1162 2.5C5.91208 2.5 2.5 5.91208 2.5 10.1162C2.5 14.3204 5.91208 17.7325 10.1162 17.7325C11.8528 17.7325 13.4471 17.1537 14.7266 16.1585L20.058 21.5L21.5 20.058L16.1585 14.7266ZM10.1162 15.7015C7.03928 15.7015 4.531 13.1932 4.531 10.1162C4.531 7.03928 7.03928 4.531 10.1162 4.531C13.1932 4.531 15.7015 7.03928 15.7015 10.1162C15.7015 11.2942 15.3359 12.3808 14.7165 13.2745C14.3306 13.8431 13.8431 14.3306 13.2745 14.7165C12.3808 15.3359 11.2942 15.7015 10.1162 15.7015Z"/></svg>
+      <svg class="search-icon" width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
+        <circle cx="5.5" cy="5.5" r="4" stroke="currentColor" stroke-width="1.5"/>
+        <line x1="8.5" y1="8.5" x2="13" y2="13" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+      </svg>
       <input id="search-input" type="search" autocomplete="off" spellcheck="false"
              data-i18n-placeholder="search_placeholder" aria-label="Search" />
       <div id="search-results" role="listbox" hidden></div>
@@ -51,7 +54,14 @@
 
     <div class="topbar-actions">
       <button id="btn-near" class="ctrl-btn">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path d="M12 16C14.2091 16 16 14.2091 16 12C16 9.79086 14.2091 8 12 8C9.79086 8 8 9.79086 8 12C8 14.2091 9.79086 16 12 16Z"/><path fill-rule="evenodd" clip-rule="evenodd" d="M10.8422 23V20.9262C6.79754 20.4068 3.59325 17.2025 3.07379 13.1578H1V11.1578H3.03888C3.42796 6.96519 6.69287 3.60669 10.8422 3.07379V1H12.8422V3.03888C17.1406 3.43777 20.5622 6.85942 20.9611 11.1578H23V13.1578H20.9262C20.3933 17.3071 17.0348 20.572 12.8422 20.9611V23H10.8422ZM12 19C15.866 19 19 15.866 19 12C19 8.13401 15.866 5 12 5C8.13401 5 5 8.13401 5 12C5 15.866 8.13401 19 12 19Z"/></svg>
+        <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
+          <circle cx="7" cy="7" r="6" stroke="currentColor" stroke-width="1.5"/>
+          <circle cx="7" cy="7" r="2" fill="currentColor"/>
+          <line x1="7" y1="0"    x2="7"  y2="2.5"  stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+          <line x1="7" y1="11.5" x2="7"  y2="14"   stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+          <line x1="0" y1="7"    x2="2.5" y2="7"   stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+          <line x1="11.5" y1="7" x2="14" y2="7"    stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+        </svg>
         <span data-i18n="near_me">In mijn buurt</span>
       </button>
       <button id="btn-lang" class="ctrl-btn lang-btn" aria-label="Switch language">EN</button>
@@ -135,7 +145,7 @@
               <summary class="info-block-title">
                 <span class="lang-nl">Wat zijn koelteplekken?</span>
                 <span class="lang-en">What are cooling spots?</span>
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" class="info-block-chevron"><path fill-rule="evenodd" clip-rule="evenodd" d="M2.5 7.91148L12 17.5L21.5 7.91148L20.1016 6.5L12 14.677L3.89845 6.5L2.5 7.91148Z"/></svg>
+                <svg class="info-block-chevron" width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M4 6l4 4 4-4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
               </summary>
               <div class="info-block-body">
                 <p class="lang-nl">Tijdens warme dagen kan het in huis erg heet worden. Langere tijd verblijven in een hete woning (boven de 27 graden) kan slecht zijn voor uw gezondheid. Als het Amsterdams Hitteplan actief is, openen in verschillende buurten koelteplekken. Deze plekken bieden een koele en fijne omgeving waar u tijdelijk aan de hitte kunt ontsnappen. Sommige locaties zijn langer open en bieden extra voorzieningen aan.</p>
@@ -150,7 +160,7 @@
               <summary class="info-block-title">
                 <span class="lang-nl">Goed om te weten</span>
                 <span class="lang-en">Good to know</span>
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" class="info-block-chevron"><path fill-rule="evenodd" clip-rule="evenodd" d="M2.5 7.91148L12 17.5L21.5 7.91148L20.1016 6.5L12 14.677L3.89845 6.5L2.5 7.91148Z"/></svg>
+                <svg class="info-block-chevron" width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M4 6l4 4 4-4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
               </summary>
               <div class="info-block-body">
                 <ul class="lang-nl">
@@ -177,7 +187,7 @@
               <summary class="info-block-title">
                 <span class="lang-nl">Kaart met koelteplekken</span>
                 <span class="lang-en">Map of cooling spots</span>
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" class="info-block-chevron"><path fill-rule="evenodd" clip-rule="evenodd" d="M2.5 7.91148L12 17.5L21.5 7.91148L20.1016 6.5L12 14.677L3.89845 6.5L2.5 7.91148Z"/></svg>
+                <svg class="info-block-chevron" width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M4 6l4 4 4-4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
               </summary>
               <div class="info-block-body">
                 <p class="lang-nl">Hieronder vindt u een kaart met alle koelteplekken in Amsterdam. Per locatie kunt u zien:</p>
@@ -215,7 +225,9 @@
   <div id="map-section">
     
     <button id="right-panel-toggle" aria-label="Locatiepaneel inklappen" aria-expanded="true">
-  <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path fill-rule="evenodd" clip-rule="evenodd" d="M7.91148 2.5L17.5 12L7.91148 21.5L6.5 20.1016L14.677 12L6.5 3.89845L7.91148 2.5Z"/></svg>
+  <svg width="8" height="13" viewBox="0 0 8 13" fill="none" aria-hidden="true">
+    <path d="M1.5 1.5L6.5 6.5L1.5 11.5" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+  </svg>
 </button>
     
     <!-- Mobile scroll handle — tap/swipe UP to return to landing section -->
@@ -224,7 +236,11 @@
     <!-- Mobile filter bar — compact single row -->
     <div id="mobile-filter-bar" role="group" aria-label="Filters">
       <button id="btn-filter-sheet" class="mfb-filters-btn" aria-expanded="false">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path fill-rule="evenodd" clip-rule="evenodd" d="M14.8294 12.8384L21.4795 4.5V2.5H2.47949V4.5L9.12939 12.8382V21.5H10.9258L14.8294 19.4314V12.8384ZM12.9294 18.288V12.8384L13.344 11.6538L19.129 4.4H4.82999L10.6148 11.6535L11.0294 12.8382V19.2948L12.9294 18.288Z"/></svg>
+        <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+          <line x1="2" y1="4"  x2="14" y2="4"  stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+          <line x1="4" y1="8"  x2="12" y2="8"  stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+          <line x1="6" y1="12" x2="10" y2="12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+        </svg>
         <span>Filters</span>
         <span class="mfb-count" id="mfb-active-count" hidden></span>
       </button>
@@ -233,7 +249,11 @@
 
     <!-- Filter FAB — floating pill over map/list on mobile -->
     <button id="btn-filter-fab" aria-label="Filters openen" aria-expanded="false">
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path fill-rule="evenodd" clip-rule="evenodd" d="M14.8294 12.8384L21.4795 4.5V2.5H2.47949V4.5L9.12939 12.8382V21.5H10.9258L14.8294 19.4314V12.8384ZM12.9294 18.288V12.8384L13.344 11.6538L19.129 4.4H4.82999L10.6148 11.6535L11.0294 12.8382V19.2948L12.9294 18.288Z"/></svg>
+      <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+        <line x1="2" y1="4"  x2="14" y2="4"  stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+        <line x1="4" y1="8"  x2="12" y2="8"  stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+        <line x1="6" y1="12" x2="10" y2="12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+      </svg>
       <span>Filters</span>
       <span class="fab-count" id="fab-active-count" hidden></span>
     </button>
@@ -241,18 +261,29 @@
     <!-- View toggle (mobile floating pill) -->
     <div class="view-toggle-bar" role="group" aria-label="View mode">
       <button class="view-btn active" data-view="map" aria-pressed="true">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path fill-rule="evenodd" clip-rule="evenodd" d="M8.5 15.7679L4.5 18.0536V8.0919L8.5 5.52047V15.7679ZM10.5 15.7388L13.5 18.1388V7.74131L10.5 5.64131V15.7388ZM14.5 6L21.5 2.5V17L14.5 21.5L9.5 17.5L2.5 21.5V7L9.5 2.5L14.5 6ZM15.5 18.4795L19.5 15.9081V5.73607L15.5 7.73607V18.4795Z"/></svg>
+        <svg width="13" height="13" viewBox="0 0 13 13" fill="none" aria-hidden="true">
+          <rect x="1" y="1" width="4.5" height="4.5" rx="1" stroke="currentColor" stroke-width="1.3"/>
+          <rect x="7.5" y="1" width="4.5" height="4.5" rx="1" stroke="currentColor" stroke-width="1.3"/>
+          <rect x="1" y="7.5" width="4.5" height="4.5" rx="1" stroke="currentColor" stroke-width="1.3"/>
+          <rect x="7.5" y="7.5" width="4.5" height="4.5" rx="1" stroke="currentColor" stroke-width="1.3"/>
+        </svg>
         <span data-i18n="view_map">Kaart</span>
       </button>
       <button class="view-btn" data-view="list" aria-pressed="false">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path d="M23 5H1V7H23V5Z"/><path d="M23 11H1V13H23V11Z"/><path d="M1 17H23V19H1V17Z"/></svg>
+        <svg width="13" height="13" viewBox="0 0 13 13" fill="none" aria-hidden="true">
+          <line x1="1" y1="3"   x2="12" y2="3"   stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/>
+          <line x1="1" y1="6.5" x2="12" y2="6.5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/>
+          <line x1="1" y1="10"  x2="12" y2="10"  stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/>
+        </svg>
         <span data-i18n="view_list">Lijst</span>
       </button>
     </div>
 
     <!-- Desktop sidebar collapse tab -->
     <button id="sidebar-collapse-btn" aria-label="Filter zijbalk inklappen" aria-expanded="true">
-  <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path fill-rule="evenodd" clip-rule="evenodd" d="M16.0885 2.5L6.5 12L16.0885 21.5L17.5 20.1016L9.32296 12L17.5 3.89845L16.0885 2.5Z"/></svg>
+  <svg width="8" height="13" viewBox="0 0 8 13" fill="none" aria-hidden="true">
+    <path d="M6.5 1.5L1.5 6.5L6.5 11.5" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+  </svg>
 </button>
 
 
@@ -261,7 +292,10 @@
       <div class="sidebar-mobile-header">
         <span class="sidebar-mobile-title" data-i18n="filter_panel_title">Soorten locaties</span>
         <button class="sidebar-mobile-close" aria-label="Sluit filters">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path d="M13.7678 10.5411L20.6853 2.5H19.0461L13.0396 9.48195L8.24224 2.5H2.70905L9.96361 13.0579L2.70905 21.4902H4.34837L10.6914 14.1171L15.7578 21.4902H21.291L13.7674 10.5411H13.7678ZM11.5225 13.151L10.7875 12.0996L4.93904 3.73406H7.45695L12.1767 10.4853L12.9118 11.5367L19.0469 20.3123H16.529L11.5225 13.1514V13.151Z"/></svg>
+          <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+            <line x1="3" y1="3"  x2="13" y2="13" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+            <line x1="13" y1="3" x2="3"  y2="13" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+          </svg>
           <span class="lang-nl">Sluiten</span>
           <span class="lang-en">Close</span>
         </button>
@@ -282,7 +316,7 @@
             <summary class="filter-section-summary">
               <span class="lang-nl">Soorten locaties</span>
               <span class="lang-en">Location categories</span>
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" class="filter-section-chevron"><path fill-rule="evenodd" clip-rule="evenodd" d="M2.5 7.91148L12 17.5L21.5 7.91148L20.1016 6.5L12 14.677L3.89845 6.5L2.5 7.91148Z"/></svg>
+              <svg class="filter-section-chevron" width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true"><path d="M2 4.5l4 3 4-3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
             </summary>
             <div id="category-chips" class="category-chips" role="group" aria-label="Filter by category"></div>
           </details>
@@ -291,12 +325,12 @@
             <summary class="filter-section-summary">
               <span class="lang-nl">Voorzieningen</span>
               <span class="lang-en">Amenities</span>
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" class="filter-section-chevron"><path fill-rule="evenodd" clip-rule="evenodd" d="M2.5 7.91148L12 17.5L21.5 7.91148L20.1016 6.5L12 14.677L3.89845 6.5L2.5 7.91148Z"/></svg>
+              <svg class="filter-section-chevron" width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true"><path d="M2 4.5l4 3 4-3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
             </summary>
             <div id="filter-chips" class="filter-chips" role="group" aria-label="Filter amenities"></div>
           </details>
           <div class="layer-row on" data-cat="water_taps" role="switch" aria-checked="true" tabindex="0">
-            <span class="l-icon" style="color:#009de6;"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path fill-rule="evenodd" clip-rule="evenodd" d="M10.1478 2.1676C8.5304 2.1676 7.21923 3.47877 7.21923 5.09617V14.9182C6.13977 14.5437 4.92661 14.6827 3.94638 15.3352L2.44415 16.3352L3.55241 18L5.05464 17C5.62891 16.6178 6.37658 16.6178 6.95085 17C8.1964 17.8292 9.81804 17.8292 11.0636 17C11.6371 16.6182 12.3865 16.6184 12.9615 17.0012C14.2043 17.8284 15.8249 17.8305 17.0691 17.0023C17.6435 16.6199 18.3917 16.6215 18.9645 17.0062L20.4407 17.9977L21.5559 16.3375L20.0796 15.3459C19.1394 14.7144 17.9816 14.558 16.9335 14.8774V5.09617C16.9335 4.58334 17.3492 4.1676 17.8621 4.1676C18.3749 4.1676 18.7906 4.58334 18.7906 5.09617V5.73903H20.7906V5.09617C20.7906 3.47877 19.4795 2.1676 17.8621 2.1676C16.2447 2.1676 14.9335 3.47877 14.9335 5.09617V7.1676H9.21923V5.09617C9.21923 4.58334 9.63496 4.1676 10.1478 4.1676C10.6606 4.1676 11.0764 4.58334 11.0764 5.09617V5.73903H13.0764V5.09617C13.0764 3.47877 11.7652 2.1676 10.1478 2.1676ZM9.95532 15.3352C9.72971 15.4854 9.47734 15.5765 9.21923 15.6087V13.1676H14.9335V15.6205C14.6315 15.6058 14.3323 15.5111 14.0697 15.3363C12.8249 14.5076 11.2016 14.5056 9.95532 15.3352ZM14.9335 11.1676V9.1676H9.21923V11.1676H14.9335ZM6.95085 20.5C6.37658 20.1178 5.62891 20.1178 5.05464 20.5L3.55241 21.5L2.44415 19.8352L3.94638 18.8352C5.19193 18.006 6.81357 18.006 8.05911 18.8352C8.63338 19.2174 9.38105 19.2174 9.95532 18.8352C11.2016 18.0056 12.8249 18.0076 14.0697 18.8363C14.6427 19.2177 15.3894 19.2179 15.9609 18.8374C17.209 18.0066 18.8349 18.0099 20.0796 18.8459L21.5559 19.8375L20.4407 21.4977L18.9645 20.5062C18.3917 20.1215 17.6435 20.1199 17.0691 20.5023C15.8249 21.3305 14.2043 21.3284 12.9615 20.5012C12.3865 20.1184 11.6371 20.1182 11.0636 20.5C9.81804 21.3292 8.1964 21.3292 6.95085 20.5Z"/></svg></span>
+            <span class="l-dot" style="background:#009de6;"></span>
             <span class="l-name" data-i18n="water_label">Drinkwaterkranen</span>
             <span class="l-count" id="cnt-water_taps"></span>
             <span class="l-sw" aria-hidden="true"></span>
@@ -314,18 +348,18 @@
             <summary class="filter-section-summary">
               <span class="lang-nl">Soorten zwemplekken</span>
               <span class="lang-en">Swimming spot types</span>
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" class="filter-section-chevron"><path fill-rule="evenodd" clip-rule="evenodd" d="M2.5 7.91148L12 17.5L21.5 7.91148L20.1016 6.5L12 14.677L3.89845 6.5L2.5 7.91148Z"/></svg>
+              <svg class="filter-section-chevron" width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true"><path d="M2 4.5l4 3 4-3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
             </summary>
             <div id="swimming-filter-chips" class="filter-chips swimming-filter-chips" role="group" aria-label="Filter swimming spot types"></div>
           </details>
           <div class="layer-row on" data-cat="parks" role="switch" aria-checked="true" tabindex="0">
-            <span class="l-icon" style="color:#00893c;"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path fill-rule="evenodd" clip-rule="evenodd" d="M18.7873 7.85723L19.1561 6.8933C19.2928 6.53616 19.3684 6.14708 19.3684 5.73684C19.3684 3.94918 17.9192 2.5 16.1316 2.5C14.3439 2.5 12.8947 3.94918 12.8947 5.73684C12.8947 6.14708 12.9703 6.53616 13.107 6.8933L13.4759 7.85722L12.7075 8.54623C11.6572 9.4879 11 10.8504 11 12.3684C11 14.9019 12.836 17.0066 15.25 17.4246V16.4246L13.1141 15.1431L13.8859 13.8569L15.25 14.6754V10H16.75V12.6893L17.9697 11.4697L19.0303 12.5303L16.75 14.8107V17.4631C19.2925 17.1577 21.2632 14.9932 21.2632 12.3684C21.2632 10.8504 20.6059 9.4879 19.5557 8.54623L18.7873 7.85723ZM16.75 18.9715C20.1226 18.6597 22.7632 15.8224 22.7632 12.3684C22.7632 10.4065 21.9112 8.64359 20.5571 7.42943C20.7582 6.90381 20.8684 6.33319 20.8684 5.73684C20.8684 3.12076 18.7477 1 16.1316 1C13.5155 1 11.3947 3.12076 11.3947 5.73684C11.3947 6.33319 11.5049 6.9038 11.7061 7.42942C10.352 8.64359 9.5 10.4065 9.5 12.3684C9.5 15.7321 12.0042 18.5108 15.25 18.9419V21H9.85848L9.47245 19.75H11.0588V18.25H9.04146L8.66646 16.75H9.38235V15.25H2.67647V16.75H3.39236L3.01736 18.25H1V19.75H2.58637L2.20034 21H1V23L23 23V21L16.75 21V18.9715ZM5.08274 16.75H6.97608L7.43931 18.25H4.61951L5.08274 16.75ZM4.15627 19.75H7.90255L8.28858 21H3.77024L4.15627 19.75Z"/></svg></span>
+            <span class="l-dot" style="background:#00893c;"></span>
             <span class="l-name" data-i18n="parks_label">Parken</span>
             <span class="l-count" id="cnt-parks"></span>
             <span class="l-sw" aria-hidden="true"></span>
           </div>
           <div class="layer-row" data-cat="shade" role="switch" aria-checked="false" tabindex="0">
-            <span class="l-icon" style="color:#1a2744;"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path fill-rule="evenodd" clip-rule="evenodd" d="M6.5286 15.0223C5.43862 13.1344 4.59575 9.57403 7.77616 6.37004C11.3825 2.73693 18.3911 2.31333 21.4446 2.55567C21.6859 4.89723 21.2639 10.5819 17.6446 14.5882C14.5625 17.9999 10.4757 17.3422 8.06459 16.2669C6.97232 17.5199 5.91146 18.9674 4.10517 21.5L2.5 20.3488C4.27211 17.8641 5.37888 16.3483 6.5286 15.0223ZM9.17098 7.76113C10.5738 6.34788 12.781 5.44398 15.2014 4.94791C16.7428 4.63199 18.2605 4.50392 19.5089 4.48202C19.3852 6.92601 18.6062 10.5854 16.1853 13.2652C14.8287 14.7669 13.2708 15.1984 11.7953 15.1507C10.9795 15.1243 10.1976 14.9484 9.52588 14.7151C10.4613 13.7889 11.6023 12.7597 13.2694 11.2746L11.9588 9.79515C10.2042 11.3582 8.98803 12.4545 7.96617 13.4797C7.74539 12.9686 7.56734 12.3454 7.52891 11.6687C7.46441 10.533 7.78206 9.16035 9.17098 7.76113Z"/></svg></span>
+            <span class="l-dot" style="background:#1a2744;"></span>
             <span class="l-name" data-i18n="shade_label">Loopschaduw</span>
             <span class="l-count" id="cnt-shade"></span>
             <span class="l-sw" aria-hidden="true"></span>
@@ -390,7 +424,9 @@
           <div id="panel-hdr-count"></div>
         </div>
         <button class="panel-hdr-back" id="panel-hdr-back" aria-label="Terug" hidden>
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path d="M10.6581 6.67326L9.23752 5.25L2.5 12L9.23752 18.75L10.6581 17.3267L6.34583 13.0064L21.5 13.0064V10.9937L6.34574 10.9937L10.6581 6.67326Z"/></svg>
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+            <path d="M10 3L5 8l5 5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
         </button>
       </div>
       <div id="list-view-inner" tabindex="-1"></div>
@@ -404,7 +440,9 @@
     <div class="cs-collapsed-summary" id="cs-toggle" role="button" aria-expanded="false" aria-controls="cs-expanded-body">
       <span class="cs-collapsed-text lang-nl">Contact &amp; Aanmelden</span>
       <span class="cs-collapsed-text lang-en">Contact &amp; Register</span>
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" class="cs-collapsed-chevron"><path fill-rule="evenodd" clip-rule="evenodd" d="M2.5 7.91148L12 17.5L21.5 7.91148L20.1016 6.5L12 14.677L3.89845 6.5L2.5 7.91148Z"/></svg>
+      <svg class="cs-collapsed-chevron" width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+        <path d="M4 6l4 4 4-4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
     </div>
     <!-- Mobile: expanded body -->
     <div class="cs-expanded-body" id="cs-expanded-body">
@@ -473,7 +511,9 @@
 <div id="contact-page" role="dialog" aria-modal="true" aria-labelledby="contact-page-title">
   <div class="tips-page-header">
     <button id="contact-back" class="tips-back-btn" aria-label="Back to map">
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path d="M10.6581 6.67326L9.23752 5.25L2.5 12L9.23752 18.75L10.6581 17.3267L6.34583 13.0064L21.5 13.0064V10.9937L6.34574 10.9937L10.6581 6.67326Z"/></svg>
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+        <path d="M10 3L5 8l5 5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
       <span data-i18n="back">Terug</span>
     </button>
     <span id="contact-page-title" class="tips-page-title" data-i18n="contact_page_title">Contact</span>
