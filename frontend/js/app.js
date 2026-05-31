@@ -1,5 +1,31 @@
 "use strict";
 
+// ── Amsterdam Design System icons — path data from packages-proprietary/assets/icons/ ─
+const ADS = {
+  search: `<path d="M16.1585 14.7266C17.1537 13.4471 17.7325 11.8528 17.7325 10.1162C17.7325 5.91208 14.3204 2.5 10.1162 2.5C5.91208 2.5 2.5 5.91208 2.5 10.1162C2.5 14.3204 5.91208 17.7325 10.1162 17.7325C11.8528 17.7325 13.4471 17.1537 14.7266 16.1585L20.058 21.5L21.5 20.058L16.1585 14.7266ZM10.1162 15.7015C7.03928 15.7015 4.531 13.1932 4.531 10.1162C4.531 7.03928 7.03928 4.531 10.1162 4.531C13.1932 4.531 15.7015 7.03928 15.7015 10.1162C15.7015 11.2942 15.3359 12.3808 14.7165 13.2745C14.3306 13.8431 13.8431 14.3306 13.2745 14.7165C12.3808 15.3359 11.2942 15.7015 10.1162 15.7015Z"/>`,
+  filter: `<path fill-rule="evenodd" clip-rule="evenodd" d="M14.8294 12.8384L21.4795 4.5V2.5H2.47949V4.5L9.12939 12.8382V21.5H10.9258L14.8294 19.4314V12.8384ZM12.9294 18.288V12.8384L13.344 11.6538L19.129 4.4H4.82999L10.6148 11.6535L11.0294 12.8382V19.2948L12.9294 18.288Z"/>`,
+  building: `<path d="M8 5H11V8H8V5Z"/><path d="M11 10H8V13H11V10Z"/><path d="M8 15H11V18H8V15Z"/><path d="M16 5H13V8H16V5Z"/><path d="M13 10H16V13H13V10Z"/><path d="M16 15H13V18H16V15Z"/><path fill-rule="evenodd" clip-rule="evenodd" d="M20 1V23H4V1H20ZM18 3H6V21H18V3Z"/>`,
+  personSwimming: `<path fill-rule="evenodd" clip-rule="evenodd" d="M15.8109 6.1899L12.6311 2.14539L6.4093 7.26881L7.41108 12.7786L5.28035 14.587L4.97079 14.8595C4.61294 14.963 4.26719 15.1216 3.94638 15.3351L2.44415 16.3351L3.55241 18L5.05464 17C5.62891 16.6177 6.37658 16.6177 6.95085 17C8.1964 17.8291 9.81804 17.8291 11.0636 17C11.6371 16.6182 12.3865 16.6184 12.9615 17.0011C14.2043 17.8284 15.8249 17.8305 17.0691 17.0022C17.6435 16.6199 18.3917 16.6215 18.9645 17.0062L20.4407 17.9977L21.5559 16.3374L20.0796 15.3459C18.8349 14.5099 17.209 14.5065 15.9609 15.3374C15.9233 15.3624 15.8849 15.3858 15.8458 15.4076L15.8665 15.3902L12.5283 11.416L12.1171 9.3667L15.8109 6.1899ZM12.7484 14.7877L10.668 12.3109L9.92604 8.61318L13.0558 5.92148L12.3232 4.98973L8.58709 8.06631L9.5853 13.5565L7.72381 15.1364C7.83812 15.1963 7.95006 15.2626 8.05911 15.3351C8.63338 15.7174 9.38105 15.7174 9.95532 15.3351C10.7925 14.7778 11.7999 14.5958 12.7484 14.7877ZM16.3192 11.9171C16.7563 12.404 17.5054 12.4443 17.9923 12.0072C18.4792 11.57 18.5195 10.8209 18.0823 10.334C17.6452 9.84714 16.8961 9.80682 16.4092 10.244C15.9223 10.6811 15.882 11.4302 16.3192 11.9171ZM14.831 13.2533C16.0061 14.5621 18.0197 14.6704 19.3285 13.4953C20.6372 12.3202 20.7456 10.3067 19.5705 8.99787C18.3954 7.68908 16.3818 7.5807 15.073 8.7558C13.7643 9.9309 13.6559 11.9445 14.831 13.2533ZM6.95085 20.5C6.37658 20.1177 5.62891 20.1177 5.05464 20.5L3.55241 21.5L2.44415 19.8351L3.94638 18.8351C5.19193 18.006 6.81357 18.006 8.05911 18.8351C8.63338 19.2174 9.38105 19.2174 9.95532 18.8351C11.2016 18.0055 12.8249 18.0076 14.0697 18.8363C14.6427 19.2177 15.3894 19.2178 15.9609 18.8374C17.209 18.0065 18.8349 18.0099 20.0796 18.8459L21.5559 19.8374L20.4407 21.4977L18.9645 20.5062C18.3917 20.1215 17.6435 20.1199 17.0691 20.5022C15.8249 21.3305 14.2043 21.3284 12.9615 20.5011C12.3865 20.1184 11.6371 20.1182 11.0636 20.5C9.81804 21.3291 8.1964 21.3291 6.95085 20.5Z"/>`,
+  waterLadder: `<path fill-rule="evenodd" clip-rule="evenodd" d="M10.1478 2.1676C8.5304 2.1676 7.21923 3.47877 7.21923 5.09617V14.9182C6.13977 14.5437 4.92661 14.6827 3.94638 15.3352L2.44415 16.3352L3.55241 18L5.05464 17C5.62891 16.6178 6.37658 16.6178 6.95085 17C8.1964 17.8292 9.81804 17.8292 11.0636 17C11.6371 16.6182 12.3865 16.6184 12.9615 17.0012C14.2043 17.8284 15.8249 17.8305 17.0691 17.0023C17.6435 16.6199 18.3917 16.6215 18.9645 17.0062L20.4407 17.9977L21.5559 16.3375L20.0796 15.3459C19.1394 14.7144 17.9816 14.558 16.9335 14.8774V5.09617C16.9335 4.58334 17.3492 4.1676 17.8621 4.1676C18.3749 4.1676 18.7906 4.58334 18.7906 5.09617V5.73903H20.7906V5.09617C20.7906 3.47877 19.4795 2.1676 17.8621 2.1676C16.2447 2.1676 14.9335 3.47877 14.9335 5.09617V7.1676H9.21923V5.09617C9.21923 4.58334 9.63496 4.1676 10.1478 4.1676C10.6606 4.1676 11.0764 4.58334 11.0764 5.09617V5.73903H13.0764V5.09617C13.0764 3.47877 11.7652 2.1676 10.1478 2.1676ZM9.95532 15.3352C9.72971 15.4854 9.47734 15.5765 9.21923 15.6087V13.1676H14.9335V15.6205C14.6315 15.6058 14.3323 15.5111 14.0697 15.3363C12.8249 14.5076 11.2016 14.5056 9.95532 15.3352ZM14.9335 11.1676V9.1676H9.21923V11.1676H14.9335ZM6.95085 20.5C6.37658 20.1178 5.62891 20.1178 5.05464 20.5L3.55241 21.5L2.44415 19.8352L3.94638 18.8352C5.19193 18.006 6.81357 18.006 8.05911 18.8352C8.63338 19.2174 9.38105 19.2174 9.95532 18.8352C11.2016 18.0056 12.8249 18.0076 14.0697 18.8363C14.6427 19.2177 15.3894 19.2179 15.9609 18.8374C17.209 18.0066 18.8349 18.0099 20.0796 18.8459L21.5559 19.8375L20.4407 21.4977L18.9645 20.5062C18.3917 20.1215 17.6435 20.1199 17.0691 20.5023C15.8249 21.3305 14.2043 21.3284 12.9615 20.5012C12.3865 20.1184 11.6371 20.1182 11.0636 20.5C9.81804 21.3292 8.1964 21.3292 6.95085 20.5Z"/>`,
+  park: `<path fill-rule="evenodd" clip-rule="evenodd" d="M18.7873 7.85723L19.1561 6.8933C19.2928 6.53616 19.3684 6.14708 19.3684 5.73684C19.3684 3.94918 17.9192 2.5 16.1316 2.5C14.3439 2.5 12.8947 3.94918 12.8947 5.73684C12.8947 6.14708 12.9703 6.53616 13.107 6.8933L13.4759 7.85722L12.7075 8.54623C11.6572 9.4879 11 10.8504 11 12.3684C11 14.9019 12.836 17.0066 15.25 17.4246V16.4246L13.1141 15.1431L13.8859 13.8569L15.25 14.6754V10H16.75V12.6893L17.9697 11.4697L19.0303 12.5303L16.75 14.8107V17.4631C19.2925 17.1577 21.2632 14.9932 21.2632 12.3684C21.2632 10.8504 20.6059 9.4879 19.5557 8.54623L18.7873 7.85723ZM16.75 18.9715C20.1226 18.6597 22.7632 15.8224 22.7632 12.3684C22.7632 10.4065 21.9112 8.64359 20.5571 7.42943C20.7582 6.90381 20.8684 6.33319 20.8684 5.73684C20.8684 3.12076 18.7477 1 16.1316 1C13.5155 1 11.3947 3.12076 11.3947 5.73684C11.3947 6.33319 11.5049 6.9038 11.7061 7.42942C10.352 8.64359 9.5 10.4065 9.5 12.3684C9.5 15.7321 12.0042 18.5108 15.25 18.9419V21H9.85848L9.47245 19.75H11.0588V18.25H9.04146L8.66646 16.75H9.38235V15.25H2.67647V16.75H3.39236L3.01736 18.25H1V19.75H2.58637L2.20034 21H1V23L23 23V21L16.75 21V18.9715ZM5.08274 16.75H6.97608L7.43931 18.25H4.61951L5.08274 16.75ZM4.15627 19.75H7.90255L8.28858 21H3.77024L4.15627 19.75Z"/>`,
+  leaf: `<path fill-rule="evenodd" clip-rule="evenodd" d="M6.5286 15.0223C5.43862 13.1344 4.59575 9.57403 7.77616 6.37004C11.3825 2.73693 18.3911 2.31333 21.4446 2.55567C21.6859 4.89723 21.2639 10.5819 17.6446 14.5882C14.5625 17.9999 10.4757 17.3422 8.06459 16.2669C6.97232 17.5199 5.91146 18.9674 4.10517 21.5L2.5 20.3488C4.27211 17.8641 5.37888 16.3483 6.5286 15.0223ZM9.17098 7.76113C10.5738 6.34788 12.781 5.44398 15.2014 4.94791C16.7428 4.63199 18.2605 4.50392 19.5089 4.48202C19.3852 6.92601 18.6062 10.5854 16.1853 13.2652C14.8287 14.7669 13.2708 15.1984 11.7953 15.1507C10.9795 15.1243 10.1976 14.9484 9.52588 14.7151C10.4613 13.7889 11.6023 12.7597 13.2694 11.2746L11.9588 9.79515C10.2042 11.3582 8.98803 12.4545 7.96617 13.4797C7.74539 12.9686 7.56734 12.3454 7.52891 11.6687C7.46441 10.533 7.78206 9.16035 9.17098 7.76113Z"/>`,
+  mail: `<path d="M1 4V20H23V4H1ZM19.62 6L12.03 12.94L4.52 6H19.62ZM3 7.32L8.05 11.98L3 16.36V7.32ZM4.17 18L9.56 13.37L10.68 14.41C11.07 14.78 11.58 14.97 12.08 14.97C12.58 14.97 13.08 14.78 13.48 14.41L14.63 13.35L20 18H4.17ZM21 16.22L16.11 11.98L21 7.46V16.22Z"/>`,
+  phone: `<path fill-rule="evenodd" clip-rule="evenodd" d="M3.03586 11.3483C2.67862 10.1912 2.5 8.9761 2.5 8.10197C2.5 5.86118 3.67374 2.5 6.60811 2.5L10.2027 10.3428L6.73353 14.0609C7.59841 15.4308 8.70912 16.6104 10.1095 17.563L13.6572 14.3109L21.5 17.9055C21.5 20.4731 18.1388 21.5001 15.898 21.5001C14.2404 21.5001 11.3564 20.938 9.9677 19.814C6.74935 17.8801 4.10371 15.0917 3.03586 11.3483ZM5.54285 4.97594L7.8263 9.95802L5.62605 12.3162C5.49571 12.1112 5.35887 11.8502 5.2249 11.5305C4.74213 10.3784 4.5 8.9609 4.5 8.10197C4.5 7.27014 4.72971 6.23468 5.17674 5.47607C5.29513 5.27517 5.41675 5.1098 5.54285 4.97594ZM13.1143 19.0844C14.114 19.3605 15.1832 19.5001 15.898 19.5001C16.7713 19.5001 17.8433 19.2899 18.6227 18.888C18.6581 18.8698 18.6921 18.8516 18.7248 18.8336L14.0304 16.682L11.9398 18.5983C12.3151 18.7732 12.7064 18.9353 13.1143 19.0844ZM6.08747 12.8361C6.08743 12.8355 6.08321 12.8333 6.07493 12.8309C6.08336 12.8354 6.0875 12.8366 6.08747 12.8361Z"/>`,
+  mapMarkerOnMap: `<path fill-rule="evenodd" clip-rule="evenodd" d="M12 12C13.6716 12 15.0268 10.6569 15.0268 9C15.0268 7.34315 13.6716 6 12 6C10.3283 6 8.97314 7.34315 8.97314 9C8.97314 10.6569 10.3283 12 12 12ZM12 10C12.5572 10 13.0089 9.55228 13.0089 9C13.0089 8.44772 12.5572 8 12 8C11.4427 8 10.991 8.44772 10.991 9C10.991 9.55228 11.4427 10 12 10Z"/><path fill-rule="evenodd" clip-rule="evenodd" d="M5.03735 9C5.03735 13 9.64577 16.6667 12 18C14.3542 16.6667 18.9626 13 18.9626 9C18.9626 6.5 17.4492 2.5 12 2.5C6.45077 2.5 5.03735 6.5 5.03735 9ZM12 15.6362C11.0839 15.0128 10.0041 14.1502 9.07009 13.145C7.72041 11.6927 7.05524 10.2479 7.05524 9C7.05524 8.09491 7.33947 6.94831 8.05611 6.0709C8.70862 5.272 9.77404 4.5 12 4.5C14.2259 4.5 15.2913 5.272 15.9438 6.0709C16.6605 6.94831 16.9447 8.09491 16.9447 9C16.9447 10.2479 16.2795 11.6927 14.9299 13.145C13.9958 14.1502 12.916 15.0128 12 15.6362Z"/><path d="M7.15081 16.2408C7.57013 16.6002 7.61869 17.2315 7.25927 17.6508L5.67423 19.5H18.91L17.325 17.6508C16.9655 17.2315 17.0141 16.6002 17.4334 16.2408C17.8527 15.8813 18.484 15.9299 18.8435 16.3492L21.136 19.0238C21.97 19.9968 21.2786 21.5 19.9971 21.5H3.50001C3.10948 21.5 2.75469 21.2727 2.5915 20.9179C2.42832 20.5631 2.4866 20.1457 2.74076 19.8492L5.74076 16.3492C6.10018 15.9299 6.73148 15.8813 7.15081 16.2408Z"/>`,
+  arrowBackward: `<path d="M10.6581 6.67326L9.23752 5.25L2.5 12L9.23752 18.75L10.6581 17.3267L6.34583 13.0064L21.5 13.0064V10.9937L6.34574 10.9937L10.6581 6.67326Z"/>`,
+  chevronDown: `<path fill-rule="evenodd" clip-rule="evenodd" d="M2.5 7.91148L12 17.5L21.5 7.91148L20.1016 6.5L12 14.677L3.89845 6.5L2.5 7.91148Z"/>`,
+  chevronForward: `<path fill-rule="evenodd" clip-rule="evenodd" d="M7.91148 2.5L17.5 12L7.91148 21.5L6.5 20.1016L14.677 12L6.5 3.89845L7.91148 2.5Z"/>`,
+  chevronBackward: `<path fill-rule="evenodd" clip-rule="evenodd" d="M16.0885 2.5L6.5 12L16.0885 21.5L17.5 20.1016L9.32296 12L17.5 3.89845L16.0885 2.5Z"/>`,
+  close: `<path d="M13.7678 10.5411L20.6853 2.5H19.0461L13.0396 9.48195L8.24224 2.5H2.70905L9.96361 13.0579L2.70905 21.4902H4.34837L10.6914 14.1171L15.7578 21.4902H21.291L13.7674 10.5411H13.7678ZM11.5225 13.151L10.7875 12.0996L4.93904 3.73406H7.45695L12.1767 10.4853L12.9118 11.5367L19.0469 20.3123H16.529L11.5225 13.1514V13.151Z"/>`,
+  crossHair: `<path d="M12 16C14.2091 16 16 14.2091 16 12C16 9.79086 14.2091 8 12 8C9.79086 8 8 9.79086 8 12C8 14.2091 9.79086 16 12 16Z"/><path fill-rule="evenodd" clip-rule="evenodd" d="M10.8422 23V20.9262C6.79754 20.4068 3.59325 17.2025 3.07379 13.1578H1V11.1578H3.03888C3.42796 6.96519 6.69287 3.60669 10.8422 3.07379V1H12.8422V3.03888C17.1406 3.43777 20.5622 6.85942 20.9611 11.1578H23V13.1578H20.9262C20.3933 17.3071 17.0348 20.572 12.8422 20.9611V23H10.8422ZM12 19C15.866 19 19 15.866 19 12C19 8.13401 15.866 5 12 5C8.13401 5 5 8.13401 5 12C5 15.866 8.13401 19 12 19Z"/>`,
+};
+
+/** Wrap ADS path data in a sized SVG element. fill="currentColor" by default. */
+function adsIcon(key, { size = 24, fill = "currentColor", cls = "" } = {}) {
+  return `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="${fill}" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"${cls ? ` class="${cls}"` : ""}>${ADS[key] || ""}</svg>`;
+}" height="${size}" viewBox="0 0 24 24" fill="${fill}" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"${cls ? ` class="${cls}"` : ""}>${ADS[key] || ""}</svg>`;
+}
+
 // ── Layer definitions ──────────────────────────────────────────────────────
 const LAYER_DEFS = [
   { cat: "koelteplekken",  label: "Koelteplekken",   color: "#004699",   type: "geojson", radius: 8 },
@@ -1343,7 +1369,7 @@ function _renderKoelteplekkenLayerInner(def, features) {
       const cls = isActive ? "koelte-marker" : "koelte-marker koelte-marker--inactive";
       const icon = L.divIcon({
         className: "",
-        html: `<div class="${cls}" style="--mc:${col}"><div class="koelte-marker-dot"><svg class="koelte-marker-icon" width="10" height="10" viewBox="0 0 14 14" fill="none" aria-hidden="true"><line x1="7" y1="1" x2="7" y2="13" stroke="white" stroke-width="2" stroke-linecap="round"/><line x1="1" y1="7" x2="13" y2="7" stroke="white" stroke-width="2" stroke-linecap="round"/><line x1="2.9" y1="2.9" x2="11.1" y2="11.1" stroke="white" stroke-width="2" stroke-linecap="round"/><line x1="11.1" y1="2.9" x2="2.9" y2="11.1" stroke="white" stroke-width="2" stroke-linecap="round"/></svg></div></div>`,
+        html: `<div class="${cls}" style="--mc:${col}"><div class="koelte-marker-dot">${adsIcon("building", { size: 11, fill: "white" })}</div></div>`,
         iconSize:    [28, 28],
         iconAnchor:  [14, 14],
         popupAnchor: [0, -14],
@@ -1558,10 +1584,10 @@ function _renderSwimmingPoolsLayerInner(def, features) {
 function makeSwimmingSquareIcon(color = "#00b4c8") {
   return L.divIcon({
     className: "swim-icon-marker",
-    html: `<div style="width:22px;height:22px;background:${color};border:2.5px solid rgba(255,255,255,0.92);border-radius:50%;display:flex;align-items:center;justify-content:center;box-shadow:0 1px 5px rgba(0,0,0,0.28);box-sizing:border-box;"><svg width="11" height="9" viewBox="0 0 20 14" fill="none" aria-hidden="true"><path d="M1 4c2.4-2.8 5-2.8 7.5 0s5 2.8 7.5 0" stroke="white" stroke-width="2.5" stroke-linecap="round"/><path d="M1 10c2.4-2.8 5-2.8 7.5 0s5 2.8 7.5 0" stroke="white" stroke-width="2.5" stroke-linecap="round"/></svg></div>`,
-    iconSize:    [22, 22],
-    iconAnchor:  [11, 11],
-    popupAnchor: [0, -11],
+    html: `<div style="width:24px;height:24px;background:${color};border:2.5px solid rgba(255,255,255,0.92);border-radius:50%;display:flex;align-items:center;justify-content:center;box-shadow:0 1px 5px rgba(0,0,0,0.28);box-sizing:border-box;">${adsIcon("personSwimming", { size: 14, fill: "white" })}</div>`,
+    iconSize:    [24, 24],
+    iconAnchor:  [12, 12],
+    popupAnchor: [0, -12],
   });
 }
 
@@ -2165,7 +2191,7 @@ function renderKoelteDetailContent(feature, container) {
   if (p.website_url) {
     const a = document.createElement("a");
     a.className = "btn-website"; a.href = p.website_url; a.target = "_blank"; a.rel = "noopener noreferrer";
-    a.innerHTML = `<svg width="13" height="13" viewBox="0 0 13 13" fill="none" aria-hidden="true"><circle cx="6.5" cy="6.5" r="5.5" stroke="white" stroke-width="1.5"/><path d="M6.5 1S4.5 3 4.5 6.5 6.5 12 6.5 12" stroke="white" stroke-width="1.2"/><path d="M6.5 1S8.5 3 8.5 6.5 6.5 12 6.5 12" stroke="white" stroke-width="1.2"/><line x1="1" y1="6.5" x2="12" y2="6.5" stroke="white" stroke-width="1.2"/></svg>${t("website_hours")}`;
+    a.innerHTML = `${adsIcon("mapMarkerOnMap", { size: 16, fill: "white" })}${t("website_hours")}`;
     actions.appendChild(a);
   }
   const [lon, lat] = feature.geometry.coordinates;
@@ -2275,7 +2301,7 @@ function renderTapDetailContent(feature, container) {
   const nameEl = document.createElement("div"); nameEl.className = "detail-panel-name"; nameEl.textContent = tapDisplayName(p);
   const iconBadge = document.createElement("div"); iconBadge.className = "detail-icon-badge";
   iconBadge.style.cssText = `background:${col}1a;border-color:${col}33;`;
-  iconBadge.innerHTML = `<svg width="22" height="16" viewBox="0 0 22 16" fill="none" aria-hidden="true" style="color:${col}"><path d="M7 1C7 1 1 8 1 11a6 6 0 0 0 12 0C13 8 7 1 7 1Z" stroke="currentColor" stroke-width="1.5" fill="none"/><circle cx="17" cy="6" r="3" stroke="currentColor" stroke-width="1.5" fill="none"/><line x1="17" y1="9" x2="17" y2="15" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>`;
+  iconBadge.innerHTML = adsIcon("waterLadder", { size: 24, fill: col });
   hdrInfo.append(catLbl, nameEl);
   hdrRow.append(hdrInfo, iconBadge);
   info.appendChild(hdrRow);
@@ -2315,7 +2341,7 @@ function renderParkDetailContent(feature, container) {
   const nameEl = document.createElement("div"); nameEl.className = "detail-panel-name"; nameEl.textContent = p.Naam || "Park";
   const iconBadge = document.createElement("div"); iconBadge.className = "detail-icon-badge";
   iconBadge.style.cssText = `background:${col}1a;border-color:${col}33;`;
-  iconBadge.innerHTML = `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true" style="color:${col}"><path d="M12 3C9 3 6 6 6 9c0 4 6 12 6 12s6-8 6-12c0-3-3-6-6-6Z" stroke="currentColor" stroke-width="1.5" fill="none"/><circle cx="12" cy="9" r="2.5" stroke="currentColor" stroke-width="1.5" fill="none"/></svg>`;
+  iconBadge.innerHTML = adsIcon("park", { size: 24, fill: col });
   hdrInfo.append(catLbl, nameEl);
   hdrRow.append(hdrInfo, iconBadge);
   info.appendChild(hdrRow);
@@ -2355,7 +2381,7 @@ function renderSwimmingPoolDetailContent(feature, container) {
   nameEl.textContent = p.name || p.Naam_locatie || p.Naam || "Zwemplek";
   const iconBadge = document.createElement("div"); iconBadge.className = "detail-icon-badge";
   iconBadge.style.cssText = `background:${col}1a;border-color:${col}33;`;
-  iconBadge.innerHTML = `<svg width="24" height="18" viewBox="0 0 24 18" fill="none" aria-hidden="true" style="color:${col}"><path d="M1 6c2.4-3.2 5-3.2 7.5 0s5 3.2 7.5 0 5-3.2 7.5 0" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"/><path d="M1 13c2.4-3.2 5-3.2 7.5 0s5 3.2 7.5 0 5-3.2 7.5 0" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"/></svg>`;
+  iconBadge.innerHTML = adsIcon("personSwimming", { size: 24, fill: col });
   hdrInfo.append(catLbl, nameEl);
   hdrRow.append(hdrInfo, iconBadge);
   info.appendChild(hdrRow);
@@ -2383,7 +2409,7 @@ function makeDirectionsBtn(lat, lon) {
   const href=isIOS?`maps://?daddr=${lat},${lon}`:`https://www.google.com/maps/dir/?api=1&destination=${lat},${lon}`;
   const a=document.createElement("a");
   a.className="btn-directions"; a.href=href; a.target="_blank"; a.rel="noopener noreferrer";
-  a.innerHTML=`<svg width="13" height="13" viewBox="0 0 13 13" fill="none" aria-hidden="true"><path d="M1.5 11.5L11.5 1.5M11.5 1.5H4.5M11.5 1.5V8.5" stroke="white" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>${t("get_directions")}`;
+  a.innerHTML=`${adsIcon("mapMarkerOnMap", { size: 16, fill: "white" })}${t("get_directions")}`;
   return a;
 }
 
@@ -2500,11 +2526,11 @@ function renderContactPage() {
   const ggdTitle=document.createElement("span"); ggdTitle.className="cp-card-title"; ggdTitle.textContent=t("contact_ggd_title");
   ggdHeading.append(ggdTitle); ggdCard.appendChild(ggdHeading);
   const phoneRow=_cpRow(t("contact_ggd_phone_label"));
-  const phoneLink=document.createElement("a"); phoneLink.href="tel:+31205555405"; phoneLink.className="cp-link"; phoneLink.textContent=t("contact_ggd_phone");
+  const phoneLink=document.createElement("a"); phoneLink.href="tel:+31205555405"; phoneLink.className="cp-link cp-link--icon"; phoneLink.innerHTML=adsIcon("phone",{size:16})+t("contact_ggd_phone");
   const phoneHours=document.createElement("span"); phoneHours.className="cp-sub"; phoneHours.textContent=t("contact_ggd_phone_hours");
   phoneRow.valueEl.appendChild(phoneLink); phoneRow.valueEl.appendChild(phoneHours); ggdCard.appendChild(phoneRow.el);
   const postLabel=t("contact_ggd_post_label"); const postVal=t("contact_ggd_post");
-  if (postLabel && postVal) { const postRow=_cpRow(postLabel); const postLink=document.createElement("a"); postLink.href="mailto:"+postVal; postLink.className="cp-link"; postLink.textContent=postVal; postRow.valueEl.appendChild(postLink); ggdCard.appendChild(postRow.el); }
+  if (postLabel && postVal) { const postRow=_cpRow(postLabel); const postLink=document.createElement("a"); postLink.href="mailto:"+postVal; postLink.className="cp-link cp-link--icon"; postLink.innerHTML=adsIcon("mail",{size:16})+postVal; postRow.valueEl.appendChild(postLink); ggdCard.appendChild(postRow.el); }
   body.appendChild(ggdCard);
   const submitCard=document.createElement("div"); submitCard.className="cp-card cp-card--highlight";
   const submitHeading=document.createElement("div"); submitHeading.className="cp-card-heading";
@@ -2512,10 +2538,10 @@ function renderContactPage() {
   submitHeading.append(submitTitle); submitCard.appendChild(submitHeading);
   const submitBody=document.createElement("p"); submitBody.className="cp-card-body"; submitBody.textContent=t("contact_submit_body"); submitCard.appendChild(submitBody);
   const sPhoneRow=_cpRow(t("contact_submit_phone_label"));
-  const sPhoneLink=document.createElement("a"); sPhoneLink.href="tel:+31611738325"; sPhoneLink.className="cp-link"; sPhoneLink.textContent=t("contact_submit_phone");
+  const sPhoneLink=document.createElement("a"); sPhoneLink.href="tel:+31611738325"; sPhoneLink.className="cp-link cp-link--icon"; sPhoneLink.innerHTML=adsIcon("phone",{size:16})+t("contact_submit_phone");
   sPhoneRow.valueEl.appendChild(sPhoneLink); submitCard.appendChild(sPhoneRow.el);
   const sEmailRow=_cpRow(t("contact_submit_email_label"));
-  const sEmailLink=document.createElement("a"); sEmailLink.href="mailto:pratischa.koirala@amsterdam.nl"; sEmailLink.className="cp-link"; sEmailLink.textContent=t("contact_submit_email");
+  const sEmailLink=document.createElement("a"); sEmailLink.href="mailto:pratischa.koirala@amsterdam.nl"; sEmailLink.className="cp-link cp-link--icon"; sEmailLink.innerHTML=adsIcon("mail",{size:16})+t("contact_submit_email");
   sEmailRow.valueEl.appendChild(sEmailLink); submitCard.appendChild(sEmailRow.el);
   body.appendChild(submitCard);
 }
