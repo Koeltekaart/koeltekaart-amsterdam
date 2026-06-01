@@ -1305,7 +1305,7 @@ body.mode-user #sidebar-policy { display: none; }
 .li-headline {
   display: flex; flex-direction: column;
   font-family: var(--font);
-  font-size: var(--ams-heading-1-font-size);
+  font-size: clamp(42px, 6.5vw, 82px);
   font-weight: 800; line-height: 0.95; letter-spacing: -0.03em;
   color: #fff; margin-bottom: 20px;
 }
