@@ -1548,34 +1548,38 @@ function updateClearFiltersBtn() {
   if (row) row.hidden = !hasActiveFilters;
 }
 
+function clearAllFilters() {
+  // Reset all category, amenity, and swim-type filters
+  state.activeCategories.clear();
+  Object.keys(state.filters).forEach(k => { state.filters[k] = false; });
+  Object.keys(state.swimTypes || {}).forEach(k => { state.swimTypes[k] = false; });
+
+  // Restore all default-ON layers if they were turned off
+  ["koelteplekken","water_taps","parks","swimming_pools"].forEach(cat => {
+    if (!state.on[cat]) {
+      state.on[cat] = true;
+      const row = document.querySelector(`.layer-row[data-cat="${cat}"]`);
+      if (row) { row.classList.add("on"); row.setAttribute("aria-checked","true"); }
+      if (state.layers[cat]) state.map.addLayer(state.layers[cat]);
+    }
+  });
+
+  // Re-sync chip UI states
+  setupCategoryFilter();
+  rebuildFilterChips();
+  rebuildSwimmingPoolChips();
+  rebuildKoelteplekkenLayer();
+  rebuildSwimmingPoolsLayer();
+  renderMobileFilterBar();
+  updateClearFiltersBtn();
+  refreshListIfActive();
+}
+
 function setupClearFilters() {
-  const btn = document.getElementById("btn-clear-filters");
-  if (!btn) return;
-  btn.addEventListener("click", () => {
-    // Reset all category, amenity, and swim-type filters
-    state.activeCategories.clear();
-    Object.keys(state.filters).forEach(k => { state.filters[k] = false; });
-    Object.keys(state.swimTypes || {}).forEach(k => { state.swimTypes[k] = false; });
-
-    // Restore all default-ON layers if they were turned off
-    ["koelteplekken","water_taps","parks","swimming_pools"].forEach(cat => {
-      if (!state.on[cat]) {
-        state.on[cat] = true;
-        const row = document.querySelector(`.layer-row[data-cat="${cat}"]`);
-        if (row) { row.classList.add("on"); row.setAttribute("aria-checked","true"); }
-        if (state.layers[cat]) state.map.addLayer(state.layers[cat]);
-      }
-    });
-
-    // Re-sync chip UI states
-    setupCategoryFilter();
-    rebuildFilterChips();
-    rebuildSwimmingPoolChips();
-    rebuildKoelteplekkenLayer();
-    rebuildSwimmingPoolsLayer();
-    renderMobileFilterBar();
-    updateClearFiltersBtn();
-    refreshListIfActive();
+  // Two triggers: the mobile header pill and the desktop sidebar text link
+  ["btn-clear-filters", "btn-clear-filters-desktop"].forEach(id => {
+    const btn = document.getElementById(id);
+    if (btn) btn.addEventListener("click", clearAllFilters);
   });
 }
 
