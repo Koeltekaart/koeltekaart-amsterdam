@@ -1,34 +1,18 @@
-# Python
-__pycache__/
-*.py[cod]
-*.egg-info/
-.venv/
-venv/
-dist/
-build/
-
-# Environment
-.env
-.env.*
-*.local
-
-# OS
+# macOS
 .DS_Store
-Thumbs.db
+.DS_Store?
+._*
+.Spotlight-V7
+.Trashes
 
-# Editor
+# Editors
 .vscode/
 .idea/
+*.swp
+*.swo
+
+# Node (if local tooling is used)
+node_modules/
 
 # Claude Code
 .claude/
-
-# Leftover data artefacts
-data/seed/
-
-# Build artefacts
-*.zip
-
-# Large geodata files — keep locally, too big for GitHub
-*.gpkg
-Data_analysis/charlie/2025-cbs_pc6_2024_v1*/
