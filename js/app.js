@@ -477,10 +477,16 @@ const TR = {
 function t(key) { return TR[state.lang]?.[key] ?? TR.en[key] ?? key; }
 
 // ── State ──────────────────────────────────────────────────────────────────
+// Default on/off state for each map layer — single source of truth used both
+// to initialise state.on and to count how many layers deviate from default.
+const DEFAULT_LAYER_ON = Object.freeze({
+  koelteplekken: true, water_taps: true, parks: true, swimming_pools: true, shade: false,
+});
+
 const state = {
   map: null,
   layers: {},
-  on: { koelteplekken: true, water_taps: true, parks: true, swimming_pools: true, shade: false },
+  on: { ...DEFAULT_LAYER_ON },
   features: { koelteplekken: [], water_taps: [], parks: [], swimming_pools: [] },
   userMarker: null,
   userPos: null,
@@ -1442,6 +1448,7 @@ function toggleFilter(key, btn) {
     c.setAttribute("aria-pressed", String(state.filters[key]));
   });
   rebuildKoelteplekkenLayer();
+  renderMobileFilterBar();
 }
 
 // ── Mobile filter bar ─────────────────────────────────────────────────────
@@ -1456,13 +1463,14 @@ function renderMobileFilterBar() {
   const stripEl = document.getElementById("mfb-active-strip");
   const fabCount = document.getElementById("fab-active-count");
 
-  // Count active filters: active categories + active amenities + active swim types + off-layers
+  // Count active filter pills (layer on/off toggles are NOT filters):
+  //   - each active category chip (default: none active)
+  //   - each active amenity filter (default: off)
+  //   - each active swim-type filter (default: off)
   let count = 0;
   count += state.activeCategories.size;
   count += Object.values(state.filters).filter(Boolean).length;
   count += Object.values(state.swimTypes || {}).filter(Boolean).length;
-  const DEFAULT_ON_CATS = new Set(["koelteplekken", "water_taps", "parks", "swimming_pools"]);
-  count += LAYER_DEFS.filter(d => DEFAULT_ON_CATS.has(d.cat) && state.on[d.cat] === false).length;
 
   // Update the floating FAB badge
   if (fabCount) {
@@ -1504,30 +1512,7 @@ function renderMobileFilterBar() {
     const chip = document.createElement("button");
     chip.className = "mfb-strip-chip mfb-strip-chip--active";
     chip.textContent = state.lang === "nl" ? def.label_nl : def.label_en;
-    chip.addEventListener("click", () => { toggleFilter(def.key, chip); renderMobileFilterBar(); });
-    stripEl.appendChild(chip);
-  });
-
-  // Off-layers in strip (only show default-on layers that were turned off)
-  const _DEFAULT_ON_CATS = new Set(["koelteplekken", "water_taps", "parks", "swimming_pools"]);
-  LAYER_DEFS.filter(d => _DEFAULT_ON_CATS.has(d.cat) && state.on[d.cat] === false).forEach(def => {
-    const chip = document.createElement("button");
-    chip.className = "mfb-strip-chip";
-    chip.style.opacity = "0.6";
-    const layerKey = def.cat === "koelteplekken"  ? "koelteplekken_label"
-                   : def.cat === "water_taps"    ? "water_label"
-                   : def.cat === "parks"         ? "parks_label"
-                   : def.cat === "swimming_pools" ? "swimming_pools_label"
-                   : def.cat === "shade"          ? "shade_label" : def.cat;
-    chip.textContent = "✕ " + t(layerKey);
-    chip.addEventListener("click", () => {
-      state.on[def.cat] = true;
-      const row = document.querySelector(`.layer-row[data-cat="${def.cat}"]`);
-      if (row) { row.classList.add("on"); row.setAttribute("aria-checked","true"); }
-      if (state.layers[def.cat]) state.map.addLayer(state.layers[def.cat]);
-      refreshListIfActive();
-      renderMobileFilterBar();
-    });
+    chip.addEventListener("click", () => toggleFilter(def.key, chip));
     stripEl.appendChild(chip);
   });
 
@@ -1540,8 +1525,7 @@ function updateClearFiltersBtn() {
   const hasActiveFilters =
     state.activeCategories.size > 0 ||
     Object.values(state.filters).some(Boolean) ||
-    Object.values(state.swimTypes || {}).some(Boolean) ||
-    LAYER_DEFS.some(d => ["koelteplekken","water_taps","parks","swimming_pools"].includes(d.cat) && !state.on[d.cat]);
+    Object.values(state.swimTypes || {}).some(Boolean);
   const headerBtn = document.getElementById("btn-clear-filters");
   if (headerBtn) headerBtn.hidden = !hasActiveFilters;
   const row = document.getElementById("filter-clear-row");
@@ -1549,20 +1533,11 @@ function updateClearFiltersBtn() {
 }
 
 function clearAllFilters() {
-  // Reset all category, amenity, and swim-type filters
+  // Reset only the filter pills — category, amenity, and swim-type filters.
+  // Layer on/off toggles are left untouched (they are not "filters").
   state.activeCategories.clear();
   Object.keys(state.filters).forEach(k => { state.filters[k] = false; });
   Object.keys(state.swimTypes || {}).forEach(k => { state.swimTypes[k] = false; });
-
-  // Restore all default-ON layers if they were turned off
-  ["koelteplekken","water_taps","parks","swimming_pools"].forEach(cat => {
-    if (!state.on[cat]) {
-      state.on[cat] = true;
-      const row = document.querySelector(`.layer-row[data-cat="${cat}"]`);
-      if (row) { row.classList.add("on"); row.setAttribute("aria-checked","true"); }
-      if (state.layers[cat]) state.map.addLayer(state.layers[cat]);
-    }
-  });
 
   // Re-sync chip UI states
   setupCategoryFilter();
