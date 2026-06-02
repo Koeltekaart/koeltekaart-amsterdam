@@ -2067,7 +2067,8 @@ function renderParkDetailContent(feature, container) {
 
   const hdrRow = document.createElement("div"); hdrRow.className = "detail-header-row";
   const hdrInfo = document.createElement("div"); hdrInfo.className = "detail-header-info";
-  const catLbl = document.createElement("div"); catLbl.className = "dp-cat"; catLbl.textContent = t("parks_label");
+  const catLbl = document.createElement("div"); catLbl.className = "dp-cat";
+  catLbl.textContent = [t("parks_label"), p.Stadsdeel].filter(Boolean).join(" · ");
   const nameEl = document.createElement("div"); nameEl.className = "detail-panel-name"; nameEl.textContent = p.Naam || "Park";
   const iconBadge = document.createElement("div"); iconBadge.className = "detail-icon-badge";
   iconBadge.style.cssText = `background:${col}1a;border-color:${col}33;`;
@@ -2080,7 +2081,7 @@ function renderParkDetailContent(feature, container) {
   const area = p.Oppervlakte_m2
     ? (p.Oppervlakte_m2 >= 10000 ? (p.Oppervlakte_m2 / 10000).toFixed(1) + " ha" : p.Oppervlakte_m2.toLocaleString() + " m²")
     : null;
-  grid.append(cell(t("district"), p.Stadsdeel), cell(t("area"), area), cell(t("city_park"), p.Stadspark === "J" ? t("yes") : t("no")));
+  grid.append(cell(t("area"), area), cell(t("city_park"), p.Stadspark === "J" ? t("yes") : t("no")));
   info.appendChild(grid);
 
   // Navigation: compute centroid of the polygon for directions
