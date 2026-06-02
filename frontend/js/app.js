@@ -8,6 +8,7 @@ const LAYER_DEFS = [
   { cat: "swimming_pools", label: "Swimming spots",   color: "#00b4c8",   src: "data/raw/zwemwater.geojson",   type: "geojson", radius: 6 },
   { cat: "shade",          label: "Sidewalk shade",   color: "#1a56db",   type: "shade" },
   { cat: "hvi",            label: "Kwetsbaarheidskaart", color: "#CA0020", src: "data/hvi_map.geojson", type: "choropleth" },
+  { cat: "temperature",    label: "Surface Temperature",color: "#CA0020",src: "data/stakeholders/temp_mean.geojson",type: "temperature"},
 ];
 
 // ── Google Sheets data sources ─────────────────────────────────────────────
@@ -419,8 +420,8 @@ function t(key) { return TR[state.lang]?.[key] ?? TR.en[key] ?? key; }
 const state = {
   map: null,
   layers: {},
-  on: { koelteplekken: true, water_taps: true, parks: true, swimming_pools: true, shade: false, hvi: false },
-  features: { koelteplekken: [], water_taps: [], parks: [], swimming_pools: [], hvi: [] },
+  on: { koelteplekken: true, water_taps: true, parks: true, swimming_pools: true, shade: false, hvi: false, temperature: false},
+  features: { koelteplekken: [], water_taps: [], parks: [], swimming_pools: [], hvi: [], temperature: [] },
   userMarker: null,
   userPos: null,
   rings: [],
@@ -926,6 +927,100 @@ function _renderHviLayer(def, features) {
   if (state.on.hvi) state.layers.hvi.addTo(state.map);
 }
 
+// build temperature
+function getTempColor(temp) {
+  return temp > 40 ? "#800026" :
+         temp > 39 ? "#BD0026" :
+         temp > 38 ? "#E31A1C" :
+         temp > 37 ? "#FC4E2A" :
+         temp > 36 ? "#FD8D3C" :
+                     "#FEB24C";
+}
+
+function buildTemperatureLayer(def, data) {
+  state.features.temperature = data.features || [];
+  _renderTemperatureLayer(def, state.features.temperature);
+}
+
+function _renderTemperatureLayer(def, features) {
+
+  if (state.layers.temperature) {
+    state.map.removeLayer(state.layers.temperature);
+  }
+
+  const fc = {
+    type: "FeatureCollection",
+    features
+  };
+
+  state.layers.temperature = L.geoJSON(fc, {
+    pane: "hviPane",
+
+    style: f => {
+
+      const temp = Number(
+        f.properties?.temp_mean
+      );
+
+      return {
+        fillColor: getTempColor(temp),
+        fillOpacity: 0.65,
+        color: "#ffffff",
+        weight: 0.5,
+        opacity: 0.5
+      };
+    },
+
+    onEachFeature: (f, l) => {
+
+      const p = f.properties || {};
+
+      const name =
+        p.buurtnaam || "Buurt";
+
+      const temp =
+        Number(p.temp_mean);
+
+      if (!IS_TOUCH_DEVICE) {
+
+        l.on("mouseover", e => {
+
+          l.setStyle({
+            fillOpacity: 0.85,
+            weight: 1.5,
+            color: "#333"
+          });
+
+          HC.show(
+            e.originalEvent.clientX,
+            e.originalEvent.clientY,
+            name,
+            `${temp.toFixed(1)} °C`,
+            getTempColor(temp)
+          );
+        });
+
+        l.on("mouseout", () => {
+          state.layers.temperature.resetStyle(l);
+          HC.hide();
+        });
+
+        l.on("mousemove", e =>
+          HC.move(
+            e.originalEvent.clientX,
+            e.originalEvent.clientY
+          )
+        );
+      }
+    }
+  });
+
+  if (state.on.temperature) {
+    state.layers.temperature.addTo(state.map);
+  }
+}
+
+
 // ── HVI analytics — statistics, charts, spatial helpers ───────────────────
 let _hviStats = null;
 
@@ -1293,6 +1388,12 @@ function loadAllLayers() {
         .then(data => buildHviLayer(def, data))
         .catch(e => console.error(def.cat, e))
         .finally(() => setLoading(false));
+    } else if (def.type === "temperature") {
+        fetch(def.src)
+          .then(r => r.json())
+          .then(data => buildTemperatureLayer(def, data))
+          .catch(e => console.error(def.cat, e))
+          .finally(() => setLoading(false));
     } else {
       fetch(def.src)
         .then(r => r.json())
