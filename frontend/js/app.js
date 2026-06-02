@@ -928,13 +928,24 @@ function _renderHviLayer(def, features) {
 }
 
 // build temperature
+const TEMP_MIN = 10;
+const TEMP_MAX = 42;
+
 function getTempColor(temp) {
-  return temp > 40 ? "#800026" :
-         temp > 39 ? "#BD0026" :
-         temp > 38 ? "#E31A1C" :
-         temp > 37 ? "#FC4E2A" :
-         temp > 36 ? "#FD8D3C" :
-                     "#FEB24C";
+
+  // Normalize to 0-1
+  const t = Math.max(
+    0,
+    Math.min(
+      1,
+      (temp - TEMP_MIN) / (TEMP_MAX - TEMP_MIN)
+    )
+  );
+
+  // Blue → Red
+  const hue = 240 - t * 240;
+
+  return `hsl(${hue}, 90%, 50%)`;
 }
 
 function buildTemperatureLayer(def, data) {
