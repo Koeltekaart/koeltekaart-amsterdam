@@ -375,7 +375,7 @@ body {
 }
 
 /* ════════ DESKTOP (true pointer devices only — touch tablets use mobile) ════════ */
-@media (min-width: 769px) and (hover: hover) and (pointer: fine) {
+@media (min-width: 901px) and (hover: hover) and (pointer: fine) {
   /* ── Left sidebar becomes a floating, collapsible legend card ─────────── */
   #sidebar {
     position: absolute;
@@ -413,12 +413,13 @@ body {
     transition: filter 0.12s;
   }
   #sidebar-collapse-btn:hover { filter: brightness(1.22); }
-  #sidebar-collapse-btn svg { width: 11px; height: 17px; flex-shrink: 0; stroke: currentColor; stroke-width: 1.1px; transition: transform 0.22s; }
+  /* Chevron points UP while expanded (click = roll up); DOWN while collapsed (click = drop down) */
+  #sidebar-collapse-btn svg { width: 15px; height: 15px; flex-shrink: 0; stroke: currentColor; stroke-width: 0.8px; transform: rotate(180deg); transition: transform 0.22s; }
 
   /* Collapsed: hide the body, leaving the header pill as the launcher */
   #map-section.sidebar-collapsed .legend-body { display: none; }
   #map-section.sidebar-collapsed .legend-header { border-bottom: none; }
-  #map-section.sidebar-collapsed #sidebar-collapse-btn svg { transform: rotate(180deg); }
+  #map-section.sidebar-collapsed #sidebar-collapse-btn svg { transform: rotate(0deg); }
 
   /* ── Right detail/list panel collapse tab (vertical tab, unchanged) ───── */
   #right-panel-toggle {
@@ -517,7 +518,7 @@ body {
 .sidebar-mobile-close svg { stroke: currentColor; stroke-width: 0.8px; }
 .sidebar-mobile-close:hover { background: rgba(0,0,0,0.14); color: #000; }
 
-@media (max-width: 768px), (hover: none) and (pointer: coarse) {
+@media (max-width: 900px), (hover: none) and (pointer: coarse) {
   /* Two-line banner on mobile */
   :root { --banner-h: 48px; }
   #heat-banner { min-height: var(--banner-h); align-items: center; }
@@ -559,23 +560,21 @@ body {
     top: 40px;              /* below the 28px scroll handle + 12px gap */
     left: 12px;
     z-index: 420;
-    height: 38px;
-    padding: 0 16px;
-    background: rgba(13,13,13,0.88);
-    backdrop-filter: blur(14px) saturate(1.4);
-    -webkit-backdrop-filter: blur(14px) saturate(1.4);
-    border: 1px solid rgba(255,255,255,0.10);
+    height: 40px;
+    padding: 0 18px;
+    background: var(--navy);
+    border: 1px solid rgba(255,255,255,0.16);
     border-radius: 100px;
-    color: rgba(255,255,255,0.90);
-    font-family: var(--font); font-size: 13px; font-weight: 600;
+    color: #fff;
+    font-family: var(--font); font-size: 13.5px; font-weight: 600;
     letter-spacing: -0.01em;
     cursor: pointer;
-    box-shadow: 0 2px 12px rgba(0,0,0,0.32);
+    box-shadow: 0 4px 14px rgba(0,70,153,0.36);
     -webkit-tap-highlight-color: transparent;
-    transition: background 0.15s;
+    transition: filter 0.15s;
     pointer-events: auto;
   }
-  #btn-filter-fab:active { background: rgba(0,50,120,0.92); }
+  #btn-filter-fab:active { filter: brightness(1.18); }
 
   /* Hide FAB while the sidebar is open (sidebar covers the screen) */
   body.sidebar-open #btn-filter-fab { display: none !important; }
@@ -1111,7 +1110,7 @@ body.mode-user #sidebar-policy { display: none; }
 /* ── View toggle — hidden on desktop, floating pill INSIDE the map on mobile ─ */
 .view-toggle-bar { display: none; }
 
-@media (max-width: 768px), (hover: none) and (pointer: coarse) {
+@media (max-width: 900px), (hover: none) and (pointer: coarse) {
   .view-toggle-bar {
     display: flex;
     position: absolute;            /* anchored to #map-section, not viewport */
@@ -1119,13 +1118,11 @@ body.mode-user #sidebar-policy { display: none; }
     left: 50%;
     transform: translateX(-50%);
     z-index: 420;
-    background: rgba(13,13,13,0.90);
-    backdrop-filter: blur(14px) saturate(1.4);
-    -webkit-backdrop-filter: blur(14px) saturate(1.4);
-    border: 1px solid rgba(255,255,255,0.09);
+    background: var(--navy);
+    border: 1px solid rgba(255,255,255,0.16);
     border-radius: 100px;
     padding: 4px;
-    box-shadow: 0 4px 28px rgba(0,0,0,0.32);
+    box-shadow: 0 4px 18px rgba(0,70,153,0.40);
     gap: 0;
     pointer-events: auto;
   }
@@ -1136,12 +1133,12 @@ body.mode-user #sidebar-policy { display: none; }
 .view-btn {
   display: flex; align-items: center; gap: 6px;
   padding: 8px 20px; border: none; border-radius: 100px;
-  background: transparent; color: rgba(255,255,255,0.45);
+  background: transparent; color: rgba(255,255,255,0.58);
   font-family: var(--font); font-size: 13px; font-weight: 600;
   cursor: pointer; transition: background 0.15s, color 0.15s;
   white-space: nowrap; letter-spacing: -0.01em;
 }
-.view-btn.active { background: #fff; color: var(--black); }
+.view-btn.active { background: rgba(255,255,255,0.22); color: #fff; font-weight: 700; }
 .view-btn:hover:not(.active) { color: rgba(255,255,255,0.75); }
 
 /* ── Right panel (list + detail) ─────────────────────────────────────────── */
@@ -1180,7 +1177,7 @@ body.mode-user #sidebar-policy { display: none; }
   border-radius: 2px;
 }
 
-@media (min-width: 769px) and (hover: hover) and (pointer: fine) {
+@media (min-width: 901px) and (hover: hover) and (pointer: fine) {
   /* Right panel is always visible on desktop unless visually collapsed */
   #list-view[hidden] {
     display: flex !important;
@@ -1219,7 +1216,7 @@ body.mode-user #sidebar-policy { display: none; }
 }
 
 /* Mobile: list/detail panel participates in the column layout */
-@media (max-width: 768px), (hover: none) and (pointer: coarse) {
+@media (max-width: 900px), (hover: none) and (pointer: coarse) {
   #list-view {
     position: static;
     top: auto;
@@ -1699,7 +1696,7 @@ body.mode-user #sidebar-policy { display: none; }
 }
 
 /* ── Mobile topbar ───────────────────────────────────────────────────────── */
-@media (max-width: 768px), (hover: none) and (pointer: coarse) {
+@media (max-width: 900px), (hover: none) and (pointer: coarse) {
   /* Nav row wraps: Row 1 (logo + title + actions), Row 2 (search) */
   :root { --top: 100px; }
 
