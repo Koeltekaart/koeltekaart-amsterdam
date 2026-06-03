@@ -264,30 +264,99 @@ body {
 .sr-sub  { font-size: 11px; color: var(--muted); margin-top: 1px; }
 
 /* ── Topbar controls ─────────────────────────────────────────────────────── */
-.ctrl-btn {
-  display: flex; align-items: center; gap: 6px;
-  height: 36px; padding: 0 14px;
-  background: transparent; border: var(--ams-border-width-s) solid rgba(255,255,255,0.18); border-radius: 8px;
-  color: rgba(255,255,255,0.75); font-family: var(--font); font-size: 13.5px; font-weight: 500;
-  cursor: pointer; transition: background 0.12s, border-color 0.12s, color 0.12s;
-  white-space: nowrap;
-}
-.ctrl-btn:hover { background: rgba(255,255,255,0.1); border-color: rgba(255,255,255,0.32); color: #fff; }
-.ctrl-btn.active { background: #fff; border-color: #fff; color: var(--navy); }
-.ctrl-btn.icon-only { padding: 0 10px; }
-.lang-btn { min-width: 46px; justify-content: center; font-weight: 600; letter-spacing: 0.04em; font-size: 12px; }
+/* Waiting state: blue background + white text */
+/* Clicked / selected state: white background + blue text */
+/* Shape update: make each button a pill / oval like Kaart/Lijst */
+
+.ctrl-btn,
 #btn-lang {
-  background: rgba(255,255,255,0.12);
-  border-color: rgba(255,255,255,0.30);
-  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+
+  height: 40px;
+  padding: 0 18px;
+
+  background: var(--navy);
+  border: 1.5px solid rgba(255,255,255,0.78);
+  border-radius: 100px;
+  color: var(--white);
+  box-shadow: 0 0 0 1px rgba(255,255,255,0.10) inset;
+
+  font-family: var(--font);
+  font-size: 13.5px;
   font-weight: 700;
+  line-height: 1;
+  letter-spacing: 0;
+
+  cursor: pointer;
+  white-space: nowrap;
+
+  transition: background 0.12s, border-color 0.12s, color 0.12s;
 }
-#btn-lang:hover { background: rgba(255,255,255,0.2); border-color: rgba(255,255,255,0.45); }
+
+.ctrl-btn:hover,
 #btn-lang:hover {
-  background: rgba(255,255,255,0.9);
-  border-color: rgba(255,255,255,0.9);
+  background: var(--navy);
+  border-color: rgba(255,255,255,0.92);
+  color: var(--white);
+}
+
+.ctrl-btn.active,
+#btn-lang.active,
+.ctrl-btn[aria-pressed="true"],
+#btn-lang[aria-pressed="true"],
+.ctrl-btn[aria-current="page"],
+#btn-lang[aria-current="page"] {
+  background: var(--white);
+  border-color: rgba(255,255,255,0.98);
   color: var(--navy);
 }
+
+.ctrl-btn.active:hover,
+#btn-lang.active:hover,
+.ctrl-btn[aria-pressed="true"]:hover,
+#btn-lang[aria-pressed="true"]:hover,
+.ctrl-btn[aria-current="page"]:hover,
+#btn-lang[aria-current="page"]:hover {
+  background: var(--white);
+  border-color: rgba(255,255,255,0.98);
+  color: var(--navy);
+}
+
+.ctrl-btn.icon-only {
+  padding: 0 12px;
+  border-radius: 100px;
+}
+
+.lang-btn {
+  min-width: 54px;
+  padding: 0 16px;
+  justify-content: center;
+  font-family: var(--font);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+
+.ctrl-btn svg,
+#btn-lang svg {
+  color: inherit;
+  stroke: currentColor;
+}
+
+.ctrl-btn svg [stroke],
+#btn-lang svg [stroke] {
+  stroke: currentColor;
+}
+
+.ctrl-btn svg [fill]:not([fill="none"]),
+#btn-lang svg [fill]:not([fill="none"]) {
+  fill: currentColor;
+}
+
+
 
 /* ── Page wrapper ────────────────────────────────────────────────────────── */
 #page { margin-top: var(--offset); }
@@ -1133,10 +1202,10 @@ body.mode-user #sidebar-policy { display: none; }
     transform: translateX(-50%);
     z-index: 420;
     background: var(--navy);
-    border: 1px solid rgba(255,255,255,0.16);
+    border: 1px solid var(--navy);
     border-radius: 100px;
     padding: 4px;
-    box-shadow: 0 4px 18px rgba(0,70,153,0.40);
+    box-shadow: none;
     gap: 0;
     pointer-events: auto;
   }
@@ -1147,35 +1216,63 @@ body.mode-user #sidebar-policy { display: none; }
 .view-btn {
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: 6px;
   padding: 8px 20px;
-  border: none;
+  border: var(--ams-border-width-s) solid var(--navy);
   border-radius: 100px;
 
-  /* Not clicked: regular Amsterdam blue + white text */
+  /* Waiting state: blue background + white text */
   background: var(--navy);
   color: var(--white);
 
   font-family: var(--font);
   font-size: 13px;
-  font-weight: 600;
+  font-weight: 700;
+  line-height: 1;
   cursor: pointer;
-  transition: background 0.15s, color 0.15s;
+  transition: background 0.15s, border-color 0.15s, color 0.15s;
   white-space: nowrap;
-  letter-spacing: -0.01em;
+  letter-spacing: 0;
 }
 
-.view-btn.active {
-  /* Clicked: white background + regular Amsterdam blue text */
+.view-btn:hover:not(.active) {
+  background: var(--navy);
+  border-color: var(--navy);
+  color: var(--white);
+}
+
+.view-btn.active,
+.view-btn[aria-pressed="true"],
+.view-btn[aria-current="page"] {
+  /* Clicked / selected state: white background + blue text */
   background: var(--white);
+  border-color: var(--white);
   color: var(--navy);
   font-weight: 700;
 }
 
-.view-btn:hover:not(.active) {
-  background: var(--ams-color-interactive-hover);
-  color: var(--white);
+.view-btn.active:hover,
+.view-btn[aria-pressed="true"]:hover,
+.view-btn[aria-current="page"]:hover {
+  background: var(--white);
+  border-color: var(--white);
+  color: var(--navy);
 }
+
+.view-btn svg {
+  color: inherit;
+  stroke: currentColor;
+}
+
+.view-btn svg [stroke] {
+  stroke: currentColor;
+}
+
+.view-btn svg [fill]:not([fill="none"]) {
+  fill: currentColor;
+}
+
 
 
 /* ── Right panel (list + detail) ─────────────────────────────────────────── */
@@ -1774,8 +1871,9 @@ body.mode-user #sidebar-policy { display: none; }
   }
   #search-input { height: 40px; border-radius: 20px; font-size: 14px; background: #ffffff; }
 
-  .ctrl-btn { height: 38px; padding: 0 10px; border-radius: 8px; white-space: nowrap; }
-  .lang-btn { min-width: 40px; padding: 0 8px; justify-content: center; }
+  .ctrl-btn { height: 40px; padding: 0 14px; border-radius: 100px; white-space: nowrap; }
+  .lang-btn { min-width: 54px; padding: 0 14px; justify-content: center; }
+
 
   /* Banner text slightly smaller on mobile to prevent wrapping */
   .banner-text { font-size: 12px; }

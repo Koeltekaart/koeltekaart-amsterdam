@@ -610,9 +610,13 @@ function applyLanguage() {
 }
 
 function setupLang() {
-  document.getElementById("btn-lang").addEventListener("click", () => {
+  const btn = document.getElementById("btn-lang");
+  if (!btn) return;
+  btn.addEventListener("click", () => {
     state.lang = state.lang === "nl" ? "en" : "nl";
     localStorage.setItem("koeltekaart_lang", state.lang);
+    btn.classList.add("active");
+    btn.setAttribute("aria-pressed", "true");
     applyLanguage();
     const tp = document.getElementById("tips-page");
     if (tp && tp.classList.contains("open")) renderTipsPage();
