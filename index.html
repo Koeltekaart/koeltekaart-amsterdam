@@ -22,14 +22,6 @@
 <!-- ── Topbar ──────────────────────────────────────────────────────────────── -->
 <header id="topbar">
 
-  <!-- Heat plan status strip — always visible, topmost -->
-  <div id="heat-banner" class="heat-banner heat-banner--inactive" role="status" aria-live="polite">
-    <div class="banner-inner">
-      <span class="banner-pulse" aria-hidden="true"></span>
-      <span id="banner-text" class="banner-text"></span>
-    </div>
-  </div>
-
   <!-- Main nav row -->
   <div class="topbar-main">
     <a class="logo-img-link" href="#landing-intro" aria-label="Koeltekaart homepage">
@@ -81,8 +73,10 @@
         <div class="li-hero-content">
           <h1 class="li-headline">
             <span class="li-hl-line" data-i18n="lp_hl1">Te warm?</span>
-            <span class="li-hl-line li-hl-accent" data-i18n="lp_hl2">Vind verkoeling.</span>
+            <span class="li-hl-line li-hl-accent" data-i18n="lp_hl2">Zoek verkoeling.</span>
           </h1>
+
+          <p class="li-tagline-sub" data-i18n="lp_tagline_sub">Klik op een symbool op de kaart om te zien wat je op deze locatie kunt verwachten.</p>
 
           <button class="li-cta btn-li-enter" data-i18n="lp_enter">Open de kaart</button>
         </div>
@@ -171,8 +165,8 @@
                   <li>there are seats and activities, such as reading or playing a game</li>
                   <li>most locations are accessible for people with a disability</li>
                 </ul>
-                <p class="info-disclaimer lang-nl">Let op: de locaties zijn niet bedoeld voor mensen die medische hulp nodig hebben.</p>
-                <p class="info-disclaimer lang-en">Please note: the locations are not intended for people who need medical assistance.</p>
+                <p class="info-disclaimer lang-nl">Let op: deze locaties bieden geen medische hulp als onderdeel van deze dienst.</p>
+                <p class="info-disclaimer lang-en">Please note: these locations do not offer medical assistance as part of this service.</p>
               </div>
             </details>
           </div>
@@ -209,13 +203,18 @@
       </section>
     </div>
 
-  <!-- Blue accent bar — marks the bottom of the landing section -->
-  <div class="landing-end-bar" aria-hidden="true"></div>
-
   </section><!-- /#landing-intro -->
 
   <!-- ── Map + contact wrapper: sticky flex column, fills viewport below topbar -->
   <div id="map-contact-wrap">
+
+  <!-- Heat plan status strip — sits directly above the map, always visible while the map is -->
+  <div id="heat-banner" class="heat-banner heat-banner--inactive" role="status" aria-live="polite">
+    <div class="banner-inner">
+      <span class="banner-pulse" aria-hidden="true"></span>
+      <span id="banner-text" class="banner-text"></span>
+    </div>
+  </div>
 
   <!-- ── Map section (flex:1 inside wrapper) ────────────────────────────── -->
   <div id="map-section">
@@ -268,18 +267,19 @@
       </button>
     </div>
 
-    <!-- Desktop sidebar collapse tab -->
-    <button id="sidebar-collapse-btn" aria-label="Filter zijbalk inklappen" aria-expanded="true">
-  <svg width="8" height="13" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-    <path fill-rule="evenodd" clip-rule="evenodd" d="M16.0885 2.5L6.5 12L16.0885 21.5L17.5 20.1016L9.32296 12L17.5 3.89845L16.0885 2.5Z"/>
-  </svg>
-</button>
-
-
-    <!-- Sidebar -->
+    <!-- Sidebar / desktop floating legend -->
     <aside id="sidebar" aria-label="Map controls and filters">
+      <!-- Desktop legend header (collapsible) -->
+      <div class="legend-header">
+        <span class="legend-title"><span class="lang-nl">Legenda</span><span class="lang-en">Legend</span></span>
+        <button id="sidebar-collapse-btn" class="legend-collapse" aria-label="Legenda inklappen" aria-expanded="true">
+          <svg width="11" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+            <path fill-rule="evenodd" clip-rule="evenodd" d="M16.0885 2.5L6.5 12L16.0885 21.5L17.5 20.1016L9.32296 12L17.5 3.89845L16.0885 2.5Z"/>
+          </svg>
+        </button>
+      </div>
       <div class="sidebar-mobile-header">
-        <span class="sidebar-mobile-title" data-i18n="filter_panel_title">Soorten locaties</span>
+        <span class="sidebar-mobile-title legend-title"><span class="lang-nl">Legenda</span><span class="lang-en">Legend</span></span>
         <button id="btn-clear-filters" class="sidebar-clear-btn" hidden>
           <span class="lang-nl">Wis filters</span>
           <span class="lang-en">Clear filters</span>
@@ -293,6 +293,7 @@
         </button>
       </div>
 
+      <div class="legend-body">
       <div class="filter-group filter-group--static">
         <div class="filter-group-body">
           <div class="layer-row on" data-cat="koelteplekken" role="switch" aria-checked="true" tabindex="0">
@@ -319,13 +320,13 @@
             </summary>
             <div id="filter-chips" class="filter-chips" role="group" aria-label="Filter amenities"></div>
           </details>
-          <div class="layer-row on" data-cat="water_taps" role="switch" aria-checked="true" tabindex="0">
+          <div class="layer-row" data-cat="water_taps" role="switch" aria-checked="false" tabindex="0">
             <span class="l-dot" style="background:#009de6;"></span>
             <span class="l-name" data-i18n="water_label">Drinkwaterkranen</span>
             <span class="l-count" id="cnt-water_taps"></span>
             <span class="l-sw" aria-hidden="true"></span>
           </div>
-          <div class="layer-row on" data-cat="swimming_pools" role="switch" aria-checked="true" tabindex="0">
+          <div class="layer-row" data-cat="swimming_pools" role="switch" aria-checked="false" tabindex="0">
             <span class="l-dot" style="background:#009de6;"></span>
             <span class="l-name" data-i18n="swimming_pools_label">Zwemplekken</span>
             <span class="l-count" id="cnt-swimming_pools"></span>
@@ -353,6 +354,7 @@
             <span class="l-sw" aria-hidden="true"></span>
           </div>
           <div class="shade-legend" id="shade-legend" hidden>
+            <div class="shade-time" id="shade-time"></div>
             <div class="shade-legend-row">
               <span class="shade-swatch shade-swatch--dark"></span>
               <span class="lang-nl">In schaduw</span><span class="lang-en">In shade</span>
@@ -371,6 +373,7 @@
           <span class="lang-en">Clear all filters</span>
         </button>
       </div>
+      </div><!-- /.legend-body -->
 
     </aside>
 

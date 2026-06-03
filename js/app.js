@@ -40,6 +40,8 @@ const ADS_ICON_PATHS = {
   Map:             'M8.5 15.7679L4.5 18.0536V8.0919L8.5 5.52047V15.7679ZM10.5 15.7388L13.5 18.1388V7.74131L10.5 5.64131V15.7388ZM14.5 6L21.5 2.5V17L14.5 21.5L9.5 17.5L2.5 21.5V7L9.5 2.5L14.5 6ZM15.5 18.4795L19.5 15.9081V5.73607L15.5 7.73607V18.4795Z',
   Plus:            'M11 13V21.5H13V13H21.5V11H13V2.5H11V11H2.5V13H11Z',
   WaterDrop:       'M12 2.5C9 7 4.5 12 4.5 16.5a7.5 7.5 0 0 0 15 0C19.5 12 15 7 12 2.5Z',
+  HouseFill:       'M21.5 8.57913L18.5 6.65914V2.49988H16.5V5.37914L12 2.49915L2.5 8.57913V21.5009H21.5V8.57913ZM10.5 19.9999V13.9999H13.5V19.9999H15V13.5773C15 13.0311 14.5523 12.5883 14 12.5883H10C9.44772 12.5883 9 13.0311 9 13.5773V19.9999H10.5Z',
+  Minus:           'M21.5 13H2.5V11H21.5V13Z',
 };
 
 /**
@@ -63,32 +65,73 @@ const LAYER_DEFS = [
   { cat: "shade",          label: "Sidewalk shade",   color: "#004699",   type: "shade" },
 ];
 
-// ── Google Sheets data sources ─────────────────────────────────────────────
-// Setup (one-time):
-//   1. Open your Google Sheet
-//   2. File → Share → Publish to web → publish the whole document → click Publish
-//   3. The link shown looks like:
-//        https://docs.google.com/spreadsheets/d/e/PUBLISHED_ID/pubhtml
-//      Copy the PUBLISHED_ID (the long 2PACX-… string between /d/e/ and /pubhtml)
-//   4. For each tab, click the tab in your browser — the URL bar ends with #gid=NUMBER
-//      Copy those numbers into locationsGid / settingsGid
-//      (The very first tab is almost always gid 0)
+// ── Data source ────────────────────────────────────────────────────────────
+// The site reads its location data + heat-plan settings from a published,
+// read-only source. It stays fully client-side: the browser fetches a public
+// URL with no credentials. Cooling-spot locations are public information, so
+// anonymous read is appropriate and safe.
 //
-// Sheet layout:
-//   "locations" tab — same columns as koelteplekken.csv (name, latitude, longitude, type, …)
-//   "settings"  tab — two columns: key, value — with one row: heat_plan_active, TRUE
-const SHEETS_CONFIG = {
-  publishedId:  "2PACX-1vToR12t2LARCufEpqz2xv0An5XQqBHd1VvqBmS9k3OdlsvzUryxgmwXTpaVfIX4zMYE61DH0-ujlnqB",  // the 2PACX-… string from the publish URL
-  locationsGid: "0",                         // #gid of the locations tab (first tab = 0)
-  settingsGid:  "971775516",   // #gid of the settings tab
+// CURRENT: a published Google Sheet (CSV).
+//
+// TO MIGRATE TO MICROSOFT 365 (the planned amsterdam.nl setup):
+//   1. GGD maintains the locations in Excel / a SharePoint List, using the
+//      same columns as today (see docs/location-template.csv).
+//   2. A scheduled Power Automate flow publishes that list to a static file at
+//      a public, read-only URL on Gemeente / Azure hosting:
+//        • simplest:  export as CSV     → set type: "csv"
+//        • or:        export as GeoJSON → set type: "geojson"
+//   3. Set DATA_SOURCE.type and the two URLs below. Nothing else changes —
+//      the field mapping (_rowToFeature) and the entire app are source-agnostic.
+//
+// Source formats:
+//   csv / google-sheet — locations: same columns as the template;
+//                         settings:  two columns "key,value".
+//   geojson            — locations: FeatureCollection whose feature.properties
+//                         use the same field names as the template columns;
+//                         settings:  a flat JSON object { key: value, … }.
+const DATA_SOURCE = {
+  type: "google-sheet",            // "google-sheet" | "csv" | "geojson"
+
+  // Used when type === "google-sheet".
+  googleSheet: {
+    publishedId:  "2PACX-1vToR12t2LARCufEpqz2xv0An5XQqBHd1VvqBmS9k3OdlsvzUryxgmwXTpaVfIX4zMYE61DH0-ujlnqB",
+    locationsGid: "0",             // #gid of the locations tab (first tab = 0)
+    settingsGid:  "971775516",     // #gid of the settings tab
+  },
+
+  // Used when type === "csv" or "geojson" — static files published from M365.
+  locationsUrl: "",                // e.g. "data/locations.csv" or "https://…/locations.geojson"
+  settingsUrl:  "",                // e.g. "data/settings.csv"  or "https://…/settings.json"
 };
 
-/** Build a published CSV URL for a given sheet tab gid. */
-function _sheetsUrl(gid) {
-  return `https://docs.google.com/spreadsheets/d/e/${SHEETS_CONFIG.publishedId}/pub?gid=${gid}&single=true&output=csv`;
+/** Build a published-CSV URL for a Google Sheet tab gid. */
+function _googleSheetUrl(gid) {
+  return `https://docs.google.com/spreadsheets/d/e/${DATA_SOURCE.googleSheet.publishedId}/pub?gid=${gid}&single=true&output=csv`;
 }
-function _sheetsReady() {
-  return SHEETS_CONFIG.publishedId && !SHEETS_CONFIG.publishedId.startsWith("PASTE_");
+
+/** True when the configured data source has the details it needs to load. */
+function _dataReady() {
+  if (DATA_SOURCE.type === "google-sheet") {
+    const id = DATA_SOURCE.googleSheet.publishedId;
+    return !!id && !id.startsWith("PASTE_");
+  }
+  return !!DATA_SOURCE.locationsUrl;
+}
+
+/** Resolve the locations request: { url, format: "csv" | "geojson" }. */
+function _locationsRequest() {
+  if (DATA_SOURCE.type === "google-sheet") {
+    return { url: _googleSheetUrl(DATA_SOURCE.googleSheet.locationsGid), format: "csv" };
+  }
+  return { url: DATA_SOURCE.locationsUrl, format: DATA_SOURCE.type === "geojson" ? "geojson" : "csv" };
+}
+
+/** Resolve the settings request: { url, format: "csv" | "json" }. */
+function _settingsRequest() {
+  if (DATA_SOURCE.type === "google-sheet") {
+    return { url: _googleSheetUrl(DATA_SOURCE.googleSheet.settingsGid), format: "csv" };
+  }
+  return { url: DATA_SOURCE.settingsUrl, format: DATA_SOURCE.type === "geojson" ? "json" : "csv" };
 }
 
 const TYPE_LABEL    = { koelteplekken: "Koelteplek", water_taps: "Water fountain", parks: "Park", swimming_pools: "Swimming spot" };
@@ -254,11 +297,13 @@ const TR = {
     parks_label: "Parken",
     swimming_pools_label: "Zwemplekken",
     shade_label: "Loopschaduw",
+    shade_around: "Schaduw rond",
     mode_user: "Bewoners",
     mode_policy: "Beleid",
     lp_headline: "Vind verkoeling in Amsterdam",
     lp_hl1: "Te warm?",
-    lp_hl2: "Vind verkoeling.",
+    lp_hl2: "Zoek verkoeling.",
+    lp_tagline_sub: "Klik op een symbool op de kaart om te zien wat je op deze locatie kunt verwachten.",
     lp_sub: "Drinkwaterkranen, parken en koelteplekken — gratis, in jouw buurt.",
     lp_enter: "Open de kaart",
     lp_on_map_title: "Wat vind je op de kaart?",
@@ -375,11 +420,13 @@ const TR = {
     parks_label: "Parks",
     swimming_pools_label: "Swimming spots",
     shade_label: "Sidewalk shade",
+    shade_around: "Shade around",
     mode_user: "Residents",
     mode_policy: "Policy",
     lp_headline: "Find cooling spots in Amsterdam",
     lp_hl1: "Too warm?",
     lp_hl2: "Find relief.",
+    lp_tagline_sub: "Tap a symbol on the map to see what you can expect at that location.",
     lp_sub: "Water fountains, parks and cooling spots — free, near you.",
     lp_enter: "Open the map",
     lp_on_map_title: "What's on the map?",
@@ -480,7 +527,7 @@ function t(key) { return TR[state.lang]?.[key] ?? TR.en[key] ?? key; }
 // Default on/off state for each map layer — single source of truth used both
 // to initialise state.on and to count how many layers deviate from default.
 const DEFAULT_LAYER_ON = Object.freeze({
-  koelteplekken: true, water_taps: true, parks: true, swimming_pools: true, shade: false,
+  koelteplekken: true, water_taps: false, parks: true, swimming_pools: false, shade: false,
 });
 
 const state = {
@@ -505,7 +552,11 @@ const state = {
 
 };
 
-function isDesktop() { return window.innerWidth > 768; }
+// Desktop = wide AND a true (non-touch) pointer. Mirrors the CSS breakpoint so
+// touch tablets (e.g. iPads in landscape) use the mobile layout regardless of width.
+function isDesktop() {
+  return window.matchMedia("(min-width: 769px) and (hover: hover) and (pointer: fine)").matches;
+}
 
 // ── Loader ─────────────────────────────────────────────────────────────────
 let _pending = 0;
@@ -601,11 +652,15 @@ function updateBannerText() {
 let _settingsPromise = null;
 
 async function fetchSettings() {
-  if (!_sheetsReady()) return;
+  if (!_dataReady()) return;
   try {
-    const r = await fetch(_sheetsUrl(SHEETS_CONFIG.settingsGid));
+    const { url, format } = _settingsRequest();
+    const r = await fetch(url);
     if (!r.ok) return;
-    const rows = parseCsv(await r.text());
+    // Normalise both source formats to a list of { key, value } rows.
+    const rows = format === "json"
+      ? Object.entries(await r.json()).map(([key, value]) => ({ key, value: String(value) }))
+      : parseCsv(await r.text());
     rows.forEach(row => {
       const key = (row.key || "").trim().toLowerCase();
       const val = (row.value || "").trim();
@@ -642,7 +697,7 @@ function _ensureSettingsLoaded() {
 }
 
 /**
- * Initialise the heat-plan status banner and start polling Google Sheets
+ * Initialise the heat-plan status banner and start polling the data source
  * every 5 minutes for live updates to heat_plan_active and label overrides.
  */
 function setupBanner() {
@@ -800,11 +855,18 @@ function initMap() {
   state.map.createPane("pointsPane");
   state.map.getPane("pointsPane").style.zIndex = 650;
 
-  L.tileLayer("https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png", {
-    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>',
-    subdomains: "abcd", maxZoom: 19,
+  // PDOK BRT Achtergrondkaart (grijs) — official Dutch-government basemap, no API key.
+  // Standard Web-Mercator REST WMTS, so {z}/{x}/{y} works with Leaflet's default CRS.
+  L.tileLayer("https://service.pdok.nl/brt/achtergrondkaart/wmts/v2_0/grijs/EPSG:3857/{z}/{x}/{y}.png", {
+    attribution: '&copy; <a href="https://www.kadaster.nl">Kadaster</a> / <a href="https://www.pdok.nl">PDOK</a>',
+    maxZoom: 19,
   }).addTo(state.map);
   L.control.zoom({ position: "topright" }).addTo(state.map);
+  // Swap Leaflet's text +/- for the Amsterdam Design System Plus/Minus icons.
+  const zoomIn  = document.querySelector(".leaflet-control-zoom-in");
+  const zoomOut = document.querySelector(".leaflet-control-zoom-out");
+  if (zoomIn)  zoomIn.innerHTML  = adsIcon("Plus",  { size: 20, fill: "currentColor" });
+  if (zoomOut) zoomOut.innerHTML = adsIcon("Minus", { size: 20, fill: "currentColor" });
   state.map.on("click", () => { closeSidebarMobile(); });
   state.map.on("mousemove", e => HC.move(e.originalEvent.clientX, e.originalEvent.clientY));
   // shade tiles are prefetched at load — no viewport tracking needed
@@ -967,16 +1029,35 @@ function _rowToFeature(row) {
   };
 }
 
-async function _loadKoelteplekkenFromSheets(def) {
-  if (!_sheetsReady()) {
-    console.warn("Koeltekaart: fill in SHEETS_CONFIG (publishedId + gids) in app.js");
+/**
+ * Normalise an incoming GeoJSON feature into the app's internal feature shape.
+ * Treats feature.properties as a data row (same field names as the CSV
+ * template) and injects latitude/longitude from Point geometry when absent,
+ * then reuses _rowToFeature so CSV and GeoJSON sources behave identically.
+ */
+function _featureFromGeoJson(f) {
+  const props = { ...(f.properties || {}) };
+  if (f.geometry?.type === "Point" && (props.latitude == null || props.longitude == null)) {
+    props.longitude = f.geometry.coordinates[0];
+    props.latitude  = f.geometry.coordinates[1];
+  }
+  return _rowToFeature(props);
+}
+
+/** Load koelteplekken from the configured data source (CSV or GeoJSON). */
+async function _loadKoelteplekken(def) {
+  if (!_dataReady()) {
+    console.warn("Koeltekaart: configure DATA_SOURCE in app.js");
     buildKoelteplekkenLayer(def, { type: "FeatureCollection", features: [] });
     return;
   }
   await _ensureSettingsLoaded(); // labels/translations must be ready before building markers
-  const r = await fetch(_sheetsUrl(SHEETS_CONFIG.locationsGid));
-  if (!r.ok) throw new Error(`Sheets locations fetch failed: ${r.status}`);
-  const features = parseCsv(await r.text()).map(_rowToFeature).filter(Boolean);
+  const { url, format } = _locationsRequest();
+  const r = await fetch(url);
+  if (!r.ok) throw new Error(`locations fetch failed: ${r.status}`);
+  const features = format === "geojson"
+    ? ((await r.json()).features || []).map(_featureFromGeoJson).filter(Boolean)
+    : parseCsv(await r.text()).map(_rowToFeature).filter(Boolean);
   buildKoelteplekkenLayer(def, { type: "FeatureCollection", features });
 }
 
@@ -985,7 +1066,7 @@ function loadAllLayers() {
   LAYER_DEFS.forEach(def => {
     setLoading(true);
     if (def.cat === "koelteplekken") {
-      _loadKoelteplekkenFromSheets(def)
+      _loadKoelteplekken(def)
         .catch(e => console.error("koelteplekken", e))
         .finally(() => setLoading(false));
     } else if (def.cat === "shade") {
@@ -1040,7 +1121,7 @@ function _renderKoelteplekkenLayerInner(def, features) {
       const cls = isActive ? "koelte-marker" : "koelte-marker koelte-marker--inactive";
       const icon = L.divIcon({
         className: "",
-        html: `<div class="${cls}" style="--mc:${col}"></div>`,
+        html: `<div class="${cls}" style="--mc:${col}">${adsIcon("HouseFill", { size: 15, fill: "white" })}</div>`,
         iconSize:    [26, 26],
         iconAnchor:  [13, 13],
         popupAnchor: [0, -13],
@@ -1171,8 +1252,19 @@ function _nearestShadeSlot() {
   return best.key;
 }
 
+// Current slot's property key (s1000 / s1300 / s1530 / s1800), set on render.
+let _shadeSlotKey = "1300";
+
+/** Show the approximate time of day the shade snapshot represents. */
+function _updateShadeTime() {
+  const el = document.getElementById("shade-time");
+  if (!el) return;
+  const k = _shadeSlotKey;
+  el.textContent = `${t("shade_around")} ${k.slice(0, 2)}:${k.slice(2)}`;
+}
+
 function _shadeStyle(feature) {
-  const pct = feature.properties?.s ?? 0;
+  const pct = feature.properties?.["s" + _shadeSlotKey] ?? 0;
   const t = Math.min(1, Math.max(0, pct / 100));
   if (t >= 0.5) {
     // In shade — dark navy overlay, opacity proportional to shade
@@ -1183,24 +1275,23 @@ function _shadeStyle(feature) {
   }
 }
 
-// Prefetch promise — resolved with the GeoJSON or null on error
-const _shadePromise = {};
+// Single combined file holds every slot's shade as properties s1000…s1800,
+// so the geometry is downloaded only once. Prefetch resolves it (or null).
+let _shadePromise = null;
 
 function _prefetchShade() {
-  const key = _nearestShadeSlot();
-  if (_shadePromise[key]) return;
-  _shadePromise[key] = fetch(`data/shade-${key}.geojson`)
-    .then(r => r.json())
-    .catch(() => null);
+  if (_shadePromise) return;
+  _shadePromise = fetch("data/shade.geojson").then(r => r.json()).catch(() => null);
 }
 
 async function _renderShadeLayer() {
   if (state.layers.shade) { state.map.removeLayer(state.layers.shade); state.layers.shade = null; }
   if (!state.on.shade) return;
 
-  const key = _nearestShadeSlot();
+  _shadeSlotKey = _nearestShadeSlot();
+  _updateShadeTime();
   _prefetchShade(); // no-op if already started
-  const gj = await _shadePromise[key];
+  const gj = await _shadePromise;
   if (!gj || !state.on.shade) return;
 
   state.layers.shade = L.geoJSON(gj, {
@@ -1378,6 +1469,20 @@ function setupToggles() {
       if (on) state.map.addLayer(state.layers[cat]);
       else    state.map.removeLayer(state.layers[cat]);
     });
+  });
+}
+
+/** Place a white ADS glyph inside each legend dot so the legend mirrors the map. */
+function decorateLegendIcons() {
+  const glyphs = {
+    koelteplekken:  "HouseFill",
+    water_taps:     "WaterDrop",
+    swimming_pools: "PersonSwimming",
+    parks:          "Park",
+  };
+  Object.entries(glyphs).forEach(([cat, key]) => {
+    const dot = document.querySelector(`.layer-row[data-cat="${cat}"] .l-dot`);
+    if (dot) dot.innerHTML = adsIcon(key, { size: 16, fill: "white" });
   });
 }
 
@@ -1716,7 +1821,14 @@ function exitDetailMode() {
   state.currentDetailRenderFn = null;
 
   const mapSection = document.getElementById("map-section");
-  if (mapSection) mapSection.classList.remove("detail-open");
+  if (mapSection) {
+    // Snap the right-panel collapse toggle to the list-panel edge instead of
+    // letting it slide in from the wider detail position.
+    mapSection.classList.add("detail-snap");
+    mapSection.classList.remove("detail-open");
+    void mapSection.offsetWidth; // commit the new position with no transition
+    mapSection.classList.remove("detail-snap");
+  }
 
   const hdrList = document.getElementById("panel-hdr-list");
   const hdrBack = document.getElementById("panel-hdr-back");
@@ -2183,16 +2295,17 @@ async function doSearch(query) {
   const qLower = q.toLowerCase();
 
   // Local koelteplekken matches first
-  const localMatches = state.features.koelteplekken
+  const localMatches = (state.features.koelteplekken || [])
     .filter(f => {
       const p = f.properties || {};
       return (
         (p.name || "").toLowerCase().includes(qLower) ||
         (p.neighborhood || "").toLowerCase().includes(qLower) ||
+        (p.district || "").toLowerCase().includes(qLower) ||
         (p.address || "").toLowerCase().includes(qLower)
       );
     })
-    .slice(0, 3);
+    .slice(0, 4);
 
   localMatches.forEach(f => {
     const p = f.properties || {};
@@ -2215,18 +2328,25 @@ async function doSearch(query) {
   });
 
   try {
-    const url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(q + " Amsterdam")}&format=json&countrycodes=nl&limit=6&viewbox=4.72,52.48,5.08,52.26&bounded=1`;
-    const response = await fetch(url, { headers: { "Accept-Language": state.lang === "nl" ? "nl" : "en" } });
+    // PDOK Locatieserver "suggest" — autocomplete/prefix matching (the "free"
+    // endpoint only matches whole word-tokens, so partial input returned nothing).
+    const url = `https://api.pdok.nl/bzk/locatieserver/search/v3_1/suggest?q=${encodeURIComponent(q)}&rows=6&fq=gemeentenaam:Amsterdam`;
+    const response = await fetch(url);
     if (!response.ok) throw new Error("Search request failed");
-    const items = await response.json();
+    const docs = (await response.json())?.response?.docs || [];
 
-    items.forEach(item => {
-      const parts = item.display_name.split(", ");
+    docs.forEach(doc => {
+      const parts = (doc.weergavenaam || "").split(", ");
       const el = document.createElement("div");
       el.className = "sr-item";
       el.innerHTML = `<div class="sr-name">${parts[0]}</div><div class="sr-sub">${parts.slice(1, 3).join(", ")}</div>`;
-      el.addEventListener("click", () => {
-        state.map.setView([parseFloat(item.lat), parseFloat(item.lon)], 16);
+      el.addEventListener("click", async () => {
+        // suggest returns no coordinates — resolve them for the chosen item.
+        try {
+          const lr = await fetch(`https://api.pdok.nl/bzk/locatieserver/search/v3_1/lookup?id=${encodeURIComponent(doc.id)}&fl=centroide_ll`);
+          const m = /POINT\(([-\d.]+) ([-\d.]+)\)/.exec((await lr.json())?.response?.docs?.[0]?.centroide_ll || "");
+          if (m) state.map.setView([parseFloat(m[2]), parseFloat(m[1])], 16);
+        } catch (_) { /* keep the map where it is if lookup fails */ }
         results.setAttribute("hidden", "");
         document.getElementById("search-input").value = parts[0];
         closeSidebarMobile();
@@ -2667,11 +2787,13 @@ document.addEventListener("DOMContentLoaded", () => {
   setupLandingIntro();
   initMap();
   loadAllLayers();
-  _prefetchShade(); // start download in background before user toggles it
+  // Shade is off by default and the dataset is large — load it lazily on first
+  // toggle (see _renderShadeLayer) rather than downloading it for every visitor.
   setupBanner();
   setupLang();
   setupModeToggle();
   setupToggles();
+  decorateLegendIcons();
   setupCategoryFilter();
   setupFilters();
   setupClearFilters();
