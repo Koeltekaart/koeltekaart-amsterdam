@@ -1955,27 +1955,6 @@ function renderKoelteDetailContent(feature, container) {
   }
 
   info.append(catLbl, nameEl);
-  if (statusTag.className) info.appendChild(statusTag);
-
-  // ── Heat plan hours note (when heatplan hours are being shown) ──
-  if (useHeat) {
-    const heatNote = document.createElement("div"); heatNote.className = "detail-heat-hours-note";
-    heatNote.innerHTML = `<svg width="12" height="12" viewBox="0 0 14 14" fill="none" aria-hidden="true"><circle cx="7" cy="7" r="6" stroke="currentColor" stroke-width="1.5"/><line x1="7" y1="4" x2="7" y2="7.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><circle cx="7" cy="10" r="0.7" fill="currentColor"/></svg>${state.lang === "nl" ? "Hitteplan-openingstijden worden getoond" : "Heat plan opening hours shown"}`;
-    info.appendChild(heatNote);
-  }
-
-  // ── Hours block ──
-  const hoursBlock = renderHoursBlock(hoursToShow);
-  // Hide the status row — shown inline above
-  const statusRow = hoursBlock.querySelector(".hours-status");
-  if (statusRow) statusRow.style.display = "none";
-  info.appendChild(hoursBlock);
-
-  if (p.hours_note) {
-    const noteEl = document.createElement("div"); noteEl.className = "hours-note";
-    noteEl.textContent = p.hours_note;
-    info.appendChild(noteEl);
-  }
 
   // ── Amenity chips — ALL amenities; present=green, absent=gray with "No" prefix ──
   if (AMENITY_DEFS.length) {
@@ -1998,6 +1977,28 @@ function renderKoelteDetailContent(feature, container) {
       chipsWrap.appendChild(chip);
     });
     if (chipsWrap.children.length) info.appendChild(chipsWrap);
+  }
+
+  if (statusTag.className) info.appendChild(statusTag);
+
+  // ── Heat plan hours note (when heatplan hours are being shown) ──
+  if (useHeat) {
+    const heatNote = document.createElement("div"); heatNote.className = "detail-heat-hours-note";
+    heatNote.innerHTML = `<svg width="12" height="12" viewBox="0 0 14 14" fill="none" aria-hidden="true"><circle cx="7" cy="7" r="6" stroke="currentColor" stroke-width="1.5"/><line x1="7" y1="4" x2="7" y2="7.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><circle cx="7" cy="10" r="0.7" fill="currentColor"/></svg>${state.lang === "nl" ? "Hitteplan-openingstijden worden getoond" : "Heat plan opening hours shown"}`;
+    info.appendChild(heatNote);
+  }
+
+  // ── Hours block ──
+  const hoursBlock = renderHoursBlock(hoursToShow);
+  // Hide the status row — shown inline above
+  const statusRow = hoursBlock.querySelector(".hours-status");
+  if (statusRow) statusRow.style.display = "none";
+  info.appendChild(hoursBlock);
+
+  if (p.hours_note) {
+    const noteEl = document.createElement("div"); noteEl.className = "hours-note";
+    noteEl.textContent = p.hours_note;
+    info.appendChild(noteEl);
   }
 
   if (p.notes) {
