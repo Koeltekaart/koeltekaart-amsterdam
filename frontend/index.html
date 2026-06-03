@@ -382,7 +382,10 @@
           <span class="lang-nl">Analyse</span>
           <span class="lang-en">Analysis</span>
         </div>
+
         <div class="filter-group-body">
+
+          <!-- HVI -->
           <div class="layer-row" data-cat="hvi" role="switch" aria-checked="false" tabindex="0">
             <span class="l-dot" style="background:#CA0020;"></span>
             <span class="l-name">
@@ -391,6 +394,44 @@
             </span>
             <span class="l-sw" aria-hidden="true"></span>
           </div>
+
+          <!-- TEMPERATURE-->
+          <div class="layer-row" data-cat="temperature" role="switch" aria-checked="false" tabindex="0">
+            <span class="l-dot" style="background:#E31A1C;"></span>
+            <span class="l-name">
+              <span class="lang-nl">Oppervlaktetemperatuur</span>
+              <span class="lang-en">Surface Temperature</span>
+            </span>
+            <span class="l-sw" aria-hidden="true"></span>
+          </div>
+          <!-- stakeholder layers-->
+          <div class="layer-row" data-cat="ndvi" role="switch" aria-checked="false" tabindex="0">
+            <span class="l-dot" style="background:#00893c;"></span>
+            <span class="l-name">
+              <span class="lang-nl">Vegetatie-index</span>
+              <span class="lang-en">Vegetation Index</span>
+            </span>
+            <span class="l-sw" aria-hidden="true"></span>
+          </div>
+
+          <div class="layer-row" data-cat="cooling_assets" role="switch" aria-checked="false" tabindex="0">
+           <span class="l-dot" style="background:#004699;"></span>
+            <span class="l-name">
+              <span class="lang-nl">Afstand tot koeltevoorzieningen</span>
+              <span class="lang-en">Cooling Asset Distance</span>
+            </span>
+            <span class="l-sw" aria-hidden="true"></span>
+          </div>
+
+          <div class="layer-row" data-cat="healthcare_distance" role="switch" aria-checked="false" tabindex="0">
+            <span class="l-dot" style="background:#a00078;"></span>
+            <span class="l-name">
+              <span class="lang-nl">Afstand tot zorg</span>
+              <span class="lang-en">Healthcare Distance</span>
+            </span>
+            <span class="l-sw" aria-hidden="true"></span>
+          </div>
+          <!-- HVI Legend -->
           <div class="hvi-legend" id="hvi-legend" hidden>
             <div class="hvi-legend-scale">
               <span class="hvi-legend-swatch" style="background:#2166AC"></span>
@@ -399,15 +440,19 @@
               <span class="hvi-legend-swatch" style="background:#F4A582"></span>
               <span class="hvi-legend-swatch" style="background:#CA0020"></span>
             </div>
+
             <div class="hvi-legend-labels">
-              <span class="lang-nl">Laag</span><span class="lang-en">Low</span>
+              <span class="lang-nl">Laag</span>
+              <span class="lang-en">Low</span>
+
               <span class="hvi-legend-spacer"></span>
-              <span class="lang-nl">Hoog</span><span class="lang-en">High</span>
+
+              <span class="lang-nl">Hoog</span>
+              <span class="lang-en">High</span>
             </div>
           </div>
         </div>
       </div>
-
     </aside>
 
     <!-- Map -->
