@@ -1,45 +1,147 @@
+/**
+ * Koeltekaart Amsterdam — Main Application
+ *
+ * A fully client-side map showing cooling spots, parks, drinking water taps,
+ * and swimming locations across Amsterdam. Location data is pulled live from
+ * a published Google Sheet; no server-side code is required.
+ *
+ * Key external dependencies (bundled in libs/):
+ *   Leaflet 1.x   — interactive map
+ *
+ * Key external services (loaded at runtime):
+ *   Google Sheets  — location data and heat-plan status
+ *   Open-Meteo     — current weather data
+ *   CartoDB tiles  — base map tiles
+ */
 "use strict";
 
-// ── Layer definitions ──────────────────────────────────────────────────────
-const LAYER_DEFS = [
-  { cat: "koelteplekken",  label: "Koelteplekken",   color: "#004699",   type: "geojson", radius: 8 },
-  { cat: "water_taps",     label: "Water fountains",  color: "#009de6",   src: "data/raw/water_taps.geojson",  type: "geojson", radius: 4 },
-  { cat: "parks",          label: "Parks",            color: "#00893c",   src: "data/raw/parks.json",          type: "polygon" },
-  { cat: "swimming_pools", label: "Swimming spots",   color: "#00b4c8",   src: "data/raw/zwemwater.geojson",   type: "geojson", radius: 6 },
-  { cat: "shade",          label: "Sidewalk shade",   color: "#1a56db",   type: "shade" },
-  { cat: "hvi",            label: "Kwetsbaarheidskaart", color: "#CA0020", src: "data/hvi_map.geojson", type: "choropleth" },
-  { cat: "temperature",    label: "Surface Temperature",color: "#CA0020",src: "data/stakeholders/temp_mean.geojson",type: "temperature"},
-  { cat: "ndvi",           label: "Vegetation Index",color: "#00893c",src: "data/stakeholders/ndvi.geojson", type: "ndvi"},
-  { cat: "cooling_assets", label: "Cooling Asset Distance",color: "#004699",src: "data/stakeholders/cooling_asset_distance.geojson",type: "cooling_assets"},
-  { cat: "healthcare_distance",label: "Healthcare Distance",color: "#a00078",src: "data/stakeholders/healthcare_distance.geojson",type: "healthcare_distance"},
-];
-
-// ── Google Sheets data sources ─────────────────────────────────────────────
-// Setup (one-time):
-//   1. Open your Google Sheet
-//   2. File → Share → Publish to web → publish the whole document → click Publish
-//   3. The link shown looks like:
-//        https://docs.google.com/spreadsheets/d/e/PUBLISHED_ID/pubhtml
-//      Copy the PUBLISHED_ID (the long 2PACX-… string between /d/e/ and /pubhtml)
-//   4. For each tab, click the tab in your browser — the URL bar ends with #gid=NUMBER
-//      Copy those numbers into locationsGid / settingsGid
-//      (The very first tab is almost always gid 0)
-//
-// Sheet layout:
-//   "locations" tab — same columns as koelteplekken.csv (name, latitude, longitude, type, …)
-//   "settings"  tab — two columns: key, value — with one row: heat_plan_active, TRUE
-const SHEETS_CONFIG = {
-  publishedId:  "2PACX-1vToR12t2LARCufEpqz2xv0An5XQqBHd1VvqBmS9k3OdlsvzUryxgmwXTpaVfIX4zMYE61DH0-ujlnqB",  // the 2PACX-… string from the publish URL
-  locationsGid: "0",                         // #gid of the locations tab (first tab = 0)
-  settingsGid:  "971775516",   // #gid of the settings tab
+// ── Amsterdam Design System icon helper ───────────────────────────────────
+const ADS_ICON_PATHS = {
+  Search:          'M16.1585 14.7266C17.1537 13.4471 17.7325 11.8528 17.7325 10.1162C17.7325 5.91208 14.3204 2.5 10.1162 2.5C5.91208 2.5 2.5 5.91208 2.5 10.1162C2.5 14.3204 5.91208 17.7325 10.1162 17.7325C11.8528 17.7325 13.4471 17.1537 14.7266 16.1585L20.058 21.5L21.5 20.058L16.1585 14.7266ZM10.1162 15.7015C7.03928 15.7015 4.531 13.1932 4.531 10.1162C4.531 7.03928 7.03928 4.531 10.1162 4.531C13.1932 4.531 15.7015 7.03928 15.7015 10.1162C15.7015 11.2942 15.3359 12.3808 14.7165 13.2745C14.3306 13.8431 13.8431 14.3306 13.2745 14.7165C12.3808 15.3359 11.2942 15.7015 10.1162 15.7015Z',
+  Filter:          'M14.8294 12.8384L21.4795 4.5V2.5H2.47949V4.5L9.12939 12.8382V21.5H10.9258L14.8294 19.4314V12.8384ZM12.9294 18.288V12.8384L13.344 11.6538L19.129 4.4H4.82999L10.6148 11.6535L11.0294 12.8382V19.2948L12.9294 18.288Z',
+  CrossHair:       'M12 16C14.2091 16 16 14.2091 16 12C16 9.79086 14.2091 8 12 8C9.79086 8 8 9.79086 8 12C8 14.2091 9.79086 16 12 16ZM10.8422 23V20.9262C6.79754 20.4068 3.59325 17.2025 3.07379 13.1578H1V11.1578H3.03888C3.42796 6.96519 6.69287 3.60669 10.8422 3.07379V1H12.8422V3.03888C17.1406 3.43777 20.5622 6.85942 20.9611 11.1578H23V13.1578H20.9262C20.3933 17.3071 17.0348 20.572 12.8422 20.9611V23H10.8422ZM12 19C15.866 19 19 15.866 19 12C19 8.13401 15.866 5 12 5C8.13401 5 5 8.13401 5 12C5 15.866 8.13401 19 12 19Z',
+  ArrowBackward:   'M10.6581 6.67326L9.23752 5.25L2.5 12L9.23752 18.75L10.6581 17.3267L6.34583 13.0064L21.5 13.0064V10.9937L6.34574 10.9937L10.6581 6.67326Z',
+  ChevronDown:     'M2.5 7.91148L12 17.5L21.5 7.91148L20.1016 6.5L12 14.677L3.89845 6.5L2.5 7.91148Z',
+  ChevronForward:  'M7.91148 2.5L17.5 12L7.91148 21.5L6.5 20.1016L14.677 12L6.5 3.89845L7.91148 2.5Z',
+  ChevronBackward: 'M16.0885 2.5L6.5 12L16.0885 21.5L17.5 20.1016L9.32296 12L17.5 3.89845L16.0885 2.5Z',
+  Close:           'M21 4.58663L19.5704 3L12.0052 10.4954L4.42957 3L3 4.58663L10.4817 12.0055L3 19.4134L4.42957 21L12.0052 13.5046L19.5704 21L21 19.4134L13.5183 12.0055L21 4.58663Z',
+  Menu:            'M23 5H1V7H23V5ZM23 11H1V13H23V11ZM1 17H23V19H1V17Z',
+  Mail:            'M1 4V20H23V4H1ZM19.62 6L12.03 12.94L4.52 6H19.62ZM3 7.32L8.05 11.98L3 16.36V7.32ZM4.17 18L9.56 13.37L10.68 14.41C11.07 14.78 11.58 14.97 12.08 14.97C12.58 14.97 13.08 14.78 13.48 14.41L14.63 13.35L20 18H4.17ZM21 16.22L16.11 11.98L21 7.46V16.22Z',
+  Phone:           'M3.03586 11.3483C2.67862 10.1912 2.5 8.9761 2.5 8.10197C2.5 5.86118 3.67374 2.5 6.60811 2.5L10.2027 10.3428L6.73353 14.0609C7.59841 15.4308 8.70912 16.6104 10.1095 17.563L13.6572 14.3109L21.5 17.9055C21.5 20.4731 18.1388 21.5001 15.898 21.5001C14.2404 21.5001 11.3564 20.938 9.9677 19.814C6.74935 17.8801 4.10371 15.0917 3.03586 11.3483ZM5.54285 4.97594L7.8263 9.95802L5.62605 12.3162C5.49571 12.1112 5.35887 11.8502 5.2249 11.5305C4.74213 10.3784 4.5 8.9609 4.5 8.10197C4.5 7.27014 4.72971 6.23468 5.17674 5.47607C5.29513 5.27517 5.41675 5.1098 5.54285 4.97594ZM13.1143 19.0844C14.114 19.3605 15.1832 19.5001 15.898 19.5001C16.7713 19.5001 17.8433 19.2899 18.6227 18.888C18.6581 18.8698 18.6921 18.8516 18.7248 18.8336L14.0304 16.682L11.9398 18.5983C12.3151 18.7732 12.7064 18.9353 13.1143 19.0844Z',
+  MapMarkerOnMap:  'M12 12C13.6716 12 15.0268 10.6569 15.0268 9C15.0268 7.34315 13.6716 6 12 6C10.3283 6 8.97314 7.34315 8.97314 9C8.97314 10.6569 10.3283 12 12 12ZM12 10C12.5572 10 13.0089 9.55228 13.0089 9C13.0089 8.44772 12.5572 8 12 8C11.4427 8 10.991 8.44772 10.991 9C10.991 9.55228 11.4427 10 12 10ZM5.03735 9C5.03735 13 9.64577 16.6667 12 18C14.3542 16.6667 18.9626 13 18.9626 9C18.9626 6.5 17.4492 2.5 12 2.5C6.45077 2.5 5.03735 6.5 5.03735 9ZM12 15.6362C11.0839 15.0128 10.0041 14.1502 9.07009 13.145C7.72041 11.6927 7.05524 10.2479 7.05524 9C7.05524 8.09491 7.33947 6.94831 8.05611 6.0709C8.70862 5.272 9.77404 4.5 12 4.5C14.2259 4.5 15.2913 5.272 15.9438 6.0709C16.6605 6.94831 16.9447 8.09491 16.9447 9C16.9447 10.2479 16.2795 11.6927 14.9299 13.145C13.9958 14.1502 12.916 15.0128 12 15.6362ZM7.15081 16.2408C7.57013 16.6002 7.61869 17.2315 7.25927 17.6508L5.67423 19.5H18.91L17.325 17.6508C16.9655 17.2315 17.0141 16.6002 17.4334 16.2408C17.8527 15.8813 18.484 15.9299 18.8435 16.3492L21.136 19.0238C21.97 19.9968 21.2786 21.5 19.9971 21.5H3.50001C3.10948 21.5 2.75469 21.2727 2.5915 20.9179C2.42832 20.5631 2.4866 20.1457 2.74076 19.8492L5.74076 16.3492C6.10018 15.9299 6.73148 15.8813 7.15081 16.2408Z',
+  Building:        'M8 5H11V8H8V5ZM11 10H8V13H11V10ZM8 15H11V18H8V15ZM16 5H13V8H16V5ZM13 10H16V13H13V10ZM16 15H13V18H16V15ZM20 1V23H4V1H20ZM18 3H6V21H18V3Z',
+  PersonSwimming:  'M15.8109 6.1899L12.6311 2.14539L6.4093 7.26881L7.41108 12.7786L5.28035 14.587L4.97079 14.8595C4.61294 14.963 4.26719 15.1216 3.94638 15.3351L2.44415 16.3351L3.55241 18L5.05464 17C5.62891 16.6177 6.37658 16.6177 6.95085 17C8.1964 17.8291 9.81804 17.8291 11.0636 17C11.6371 16.6182 12.3865 16.6184 12.9615 17.0011C14.2043 17.8284 15.8249 17.8305 17.0691 17.0022C17.6435 16.6199 18.3917 16.6215 18.9645 17.0062L20.4407 17.9977L21.5559 16.3374L20.0796 15.3459C18.8349 14.5099 17.209 14.5065 15.9609 15.3374C15.9233 15.3624 15.8849 15.3858 15.8458 15.4076L15.8665 15.3902L12.5283 11.416L12.1171 9.3667L15.8109 6.1899ZM12.7484 14.7877L10.668 12.3109L9.92604 8.61318L13.0558 5.92148L12.3232 4.98973L8.58709 8.06631L9.5853 13.5565L7.72381 15.1364C7.83812 15.1963 7.95006 15.2626 8.05911 15.3351C8.63338 15.7174 9.38105 15.7174 9.95532 15.3351C10.7925 14.7778 11.7999 14.5958 12.7484 14.7877ZM16.3192 11.9171C16.7563 12.404 17.5054 12.4443 17.9923 12.0072C18.4792 11.57 18.5195 10.8209 18.0823 10.334C17.6452 9.84714 16.8961 9.80682 16.4092 10.244C15.9223 10.6811 15.882 11.4302 16.3192 11.9171ZM14.831 13.2533C16.0061 14.5621 18.0197 14.6704 19.3285 13.4953C20.6372 12.3202 20.7456 10.3067 19.5705 8.99787C18.3954 7.68908 16.3818 7.5807 15.073 8.7558C13.7643 9.9309 13.6559 11.9445 14.831 13.2533ZM6.95085 20.5C6.37658 20.1177 5.62891 20.1177 5.05464 20.5L3.55241 21.5L2.44415 19.8351L3.94638 18.8351C5.19193 18.006 6.81357 18.006 8.05911 18.8351C8.63338 19.2174 9.38105 19.2174 9.95532 18.8351C11.2016 18.0055 12.8249 18.0076 14.0697 18.8363C14.6427 19.2177 15.3894 19.2178 15.9609 18.8374C17.209 18.0065 18.8349 18.0099 20.0796 18.8459L21.5559 19.8374L20.4407 21.4977L18.9645 20.5062C18.3917 20.1215 17.6435 20.1199 17.0691 20.5022C15.8249 21.3305 14.2043 21.3284 12.9615 20.5011C12.3865 20.1184 11.6371 20.1182 11.0636 20.5C9.81804 21.3291 8.1964 21.3291 6.95085 20.5Z',
+  WaterLadder:     'M10.1478 2.1676C8.5304 2.1676 7.21923 3.47877 7.21923 5.09617V14.9182C6.13977 14.5437 4.92661 14.6827 3.94638 15.3352L2.44415 16.3352L3.55241 18L5.05464 17C5.62891 16.6178 6.37658 16.6178 6.95085 17C8.1964 17.8292 9.81804 17.8292 11.0636 17C11.6371 16.6182 12.3865 16.6184 12.9615 17.0012C14.2043 17.8284 15.8249 17.8305 17.0691 17.0023C17.6435 16.6199 18.3917 16.6215 18.9645 17.0062L20.4407 17.9977L21.5559 16.3375L20.0796 15.3459C19.1394 14.7144 17.9816 14.558 16.9335 14.8774V5.09617C16.9335 4.58334 17.3492 4.1676 17.8621 4.1676C18.3749 4.1676 18.7906 4.58334 18.7906 5.09617V5.73903H20.7906V5.09617C20.7906 3.47877 19.4795 2.1676 17.8621 2.1676C16.2447 2.1676 14.9335 3.47877 14.9335 5.09617V7.1676H9.21923V5.09617C9.21923 4.58334 9.63496 4.1676 10.1478 4.1676C10.6606 4.1676 11.0764 4.58334 11.0764 5.09617V5.73903H13.0764V5.09617C13.0764 3.47877 11.7652 2.1676 10.1478 2.1676ZM9.95532 15.3352C9.72971 15.4854 9.47734 15.5765 9.21923 15.6087V13.1676H14.9335V15.6205C14.6315 15.6058 14.3323 15.5111 14.0697 15.3363C12.8249 14.5076 11.2016 14.5056 9.95532 15.3352ZM14.9335 11.1676V9.1676H9.21923V11.1676H14.9335ZM6.95085 20.5C6.37658 20.1178 5.62891 20.1178 5.05464 20.5L3.55241 21.5L2.44415 19.8352L3.94638 18.8352C5.19193 18.006 6.81357 18.006 8.05911 18.8352C8.63338 19.2174 9.38105 19.2174 9.95532 18.8352C11.2016 18.0056 12.8249 18.0076 14.0697 18.8363C14.6427 19.2177 15.3894 19.2179 15.9609 18.8374C17.209 18.0066 18.8349 18.0099 20.0796 18.8459L21.5559 19.8375L20.4407 21.4977L18.9645 20.5062C18.3917 20.1215 17.6435 20.1199 17.0691 20.5023C15.8249 21.3305 14.2043 21.3284 12.9615 20.5012C12.3865 20.1184 11.6371 20.1182 11.0636 20.5C9.81804 21.3292 8.1964 21.3292 6.95085 20.5Z',
+  Park:            'M18.7873 7.85723L19.1561 6.8933C19.2928 6.53616 19.3684 6.14708 19.3684 5.73684C19.3684 3.94918 17.9192 2.5 16.1316 2.5C14.3439 2.5 12.8947 3.94918 12.8947 5.73684C12.8947 6.14708 12.9703 6.53616 13.107 6.8933L13.4759 7.85722L12.7075 8.54623C11.6572 9.4879 11 10.8504 11 12.3684C11 14.9019 12.836 17.0066 15.25 17.4246V16.4246L13.1141 15.1431L13.8859 13.8569L15.25 14.6754V10H16.75V12.6893L17.9697 11.4697L19.0303 12.5303L16.75 14.8107V17.4631C19.2925 17.1577 21.2632 14.9932 21.2632 12.3684C21.2632 10.8504 20.6059 9.4879 19.5557 8.54623L18.7873 7.85723ZM16.75 18.9715C20.1226 18.6597 22.7632 15.8224 22.7632 12.3684C22.7632 10.4065 21.9112 8.64359 20.5571 7.42943C20.7582 6.90381 20.8684 6.33319 20.8684 5.73684C20.8684 3.12076 18.7477 1 16.1316 1C13.5155 1 11.3947 3.12076 11.3947 5.73684C11.3947 6.33319 11.5049 6.9038 11.7061 7.42942C10.352 8.64359 9.5 10.4065 9.5 12.3684C9.5 15.7321 12.0042 18.5108 15.25 18.9419V21H9.85848L9.47245 19.75H11.0588V18.25H9.04146L8.66646 16.75H9.38235V15.25H2.67647V16.75H3.39236L3.01736 18.25H1V19.75H2.58637L2.20034 21H1V23L23 23V21L16.75 21V18.9715ZM5.08274 16.75H6.97608L7.43931 18.25H4.61951L5.08274 16.75ZM4.15627 19.75H7.90255L8.28858 21H3.77024L4.15627 19.75Z',
+  Leaf:            'M6.5286 15.0223C5.43862 13.1344 4.59575 9.57403 7.77616 6.37004C11.3825 2.73693 18.3911 2.31333 21.4446 2.55567C21.6859 4.89723 21.2639 10.5819 17.6446 14.5882C14.5625 17.9999 10.4757 17.3422 8.06459 16.2669C6.97232 17.5199 5.91146 18.9674 4.10517 21.5L2.5 20.3488C4.27211 17.8641 5.37888 16.3483 6.5286 15.0223ZM9.17098 7.76113C10.5738 6.34788 12.781 5.44398 15.2014 4.94791C16.7428 4.63199 18.2605 4.50392 19.5089 4.48202C19.3852 6.92601 18.6062 10.5854 16.1853 13.2652C14.8287 14.7669 13.2708 15.1984 11.7953 15.1507C10.9795 15.1243 10.1976 14.9484 9.52588 14.7151C10.4613 13.7889 11.6023 12.7597 13.2694 11.2746L11.9588 9.79515C10.2042 11.3582 8.98803 12.4545 7.96617 13.4797C7.74539 12.9686 7.56734 12.3454 7.52891 11.6687C7.46441 10.533 7.78206 9.16035 9.17098 7.76113Z',
+  CheckMark:       'M8.64233 17.0316L20.0136 4L21.5 5.30419L8.67655 20L2.5 13.2434L3.95594 11.9051L8.64233 17.0316Z',
+  List:            'M2 7C2.55228 7 3 6.55228 3 6C3 5.44772 2.55228 5 2 5C1.44772 5 1 5.44772 1 6C1 6.55228 1.44772 7 2 7ZM5 7H23V5H5V7ZM23 13H5V11H23V13ZM2 13C2.55228 13 3 12.5523 3 12C3 11.4477 2.55228 11 2 11C1.44772 11 1 11.4477 1 12C1 12.5523 1.44772 13 2 13ZM23 19H5V17H23V19ZM2 19C2.55228 19 3 18.5523 3 18C3 17.4477 2.55228 17 2 17C1.44772 17 1 17.4477 1 18C1 18.5523 1.44772 19 2 19Z',
+  Grid:            'M5.5 21.5C3.84314 21.5 2.5 20.1569 2.5 18.5V5.5C2.5 3.84315 3.84315 2.5 5.5 2.5H18.5C20.1569 2.5 21.5 3.84315 21.5 5.5V18.5C21.5 20.1569 20.1569 21.5 18.5 21.5H5.5ZM15.7632 19.5V15.9605H19.5V18.5C19.5 19.0523 19.0523 19.5 18.5 19.5H15.7632ZM19.5 5.5C19.5 4.94772 19.0523 4.5 18.5 4.5H15.7632V8.43421H19.5V5.5ZM15.7632 13.9605V10.4342H19.5V13.9605H15.7632ZM13.7632 10.4342H10.2368V13.9605H13.7632V10.4342ZM13.7632 4.5H10.2368V8.43421H13.7632V4.5ZM13.7632 15.9605H10.2368V19.5H13.7632V15.9605ZM8.23681 13.9605H4.5V10.4342H8.23681V13.9605ZM8.23681 8.43421H4.5V5.5C4.5 4.94772 4.94772 4.5 5.5 4.5H8.23681V8.43421ZM8.23681 19.5H5.5C4.94772 19.5 4.5 19.0523 4.5 18.5V15.9605H8.23681V19.5Z',
+  Map:             'M8.5 15.7679L4.5 18.0536V8.0919L8.5 5.52047V15.7679ZM10.5 15.7388L13.5 18.1388V7.74131L10.5 5.64131V15.7388ZM14.5 6L21.5 2.5V17L14.5 21.5L9.5 17.5L2.5 21.5V7L9.5 2.5L14.5 6ZM15.5 18.4795L19.5 15.9081V5.73607L15.5 7.73607V18.4795Z',
+  Plus:            'M11 13V21.5H13V13H21.5V11H13V2.5H11V11H2.5V13H11Z',
+  WaterDrop:       'M12 2.5C9 7 4.5 12 4.5 16.5a7.5 7.5 0 0 0 15 0C19.5 12 15 7 12 2.5Z',
+  HouseFill:       'M21.5 8.57913L18.5 6.65914V2.49988H16.5V5.37914L12 2.49915L2.5 8.57913V21.5009H21.5V8.57913ZM10.5 19.9999V13.9999H13.5V19.9999H15V13.5773C15 13.0311 14.5523 12.5883 14 12.5883H10C9.44772 12.5883 9 13.0311 9 13.5773V19.9999H10.5Z',
+  Minus:           'M21.5 13H2.5V11H21.5V13Z',
 };
 
-/** Build a published CSV URL for a given sheet tab gid. */
-function _sheetsUrl(gid) {
-  return `https://docs.google.com/spreadsheets/d/e/${SHEETS_CONFIG.publishedId}/pub?gid=${gid}&single=true&output=csv`;
+/**
+ * Render an Amsterdam Design System SVG icon as an HTML string.
+ * @param {string} key - Icon name matching a key in ADS_ICON_PATHS.
+ * @param {{size?: number, fill?: string, cls?: string}} [opts]
+ * @returns {string} Inline `<svg>` HTML, or empty string for unknown keys.
+ */
+function adsIcon(key, { size = 16, fill = "currentColor", cls = "" } = {}) {
+  const d = ADS_ICON_PATHS[key];
+  if (!d) return "";
+  return `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="${fill}" aria-hidden="true"${cls ? ` class="${cls}"` : ""}><path d="${d}"/></svg>`;
 }
-function _sheetsReady() {
-  return SHEETS_CONFIG.publishedId && !SHEETS_CONFIG.publishedId.startsWith("PASTE_");
+
+// ── Layer definitions ──────────────────────────────────────────────────────
+const COMMUNITY_LAYER_CATS = new Set(["koelteplekken","water_taps","parks","swimming_pools","shade"]);
+const POLICY_LAYER_CATS    = new Set(["hvi","temperature","ndvi","cooling_assets","healthcare_distance"]);
+
+const LAYER_DEFS = [
+  // Community layers
+  { cat: "koelteplekken",       label: "Koelteplekken",           color: "#004699",   type: "geojson",              radius: 8 },
+  { cat: "water_taps",          label: "Water fountains",         color: "#009de6",   src: "data/raw/water_taps.geojson",                             type: "geojson", radius: 4 },
+  { cat: "parks",               label: "Parks",                   color: "#00893c",   src: "data/raw/parks.json",                                     type: "polygon" },
+  { cat: "swimming_pools",      label: "Swimming spots",          color: "#009de6",   src: "data/raw/zwemwater.geojson",                              type: "geojson", radius: 6 },
+  { cat: "shade",               label: "Sidewalk shade",          color: "#004699",   type: "shade" },
+  // Policy / analysis layers
+  { cat: "hvi",                 label: "Kwetsbaarheidskaart",     color: "#CA0020",   src: "data/hvi_map.geojson",                                    type: "choropleth" },
+  { cat: "temperature",         label: "Surface Temperature",     color: "#CA0020",   src: "data/stakeholders/temp_mean.geojson",                     type: "temperature" },
+  { cat: "ndvi",                label: "Vegetation Index",        color: "#00893c",   src: "data/stakeholders/ndvi.geojson",                          type: "ndvi" },
+  { cat: "cooling_assets",      label: "Cooling Asset Distance",  color: "#004699",   src: "data/stakeholders/cooling_asset_distance.geojson",        type: "cooling_assets" },
+  { cat: "healthcare_distance", label: "Healthcare Distance",     color: "#a00078",   src: "data/stakeholders/healthcare_distance.geojson",           type: "healthcare_distance" },
+];
+
+// ── Data source ────────────────────────────────────────────────────────────
+// The site reads its location data + heat-plan settings from a published,
+// read-only source. It stays fully client-side: the browser fetches a public
+// URL with no credentials. Cooling-spot locations are public information, so
+// anonymous read is appropriate and safe.
+//
+// CURRENT: a published Google Sheet (CSV).
+//
+// TO MIGRATE TO MICROSOFT 365 (the planned amsterdam.nl setup):
+//   1. GGD maintains the locations in Excel / a SharePoint List, using the
+//      same columns as today (see docs/location-template.csv).
+//   2. A scheduled Power Automate flow publishes that list to a static file at
+//      a public, read-only URL on Gemeente / Azure hosting:
+//        • simplest:  export as CSV     → set type: "csv"
+//        • or:        export as GeoJSON → set type: "geojson"
+//   3. Set DATA_SOURCE.type and the two URLs below. Nothing else changes —
+//      the field mapping (_rowToFeature) and the entire app are source-agnostic.
+//
+// Source formats:
+//   csv / google-sheet — locations: same columns as the template;
+//                         settings:  two columns "key,value".
+//   geojson            — locations: FeatureCollection whose feature.properties
+//                         use the same field names as the template columns;
+//                         settings:  a flat JSON object { key: value, … }.
+const DATA_SOURCE = {
+  type: "google-sheet",            // "google-sheet" | "csv" | "geojson"
+
+  // Used when type === "google-sheet".
+  googleSheet: {
+    publishedId:  "2PACX-1vToR12t2LARCufEpqz2xv0An5XQqBHd1VvqBmS9k3OdlsvzUryxgmwXTpaVfIX4zMYE61DH0-ujlnqB",
+    locationsGid: "0",             // #gid of the locations tab (first tab = 0)
+    settingsGid:  "971775516",     // #gid of the settings tab
+  },
+
+  // Used when type === "csv" or "geojson" — static files published from M365.
+  locationsUrl: "",                // e.g. "data/locations.csv" or "https://…/locations.geojson"
+  settingsUrl:  "",                // e.g. "data/settings.csv"  or "https://…/settings.json"
+};
+
+/** Build a published-CSV URL for a Google Sheet tab gid. */
+function _googleSheetUrl(gid) {
+  return `https://docs.google.com/spreadsheets/d/e/${DATA_SOURCE.googleSheet.publishedId}/pub?gid=${gid}&single=true&output=csv`;
+}
+
+/** True when the configured data source has the details it needs to load. */
+function _dataReady() {
+  if (DATA_SOURCE.type === "google-sheet") {
+    const id = DATA_SOURCE.googleSheet.publishedId;
+    return !!id && !id.startsWith("PASTE_");
+  }
+  return !!DATA_SOURCE.locationsUrl;
+}
+
+/** Resolve the locations request: { url, format: "csv" | "geojson" }. */
+function _locationsRequest() {
+  if (DATA_SOURCE.type === "google-sheet") {
+    return { url: _googleSheetUrl(DATA_SOURCE.googleSheet.locationsGid), format: "csv" };
+  }
+  return { url: DATA_SOURCE.locationsUrl, format: DATA_SOURCE.type === "geojson" ? "geojson" : "csv" };
+}
+
+/** Resolve the settings request: { url, format: "csv" | "json" }. */
+function _settingsRequest() {
+  if (DATA_SOURCE.type === "google-sheet") {
+    return { url: _googleSheetUrl(DATA_SOURCE.googleSheet.settingsGid), format: "csv" };
+  }
+  return { url: DATA_SOURCE.settingsUrl, format: DATA_SOURCE.type === "geojson" ? "json" : "csv" };
 }
 
 const TYPE_LABEL    = { koelteplekken: "Koelteplek", water_taps: "Water fountain", parks: "Park", swimming_pools: "Swimming spot" };
@@ -104,18 +206,24 @@ const CATEGORY_COLORS = {
   urban_farm:       "#bed200",  // Amsterdam lime green
   community_center: "#ff9100",  // Amsterdam orange
   sports:           "#e50082",  // Amsterdam magenta
-  theater:          "#ffa0d7",  // Amsterdam light blue
+  theater:          "#e50082",  // Amsterdam magenta
   default:          "#004699",  // Amsterdam dark blue
 };
 
 // Amsterdam brand palette used for auto-assigning colors to new/unknown categories
 const AMSTERDAM_PALETTE = [
   "#004699", "#a00078", "#00893c", "#bed200", "#ff9100",
-  "#e50082", "#ffa0d7", "#ffe600", "#ec0000", "#202020",
+  "#e50082", "#009de6", "#ffe600", "#ec0000", "#202020",
 ];
 let _paletteIndex = Object.keys(CATEGORY_COLORS).filter(k => k !== "default").length;
 
 /** Return the color for a given location type. Auto-assigns from Amsterdam palette for unknown types. */
+/**
+ * Return the brand colour for a koelteplaats category.
+ * Unknown categories are auto-assigned from the Amsterdam palette and cached.
+ * @param {string|null} type - Category key (e.g. "library", "church").
+ * @returns {string} Hex colour string.
+ */
 function getCategoryColor(type) {
   if (!type) return CATEGORY_COLORS.default;
   if (CATEGORY_COLORS[type]) return CATEGORY_COLORS[type];
@@ -185,6 +293,8 @@ const TR = {
     org: "GGD Amsterdam",
     title: "Koeltekaart Amsterdam",
     search_placeholder: "Zoek straat, buurt of locatie…",
+    search_placeholder_medium: "Zoek locatie…",
+    search_placeholder_short: "Zoeken…",
     near_me: "In mijn buurt",
     stay_cool: "Blijf koel",
     heat_advice_btn: "Hitteadvies",
@@ -198,11 +308,13 @@ const TR = {
     parks_label: "Parken",
     swimming_pools_label: "Zwemplekken",
     shade_label: "Loopschaduw",
+    shade_around: "Schaduw rond",
     mode_user: "Bewoners",
     mode_policy: "Beleid",
     lp_headline: "Vind verkoeling in Amsterdam",
     lp_hl1: "Te warm?",
-    lp_hl2: "Vind verkoeling.",
+    lp_hl2: "Zoek verkoeling.",
+    lp_tagline_sub: "Klik op een symbool op de kaart om te zien wat je op deze locatie kunt verwachten.",
     lp_sub: "Drinkwaterkranen, parken en koelteplekken — gratis, in jouw buurt.",
     lp_enter: "Open de kaart",
     lp_on_map_title: "Wat vind je op de kaart?",
@@ -231,7 +343,7 @@ const TR = {
     opens_on: "Opent op",
     hours_unknown: "Openingstijden onbekend",
     get_directions: "Routebeschrijving",
-    website_hours: "Website & openingstijden",
+    website_hours: "Website",
     near_you: "In jouw buurt",
     other_locations: "Andere locaties",
     no_near_results: "Geen locaties gevonden, probeer het later opnieuw.",
@@ -305,6 +417,8 @@ const TR = {
     org: "GGD Amsterdam",
     title: "Cool Map Amsterdam",
     search_placeholder: "Search street, neighbourhood or place…",
+    search_placeholder_medium: "Search place…",
+    search_placeholder_short: "Search…",
     near_me: "Near me",
     stay_cool: "Stay cool",
     heat_advice_btn: "Heat advice",
@@ -318,11 +432,13 @@ const TR = {
     parks_label: "Parks",
     swimming_pools_label: "Swimming spots",
     shade_label: "Sidewalk shade",
+    shade_around: "Shade around",
     mode_user: "Residents",
     mode_policy: "Policy",
     lp_headline: "Find cooling spots in Amsterdam",
     lp_hl1: "Too warm?",
     lp_hl2: "Find relief.",
+    lp_tagline_sub: "Tap a symbol on the map to see what you can expect at that location.",
     lp_sub: "Water fountains, parks and cooling spots — free, near you.",
     lp_enter: "Open the map",
     lp_on_map_title: "What's on the map?",
@@ -351,7 +467,7 @@ const TR = {
     opens_on: "Opens on",
     hours_unknown: "Opening hours unknown",
     get_directions: "Get directions",
-    website_hours: "Website & opening hours",
+    website_hours: "Website",
     near_you: "Near you",
     other_locations: "Other locations",
     no_near_results: "No locations found — wait a moment and try again.",
@@ -420,10 +536,17 @@ const TR = {
 function t(key) { return TR[state.lang]?.[key] ?? TR.en[key] ?? key; }
 
 // ── State ──────────────────────────────────────────────────────────────────
+// Default on/off state for each map layer — single source of truth used both
+// to initialise state.on and to count how many layers deviate from default.
+const DEFAULT_LAYER_ON = Object.freeze({
+  koelteplekken: true, water_taps: false, parks: true, swimming_pools: false, shade: false,
+  hvi: false, temperature: false, ndvi: false, cooling_assets: false, healthcare_distance: false,
+});
+
 const state = {
   map: null,
   layers: {},
-  on: { koelteplekken: true, water_taps: true, parks: true, swimming_pools: true, shade: false, hvi: false, temperature: false, ndvi: false, cooling_assets: false, healthcare_distance: false},
+  on: { ...DEFAULT_LAYER_ON },
   features: { koelteplekken: [], water_taps: [], parks: [], swimming_pools: [], hvi: [], temperature: [], ndvi: [], cooling_assets: [], healthcare_distance: [] },
   userMarker: null,
   userPos: null,
@@ -434,6 +557,7 @@ const state = {
   lang: localStorage.getItem("koeltekaart_lang") || "nl",
   activeCategories: new Set(),
   heatPlanActive: false,
+  viewMode: localStorage.getItem("koeltekaart_view") || "community", // "community" | "policy"
   panelMode: "list",    // "list" | "detail"
   mobileView: "map",    // "map"  | "list"   — mobile only
   detailBackTo: "map",  // "map"  | "list"   — where back button returns to on mobile
@@ -442,7 +566,11 @@ const state = {
 
 };
 
-function isDesktop() { return window.innerWidth > 768; }
+// Desktop = wide AND a true (non-touch) pointer. Mirrors the CSS breakpoint so
+// touch tablets (e.g. iPads in landscape) use the mobile layout regardless of width.
+function isDesktop() {
+  return window.matchMedia("(min-width: 901px) and (hover: hover) and (pointer: fine)").matches;
+}
 
 // ── Loader ─────────────────────────────────────────────────────────────────
 let _pending = 0;
@@ -461,15 +589,18 @@ function applyLanguage() {
   // Dutch tagline: wrap all letters except "g." in an underline span so the
   // descender of "g" doesn't collide with the decorative underline.
   const hlAccent = document.querySelector(".li-hl-accent");
-  if (hlAccent && state.lang === "nl") {
-    hlAccent.innerHTML = '<span class="li-hl-u">Vind verkoelin</span>g.';
+  if (hlAccent) {
+    if (state.lang === "nl") {
+      hlAccent.innerHTML = '<span class="li-hl-u">Vind verkoelin</span>g.';
+    } else {
+      hlAccent.innerHTML = '<span class="li-hl-u">Find relief</span>.';
+    }
   }
   document.querySelectorAll("[data-tooltip-i18n]").forEach(el => {
     const key = el.dataset.tooltipI18n;
     if (key) { el.setAttribute("data-tooltip", t(key)); el.setAttribute("aria-label", t(key)); }
   });
-  const si = document.getElementById("search-input");
-  if (si) si.placeholder = t("search_placeholder");
+  updateSearchPlaceholder();
   const langBtn = document.getElementById("btn-lang");
   if (langBtn) langBtn.textContent = state.lang === "nl" ? "EN" : "NL";
   setupCategoryFilter();
@@ -482,11 +613,10 @@ function applyLanguage() {
   rebuildFilterChips();
   rebuildSwimmingPoolChips();
   renderMobileFilterBar();
-
-
+  // Refresh view mode label text after language switch
+  _applyViewMode(state.viewMode);
   // Update panel title if in list mode
   updatePanelTitle();
-
   rerenderCurrentDetailPanel();
 }
 
@@ -535,11 +665,15 @@ function updateBannerText() {
 let _settingsPromise = null;
 
 async function fetchSettings() {
-  if (!_sheetsReady()) return;
+  if (!_dataReady()) return;
   try {
-    const r = await fetch(_sheetsUrl(SHEETS_CONFIG.settingsGid));
+    const { url, format } = _settingsRequest();
+    const r = await fetch(url);
     if (!r.ok) return;
-    const rows = parseCsv(await r.text());
+    // Normalise both source formats to a list of { key, value } rows.
+    const rows = format === "json"
+      ? Object.entries(await r.json()).map(([key, value]) => ({ key, value: String(value) }))
+      : parseCsv(await r.text());
     rows.forEach(row => {
       const key = (row.key || "").trim().toLowerCase();
       const val = (row.value || "").trim();
@@ -575,6 +709,10 @@ function _ensureSettingsLoaded() {
   return _settingsPromise;
 }
 
+/**
+ * Initialise the heat-plan status banner and start polling the data source
+ * every 5 minutes for live updates to heat_plan_active and label overrides.
+ */
 function setupBanner() {
   updateBannerText();
   _ensureSettingsLoaded();
@@ -633,6 +771,12 @@ function polygonCentroid(coordinates) {
 // ── Opening hours ──────────────────────────────────────────────────────────
 function parseMinutes(str) { const [h,m] = str.split(":").map(Number); return h*60+m; }
 
+/**
+ * Determine whether a location is currently open, closed, or has unknown hours.
+ * @param {string[]|null} hours - 7-element array of "HH:MM-HH:MM" slots indexed
+ *   Mon=0…Sun=6, or null/undefined if hours are unknown.
+ * @returns {{status: "open"|"closed"|"unknown", closesAt?: string, opensAt?: string, nextDay?: number}}
+ */
 function getOpenStatus(hours) {
   if (!hours || !Array.isArray(hours)) return { status: "unknown" };
   const now = new Date(), dow = (now.getDay()+6)%7;
@@ -653,6 +797,12 @@ function getOpenStatus(hours) {
   return { status:"open", closesAt:closeStr, today };
 }
 
+/**
+ * Build a DOM element displaying a weekly opening-hours table plus a
+ * current open/closed status badge.
+ * @param {string[]|null} hours - Same format as accepted by getOpenStatus.
+ * @returns {HTMLElement} A `<div class="hours-wrap">` ready to insert into the DOM.
+ */
 function renderHoursBlock(hours) {
   const status   = getOpenStatus(hours);
   const dayShort = state.lang === "nl" ? DAY_SHORT_NL : DAY_SHORT_EN;
@@ -720,11 +870,18 @@ function initMap() {
   state.map.createPane("pointsPane");
   state.map.getPane("pointsPane").style.zIndex = 650;
 
-  L.tileLayer("https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png", {
-    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>',
-    subdomains: "abcd", maxZoom: 19,
+  // PDOK BRT Achtergrondkaart (grijs) — official Dutch-government basemap, no API key.
+  // Standard Web-Mercator REST WMTS, so {z}/{x}/{y} works with Leaflet's default CRS.
+  L.tileLayer("https://service.pdok.nl/brt/achtergrondkaart/wmts/v2_0/grijs/EPSG:3857/{z}/{x}/{y}.png", {
+    attribution: '&copy; <a href="https://www.kadaster.nl">Kadaster</a> / <a href="https://www.pdok.nl">PDOK</a>',
+    maxZoom: 19,
   }).addTo(state.map);
   L.control.zoom({ position: "topright" }).addTo(state.map);
+  // Swap Leaflet's text +/- for the Amsterdam Design System Plus/Minus icons.
+  const zoomIn  = document.querySelector(".leaflet-control-zoom-in");
+  const zoomOut = document.querySelector(".leaflet-control-zoom-out");
+  if (zoomIn)  zoomIn.innerHTML  = adsIcon("Plus",  { size: 20, fill: "currentColor" });
+  if (zoomOut) zoomOut.innerHTML = adsIcon("Minus", { size: 20, fill: "currentColor" });
   state.map.on("click", () => { closeSidebarMobile(); });
   state.map.on("mousemove", e => HC.move(e.originalEvent.clientX, e.originalEvent.clientY));
   // shade tiles are prefetched at load — no viewport tracking needed
@@ -747,6 +904,13 @@ function initMap() {
 // ── CSV utilities (replaces Python backend parser) ─────────────────────────
 
 /** Parse a CSV string into an array of {header: value} objects. */
+/**
+ * Parse a CSV string into an array of row objects keyed by header names.
+ * Handles quoted fields, embedded commas, and Windows/Unix line endings.
+ * Strips a leading UTF-8 BOM if present.
+ * @param {string} text - Raw CSV text.
+ * @returns {Object[]} Array of row objects.
+ */
 function parseCsv(text) {
   if (text.charCodeAt(0) === 0xFEFF) text = text.slice(1); // strip BOM
   const rows = [];
@@ -831,6 +995,13 @@ function _resolvePhotoUrl(url) {
 }
 
 /** Convert one CSV row into a GeoJSON Feature (returns null if row is invalid). */
+/**
+ * Convert one Google Sheet CSV row into a GeoJSON Feature.
+ * Normalises field names, parses opening hours, resolves Google Drive photo
+ * URLs, and booleanises amenity columns.
+ * @param {Object} row - A parsed CSV row object.
+ * @returns {Object|null} GeoJSON Feature, or null if lat/lon are missing.
+ */
 function _rowToFeature(row) {
   const name = (row.name || "").trim();
   if (!name) return null;
@@ -873,21 +1044,40 @@ function _rowToFeature(row) {
   };
 }
 
-async function _loadKoelteplekkenFromSheets(def) {
-  if (!_sheetsReady()) {
-    console.warn("Koeltekaart: fill in SHEETS_CONFIG (publishedId + gids) in app.js");
+/**
+ * Normalise an incoming GeoJSON feature into the app's internal feature shape.
+ * Treats feature.properties as a data row (same field names as the CSV
+ * template) and injects latitude/longitude from Point geometry when absent,
+ * then reuses _rowToFeature so CSV and GeoJSON sources behave identically.
+ */
+function _featureFromGeoJson(f) {
+  const props = { ...(f.properties || {}) };
+  if (f.geometry?.type === "Point" && (props.latitude == null || props.longitude == null)) {
+    props.longitude = f.geometry.coordinates[0];
+    props.latitude  = f.geometry.coordinates[1];
+  }
+  return _rowToFeature(props);
+}
+
+/** Load koelteplekken from the configured data source (CSV or GeoJSON). */
+async function _loadKoelteplekken(def) {
+  if (!_dataReady()) {
+    console.warn("Koeltekaart: configure DATA_SOURCE in app.js");
     buildKoelteplekkenLayer(def, { type: "FeatureCollection", features: [] });
     return;
   }
   await _ensureSettingsLoaded(); // labels/translations must be ready before building markers
-  const r = await fetch(_sheetsUrl(SHEETS_CONFIG.locationsGid));
-  if (!r.ok) throw new Error(`Sheets locations fetch failed: ${r.status}`);
-  const features = parseCsv(await r.text()).map(_rowToFeature).filter(Boolean);
+  const { url, format } = _locationsRequest();
+  const r = await fetch(url);
+  if (!r.ok) throw new Error(`locations fetch failed: ${r.status}`);
+  const features = format === "geojson"
+    ? ((await r.json()).features || []).map(_featureFromGeoJson).filter(Boolean)
+    : parseCsv(await r.text()).map(_rowToFeature).filter(Boolean);
   buildKoelteplekkenLayer(def, { type: "FeatureCollection", features });
 }
 
 // ── HVI choropleth layer ───────────────────────────────────────────────────
-const HVI_TIER_COLORS = ["#2166AC", "#92C5DE", "#FFFFBF", "#F4A582", "#CA0020"];
+const HVI_TIER_COLORS = ["#2166AC","#92C5DE","#FFFFBF","#F4A582","#CA0020"];
 
 function _hviTierColor(tier) {
   const t = parseInt(tier);
@@ -897,7 +1087,7 @@ function _hviTierColor(tier) {
 
 function buildHviLayer(def, data) {
   state.features.hvi = data.features || [];
-  _hviStats = null; // invalidate cache
+  _hviStats = null;
   _renderHviLayer(def, state.features.hvi);
 }
 
@@ -930,25 +1120,12 @@ function _renderHviLayer(def, features) {
   if (state.on.hvi) state.layers.hvi.addTo(state.map);
 }
 
-// build temperature
-const TEMP_MIN = 10;
-const TEMP_MAX = 42;
+// ── Surface temperature layer ──────────────────────────────────────────────
+const TEMP_MIN = 10, TEMP_MAX = 42;
 
 function getTempColor(temp) {
-
-  // Normalize to 0-1
-  const t = Math.max(
-    0,
-    Math.min(
-      1,
-      (temp - TEMP_MIN) / (TEMP_MAX - TEMP_MIN)
-    )
-  );
-
-  // Blue → Red
-  const hue = 240 - t * 240;
-
-  return `hsl(${hue}, 90%, 50%)`;
+  const t = Math.max(0, Math.min(1, (temp - TEMP_MIN) / (TEMP_MAX - TEMP_MIN)));
+  return `hsl(${240 - t * 240}, 90%, 50%)`;
 }
 
 function buildTemperatureLayer(def, data) {
@@ -957,238 +1134,86 @@ function buildTemperatureLayer(def, data) {
 }
 
 function _renderTemperatureLayer(def, features) {
-
-  if (state.layers.temperature) {
-    state.map.removeLayer(state.layers.temperature);
-  }
-
-  const fc = {
-    type: "FeatureCollection",
-    features
-  };
-
-  state.layers.temperature = L.geoJSON(fc, {
+  if (state.layers.temperature) state.map.removeLayer(state.layers.temperature);
+  state.layers.temperature = L.geoJSON({ type: "FeatureCollection", features }, {
     pane: "hviPane",
-
-    style: f => {
-
-      const temp = Number(
-        f.properties?.temp_mean
-      );
-
-      return {
-        fillColor: getTempColor(temp),
-        fillOpacity: 0.65,
-        color: "#ffffff",
-        weight: 0.5,
-        opacity: 0.5
-      };
-    },
-
+    style: f => ({ fillColor: getTempColor(Number(f.properties?.temp_mean)), fillOpacity: 0.65, color: "#fff", weight: 0.5, opacity: 0.5 }),
     onEachFeature: (f, l) => {
-
       const p = f.properties || {};
-
-      const name =
-        p.buurtnaam || "Buurt";
-
-      const temp =
-        Number(p.temp_mean);
-
+      const temp = Number(p.temp_mean);
       if (!IS_TOUCH_DEVICE) {
-
-        l.on("mouseover", e => {
-
-          l.setStyle({
-            fillOpacity: 0.85,
-            weight: 1.5,
-            color: "#333"
-          });
-
-          HC.show(
-            e.originalEvent.clientX,
-            e.originalEvent.clientY,
-            name,
-            `${temp.toFixed(1)} °C`,
-            getTempColor(temp)
-          );
-        });
-
-        l.on("mouseout", () => {
-          state.layers.temperature.resetStyle(l);
-          HC.hide();
-        });
-
-        l.on("mousemove", e =>
-          HC.move(
-            e.originalEvent.clientX,
-            e.originalEvent.clientY
-          )
-        );
+        l.on("mouseover", e => { l.setStyle({ fillOpacity: 0.85, weight: 1.5, color: "#333" }); HC.show(e.originalEvent.clientX, e.originalEvent.clientY, p.buurtnaam || "Buurt", `${temp.toFixed(1)} °C`, getTempColor(temp)); });
+        l.on("mouseout", () => { state.layers.temperature.resetStyle(l); HC.hide(); });
+        l.on("mousemove", e => HC.move(e.originalEvent.clientX, e.originalEvent.clientY));
       }
-    }
+    },
   });
-
-  if (state.on.temperature) {
-    state.layers.temperature.addTo(state.map);
-  }
+  if (state.on.temperature) state.layers.temperature.addTo(state.map);
 }
-// other stakeholder layers
-function interpolateColor(value, min, max, colors) {
+
+// ── Stakeholder layers (NDVI, cooling access, healthcare distance) ─────────
+function _interpolateColor(value, min, max, colors) {
   const t = Math.max(0, Math.min(1, (value - min) / (max - min)));
   const n = colors.length - 1;
   const idx = Math.min(Math.floor(t * n), n - 1);
   const frac = t * n - idx;
-
-  const c1 = colors[idx];
-  const c2 = colors[idx + 1];
-
-  const r = Math.round(c1[0] + frac * (c2[0] - c1[0]));
-  const g = Math.round(c1[1] + frac * (c2[1] - c1[1]));
-  const b = Math.round(c1[2] + frac * (c2[2] - c1[2]));
-
-  return `rgb(${r},${g},${b})`;
+  const [r1,g1,b1] = colors[idx], [r2,g2,b2] = colors[idx + 1];
+  return `rgb(${Math.round(r1+frac*(r2-r1))},${Math.round(g1+frac*(g2-g1))},${Math.round(b1+frac*(b2-b1))})`;
 }
 
-function getStakeholderValue(def, p) {
-  if (def.cat === "ndvi") return Number(p.ndvi_mean);
-  if (def.cat === "cooling_assets") return Number(p.cooling_asset_distance_index);
+function _stakeholderValue(def, p) {
+  if (def.cat === "ndvi")                return Number(p.ndvi_mean);
+  if (def.cat === "cooling_assets")      return Number(p.cooling_asset_distance_index);
   if (def.cat === "healthcare_distance") return Number(p.healthcare_distance_index);
   return null;
 }
 
-function getStakeholderColor(def, value) {
+function _stakeholderColor(def, value) {
   if (!Number.isFinite(value)) return "#D1D5DB";
-
-  if (def.cat === "ndvi") {
-    return interpolateColor(value, 0, 0.7, [
-      [255, 255, 204],
-      [194, 230, 153],
-      [120, 198, 121],
-      [49, 163, 84],
-      [0, 104, 55]
-    ]);
-  }
-
-  if (def.cat === "cooling_assets") {
-    return interpolateColor(value, -1.5, 2.5, [
-      [216, 243, 220],
-      [149, 213, 178],
-      [255, 255, 191],
-      [253, 174, 97],
-      [215, 48, 39]
-    ]);
-  }
-
-  if (def.cat === "healthcare_distance") {
-    return interpolateColor(value, -1.5, 2.5, [
-      [224, 236, 244],
-      [158, 188, 218],
-      [255, 255, 191],
-      [241, 163, 64],
-      [153, 52, 4]
-    ]);
-  }
-
+  if (def.cat === "ndvi")
+    return _interpolateColor(value, 0, 0.7, [[255,255,204],[194,230,153],[120,198,121],[49,163,84],[0,104,55]]);
+  if (def.cat === "cooling_assets")
+    return _interpolateColor(value, -1.5, 2.5, [[216,243,220],[149,213,178],[255,255,191],[253,174,97],[215,48,39]]);
+  if (def.cat === "healthcare_distance")
+    return _interpolateColor(value, -1.5, 2.5, [[224,236,244],[158,188,218],[255,255,191],[241,163,64],[153,52,4]]);
   return "#D1D5DB";
 }
 
-function getStakeholderLabel(def, value) {
+function _stakeholderLabel(def, value) {
   if (!Number.isFinite(value)) return "Geen data";
-
-  if (def.cat === "ndvi") {
-    return `NDVI: ${value.toFixed(2)}`;
-  }
-
-  if (def.cat === "cooling_assets") {
-    return `Cooling asset distance index: ${value.toFixed(2)}`;
-  }
-
-  if (def.cat === "healthcare_distance") {
-    return `Healthcare distance index: ${value.toFixed(2)}`;
-  }
-
+  if (def.cat === "ndvi")                return `NDVI: ${value.toFixed(2)}`;
+  if (def.cat === "cooling_assets")      return `Cooling access index: ${value.toFixed(2)}`;
+  if (def.cat === "healthcare_distance") return `Healthcare distance index: ${value.toFixed(2)}`;
   return value.toFixed(2);
 }
 
 function buildStakeholderLayer(def, data) {
   state.features[def.cat] = data.features || [];
-  renderStakeholderLayer(def, state.features[def.cat]);
+  _renderStakeholderLayer(def, state.features[def.cat]);
 }
 
-function renderStakeholderLayer(def, features) {
-  if (state.layers[def.cat]) {
-    state.map.removeLayer(state.layers[def.cat]);
-  }
-
-  state.layers[def.cat] = L.geoJSON(
-    {
-      type: "FeatureCollection",
-      features
+function _renderStakeholderLayer(def, features) {
+  if (state.layers[def.cat]) state.map.removeLayer(state.layers[def.cat]);
+  state.layers[def.cat] = L.geoJSON({ type: "FeatureCollection", features }, {
+    pane: "hviPane",
+    style: f => {
+      const v = _stakeholderValue(def, f.properties || {});
+      return { fillColor: _stakeholderColor(def, v), fillOpacity: 0.65, color: "#fff", weight: 0.5, opacity: 0.5 };
     },
-    {
-      pane: "hviPane",
-
-      style: f => {
-        const p = f.properties || {};
-        const value = getStakeholderValue(def, p);
-        const color = getStakeholderColor(def, value);
-
-        return {
-          fillColor: color,
-          fillOpacity: 0.65,
-          color: "#ffffff",
-          weight: 0.5,
-          opacity: 0.5
-        };
-      },
-
-      onEachFeature: (f, l) => {
-        const p = f.properties || {};
-        const name = p.buurtnaam || "Buurt";
-        const value = getStakeholderValue(def, p);
-        const label = getStakeholderLabel(def, value);
-        const color = getStakeholderColor(def, value);
-
-        if (!IS_TOUCH_DEVICE) {
-          l.on("mouseover", e => {
-            l.setStyle({
-              fillOpacity: 0.85,
-              weight: 1.5,
-              color: "#333"
-            });
-
-            HC.show(
-              e.originalEvent.clientX,
-              e.originalEvent.clientY,
-              name,
-              label,
-              color
-            );
-          });
-
-          l.on("mouseout", () => {
-            state.layers[def.cat].resetStyle(l);
-            HC.hide();
-          });
-
-          l.on("mousemove", e =>
-            HC.move(
-              e.originalEvent.clientX,
-              e.originalEvent.clientY
-            )
-          );
-        }
+    onEachFeature: (f, l) => {
+      const p = f.properties || {};
+      const v = _stakeholderValue(def, p);
+      if (!IS_TOUCH_DEVICE) {
+        l.on("mouseover", e => { l.setStyle({ fillOpacity: 0.85, weight: 1.5, color: "#333" }); HC.show(e.originalEvent.clientX, e.originalEvent.clientY, p.buurtnaam || "Buurt", _stakeholderLabel(def, v), _stakeholderColor(def, v)); });
+        l.on("mouseout", () => { state.layers[def.cat].resetStyle(l); HC.hide(); });
+        l.on("mousemove", e => HC.move(e.originalEvent.clientX, e.originalEvent.clientY));
       }
-    }
-  );
-
-  if (state.on[def.cat]) {
-    state.layers[def.cat].addTo(state.map);
-  }
+    },
+  });
+  if (state.on[def.cat]) state.layers[def.cat].addTo(state.map);
 }
 
-// ── HVI analytics — statistics, charts, spatial helpers ───────────────────
+// ── HVI analytics ─────────────────────────────────────────────────────────
 let _hviStats = null;
 
 function _getHviStats() {
@@ -1196,17 +1221,17 @@ function _getHviStats() {
   const feats = (state.features.hvi || []).map(f => f.properties).filter(p => p.hvi != null);
   if (!feats.length) return null;
   const sorted = feats.map(p => p.hvi).sort((a, b) => a - b);
-  const median = arr => { const s = [...arr].sort((a, b) => a - b); const m = Math.floor(s.length / 2); return s.length % 2 ? s[m] : (s[m-1]+s[m])/2; };
-  const pct = q => sorted[Math.max(0, Math.min(sorted.length - 1, Math.floor(q * sorted.length)))];
+  const median = arr => { const s = [...arr].sort((a,b)=>a-b); const m = Math.floor(s.length/2); return s.length%2?s[m]:(s[m-1]+s[m])/2; };
+  const pct = q => sorted[Math.max(0, Math.min(sorted.length-1, Math.floor(q*sorted.length)))];
   _hviStats = {
-    total:      feats.length,
-    hvi:        median(feats.map(p => p.hvi)),
-    hi_norm:    median(feats.filter(p => p.hi_norm != null).map(p => p.hi_norm)),
-    svi:        median(feats.filter(p => p.svi_pca != null).map(p => p.svi_pca)),
-    access:     median(feats.filter(p => p.cooling_access != null).map(p => p.cooling_access)),
+    total: feats.length,
+    hvi: median(feats.map(p=>p.hvi)),
+    hi_norm: median(feats.filter(p=>p.hi_norm!=null).map(p=>p.hi_norm)),
+    svi: median(feats.filter(p=>p.svi_pca!=null).map(p=>p.svi_pca)),
+    access: median(feats.filter(p=>p.cooling_access!=null).map(p=>p.cooling_access)),
     sortedDesc: [...sorted].reverse(),
-    allHvi:     sorted,
-    thresholds: [pct(0.2), pct(0.4), pct(0.6), pct(0.8)],
+    allHvi: sorted,
+    thresholds: [pct(0.2),pct(0.4),pct(0.6),pct(0.8)],
   };
   return _hviStats;
 }
@@ -1222,7 +1247,6 @@ function _hviGetTier(hvi) {
   return 5;
 }
 
-// Compute polygon centroid for distance calculations
 function _featureCentroid(feature) {
   const geom = feature.geometry; if (!geom) return null;
   let ring;
@@ -1232,7 +1256,6 @@ function _featureCentroid(feature) {
   return { lat: ring.reduce((s,c)=>s+c[1],0)/ring.length, lon: ring.reduce((s,c)=>s+c[0],0)/ring.length };
 }
 
-// Nearest koelteplek from buurt centroid
 function _nearestKoelteplek(centroid) {
   if (!centroid || !state.features.koelteplekken?.length) return null;
   let best = null, bestDist = Infinity;
@@ -1245,49 +1268,35 @@ function _nearestKoelteplek(centroid) {
   return best;
 }
 
-// Top-N most similar buurten by Euclidean distance in [hi_norm, svi_pca, cooling_access]
 function _similarBuurten(p, n = 5) {
   return (state.features.hvi || [])
     .map(f => f.properties)
     .filter(q => q.buurtnaam !== p.buurtnaam && q.hi_norm != null && q.svi_pca != null && q.cooling_access != null)
-    .map(q => ({
-      buurtnaam: q.buurtnaam,
-      hvi: q.hvi,
-      hvi_tier: q.hvi_tier,
-      dist: Math.sqrt((q.hi_norm-p.hi_norm)**2 + (q.svi_pca-p.svi_pca)**2 + (q.cooling_access-p.cooling_access)**2),
-    }))
-    .sort((a, b) => a.dist - b.dist)
-    .slice(0, n);
+    .map(q => ({ buurtnaam: q.buurtnaam, hvi: q.hvi, hvi_tier: q.hvi_tier, dist: Math.sqrt((q.hi_norm-p.hi_norm)**2+(q.svi_pca-p.svi_pca)**2+(q.cooling_access-p.cooling_access)**2) }))
+    .sort((a,b) => a.dist - b.dist).slice(0, n);
 }
 
-// What-if: how much does each intervention shift the HVI and tier?
 function _whatIf(p, stats) {
-  const W_H = 0.40, W_S = 0.40, W_A = 0.20;
-  const hvi = (h, s, a) => W_H * h + W_S * s + W_A * (1 - a);
-  const cur = hvi(p.hi_norm ?? stats.hi_norm, p.svi_pca ?? stats.svi, p.cooling_access ?? stats.access);
+  const W_H=0.40, W_S=0.40, W_A=0.20;
+  const hvi = (h,s,a) => W_H*h + W_S*s + W_A*(1-a);
+  const cur = hvi(p.hi_norm??stats.hi_norm, p.svi_pca??stats.svi, p.cooling_access??stats.access);
   return [
-    { key: "access",  label_nl: "Koeltoegang → stadsmed.",        label_en: "Cooling access → median",     newHvi: hvi(p.hi_norm, p.svi_pca, Math.max(p.cooling_access, stats.access)) },
-    { key: "social",  label_nl: "Sociale kwetsb. → stadsmed.",    label_en: "Social vulnerability → med.", newHvi: hvi(p.hi_norm, Math.min(p.svi_pca, stats.svi), p.cooling_access) },
-    { key: "heat",    label_nl: "Hitteblootstelling → stadsmed.", label_en: "Heat exposure → median",      newHvi: hvi(Math.min(p.hi_norm, stats.hi_norm), p.svi_pca, p.cooling_access) },
-  ].map(s => ({
-    ...s,
-    delta:    Math.round((s.newHvi - cur) * 100),
-    newTier:  _hviGetTier(s.newHvi),
-    curTier:  _hviGetTier(cur),
-  }));
+    { key:"access",  label_nl:"Koeltoegang → stadsmed.",        label_en:"Cooling access → median",     newHvi: hvi(p.hi_norm, p.svi_pca, Math.max(p.cooling_access, stats.access)) },
+    { key:"social",  label_nl:"Sociale kwetsb. → stadsmed.",    label_en:"Social vulnerability → med.", newHvi: hvi(p.hi_norm, Math.min(p.svi_pca, stats.svi), p.cooling_access) },
+    { key:"heat",    label_nl:"Hitteblootstelling → stadsmed.", label_en:"Heat exposure → median",      newHvi: hvi(Math.min(p.hi_norm, stats.hi_norm), p.svi_pca, p.cooling_access) },
+  ].map(s => ({ ...s, delta: Math.round((s.newHvi-cur)*100), newTier: _hviGetTier(s.newHvi), curTier: _hviGetTier(cur) }));
 }
 
-// Dominant driver: which component contributes most above city median
 function _dominantDriver(p, stats, isNL) {
   const excess = [
-    { label: isNL ? "Hitteblootstelling" : "Heat exposure",        val: Math.max(0, (p.hi_norm ?? 0) - stats.hi_norm) * 0.40 },
-    { label: isNL ? "Sociale kwetsbaarheid" : "Social vulnerability", val: Math.max(0, (p.svi_pca ?? 0) - stats.svi) * 0.40 },
-    { label: isNL ? "Slechte koeltoegang" : "Poor cooling access",  val: Math.max(0, stats.access - (p.cooling_access ?? 0)) * 0.20 },
-  ].sort((a, b) => b.val - a.val);
+    { label: isNL?"Hitteblootstelling":"Heat exposure",        val: Math.max(0,(p.hi_norm??0)-stats.hi_norm)*0.40 },
+    { label: isNL?"Sociale kwetsbaarheid":"Social vulnerability", val: Math.max(0,(p.svi_pca??0)-stats.svi)*0.40 },
+    { label: isNL?"Slechte koeltoegang":"Poor cooling access",  val: Math.max(0,stats.access-(p.cooling_access??0))*0.20 },
+  ].sort((a,b)=>b.val-a.val);
   return excess[0].val > 0 ? excess[0].label : null;
 }
 
-// ── Chart.js helpers (destroy before recreate to avoid canvas reuse error) ─
+// ── Chart.js helpers ───────────────────────────────────────────────────────
 const _charts = {};
 function _destroyChart(id) { if (_charts[id]) { _charts[id].destroy(); delete _charts[id]; } }
 
@@ -1295,33 +1304,16 @@ function _renderRadarChart(canvasId, buurtVals, medianVals, isNL) {
   _destroyChart(canvasId);
   const ctx = document.getElementById(canvasId)?.getContext("2d");
   if (!ctx || typeof Chart === "undefined") return;
-  const labels = isNL
-    ? ["Hitteblootstelling", "Sociale kwetsbaarheid", "Koelplaatsentekort"]
-    : ["Heat exposure", "Social vulnerability", "Cooling gap"];
+  const labels = isNL ? ["Hitteblootstelling","Sociale kwetsbaarheid","Koelplaatsentekort"] : ["Heat exposure","Social vulnerability","Cooling gap"];
   _charts[canvasId] = new Chart(ctx, {
     type: "radar",
-    data: {
-      labels,
-      datasets: [
-        { label: isNL ? "Deze buurt" : "This buurt", data: buurtVals,  borderColor: "#CA0020", backgroundColor: "rgba(202,0,32,0.15)",   borderWidth: 2, pointBackgroundColor: "#CA0020", pointRadius: 3 },
-        { label: isNL ? "Stadsmed." : "City median", data: medianVals, borderColor: "#004699", backgroundColor: "rgba(0,70,153,0.07)",   borderWidth: 1.5, borderDash: [4,3], pointBackgroundColor: "#004699", pointRadius: 2 },
-      ],
-    },
-    options: {
-      responsive: true, maintainAspectRatio: true,
-      plugins: {
-        legend: { position: "bottom", labels: { font: { size: 10 }, padding: 8, boxWidth: 10 } },
-        tooltip: { callbacks: { label: c => `${c.dataset.label}: ${c.parsed.r.toFixed(0)}/100` } },
-      },
-      scales: {
-        r: {
-          min: 0, max: 100,
-          ticks: { stepSize: 25, font: { size: 8 }, color: "#9CA3AF", backdropColor: "transparent" },
-          grid: { color: "rgba(0,0,0,0.07)" },
-          angleLines: { color: "rgba(0,0,0,0.07)" },
-          pointLabels: { font: { size: 10 }, color: "#374151" },
-        },
-      },
+    data: { labels, datasets: [
+      { label: isNL?"Deze buurt":"This buurt", data: buurtVals,  borderColor:"#CA0020", backgroundColor:"rgba(202,0,32,0.15)", borderWidth:2, pointBackgroundColor:"#CA0020", pointRadius:3 },
+      { label: isNL?"Stadsmed.":"City median", data: medianVals, borderColor:"#004699", backgroundColor:"rgba(0,70,153,0.07)",  borderWidth:1.5, borderDash:[4,3], pointBackgroundColor:"#004699", pointRadius:2 },
+    ]},
+    options: { responsive:true, maintainAspectRatio:true,
+      plugins: { legend:{position:"bottom",labels:{font:{size:10},padding:8,boxWidth:10}}, tooltip:{callbacks:{label:c=>`${c.dataset.label}: ${c.parsed.r.toFixed(0)}/100`}} },
+      scales: { r:{ min:0, max:100, ticks:{stepSize:25,font:{size:8},color:"#9CA3AF",backdropColor:"transparent"}, grid:{color:"rgba(0,0,0,0.07)"}, angleLines:{color:"rgba(0,0,0,0.07)"}, pointLabels:{font:{size:10},color:"#374151"} } },
     },
   });
 }
@@ -1331,97 +1323,76 @@ function _renderDistributionChart(canvasId, allHvi, thisHvi, isNL) {
   const ctx = document.getElementById(canvasId)?.getContext("2d");
   if (!ctx || typeof Chart === "undefined") return;
   const bins = Array(10).fill(0);
-  allHvi.forEach(v => { bins[Math.min(9, Math.floor(v * 10))]++; });
-  const thisBin = Math.min(9, Math.floor(thisHvi * 10));
-  const labels = ["0–10","10–20","20–30","30–40","40–50","50–60","60–70","70–80","80–90","90–100"];
+  allHvi.forEach(v => { bins[Math.min(9, Math.floor(v*10))]++; });
+  const thisBin = Math.min(9, Math.floor(thisHvi*10));
   _charts[canvasId] = new Chart(ctx, {
     type: "bar",
-    data: {
-      labels,
-      datasets: [{
-        data: bins,
-        backgroundColor: bins.map((_, i) => i === thisBin ? "#CA0020" : "rgba(0,70,153,0.2)"),
-        borderRadius: 3, borderWidth: 0,
-      }],
-    },
-    options: {
-      responsive: true, maintainAspectRatio: true,
-      plugins: {
-        legend: { display: false },
-        tooltip: { callbacks: {
-          title: c => `HVI ${c[0].label}`,
-          label: c => `${c.parsed.y} ${isNL ? "buurten" : "neighbourhoods"}`,
-        }},
-      },
-      scales: {
-        x: { ticks: { font: { size: 8 }, maxRotation: 45 }, grid: { display: false } },
-        y: { ticks: { font: { size: 8 } }, grid: { color: "rgba(0,0,0,0.06)" },
-             title: { display: true, text: isNL ? "Buurten" : "Neighbourhoods", font: { size: 8 }, color: "#9CA3AF" } },
-      },
+    data: { labels:["0–10","10–20","20–30","30–40","40–50","50–60","60–70","70–80","80–90","90–100"],
+      datasets:[{ data:bins, backgroundColor:bins.map((_,i)=>i===thisBin?"#CA0020":"rgba(0,70,153,0.2)"), borderRadius:3, borderWidth:0 }] },
+    options: { responsive:true, maintainAspectRatio:true,
+      plugins:{ legend:{display:false}, tooltip:{callbacks:{ title:c=>`HVI ${c[0].label}`, label:c=>`${c.parsed.y} ${isNL?"buurten":"neighbourhoods"}` }} },
+      scales:{ x:{ticks:{font:{size:8},maxRotation:45},grid:{display:false}}, y:{ticks:{font:{size:8}},grid:{color:"rgba(0,0,0,0.06)"},title:{display:true,text:isNL?"Buurten":"Neighbourhoods",font:{size:8},color:"#9CA3AF"}} },
     },
   });
 }
 
-// ── HVI dashboard ──────────────────────────────────────────────────────────
+// ── HVI neighbourhood detail panel ────────────────────────────────────────
+function _makeBar(value, color) {
+  const wrap = document.createElement("div"); wrap.className = "hvi-bar-wrap";
+  const track = document.createElement("div"); track.className = "hvi-bar-track";
+  const fill  = document.createElement("div"); fill.className  = "hvi-bar-fill";
+  fill.style.width = Math.round((value||0)*100) + "%";
+  fill.style.background = color;
+  track.appendChild(fill); wrap.appendChild(track);
+  return wrap;
+}
+
 function renderHviDetailContent(feature, container) {
   const p = feature.properties || {};
   const tier = parseInt(p.hvi_tier) || null;
   const color = _hviTierColor(p.hvi_tier);
   const isNL = state.lang === "nl";
   const stats = _getHviStats();
-
   const body = document.createElement("div"); body.className = "detail-panel-body";
   const dash = document.createElement("div"); dash.className = "hvi-dash";
 
-  // ── Header ──
   const hdr = document.createElement("div"); hdr.className = "hvi-dash-hdr";
   const catLbl = document.createElement("div"); catLbl.className = "dp-cat";
   catLbl.textContent = isNL ? "Hittekwetsbaarheidsindex" : "Heat Vulnerability Index";
   const nameEl = document.createElement("div"); nameEl.className = "detail-panel-name";
   nameEl.textContent = p.buurtnaam || "Buurt";
-  hdr.append(catLbl, nameEl);
-  dash.appendChild(hdr);
+  hdr.append(catLbl, nameEl); dash.appendChild(hdr);
 
   if (!tier || p.hvi == null) {
     const noData = document.createElement("p"); noData.className = "hvi-no-data";
     noData.textContent = isNL ? "Geen data beschikbaar voor deze buurt." : "No data available for this neighbourhood.";
-    dash.appendChild(noData);
-    body.appendChild(dash); container.appendChild(body); return;
+    dash.appendChild(noData); body.appendChild(dash); container.appendChild(body); return;
   }
 
-  const tierNames = isNL
-    ? ["Laag", "Laag-gemiddeld", "Gemiddeld", "Hoog-gemiddeld", "Hoog"]
-    : ["Low", "Low-medium", "Medium", "High-medium", "High"];
-
-  // ── Tier badge ──
+  const tierNames = isNL ? ["Laag","Laag-gemiddeld","Gemiddeld","Hoog-gemiddeld","Hoog"] : ["Low","Low-medium","Medium","High-medium","High"];
   const tierBadge = document.createElement("div"); tierBadge.className = "hvi-tier-badge";
   tierBadge.style.setProperty("--tier-color", color);
   const tierDot = document.createElement("span"); tierDot.className = "hvi-tier-dot";
-  const tierTxt = document.createElement("span");
-  tierTxt.textContent = `Tier ${tier} — ${tierNames[tier - 1]}`;
-  tierBadge.append(tierDot, tierTxt);
-  dash.appendChild(tierBadge);
+  const tierTxt = document.createElement("span"); tierTxt.textContent = `Tier ${tier} — ${tierNames[tier-1]}`;
+  tierBadge.append(tierDot, tierTxt); dash.appendChild(tierBadge);
 
-  // ── Score + rank ──
   const rank = stats ? _hviRank(p.hvi) : null;
   const scoreRow = document.createElement("div"); scoreRow.className = "hvi-score-row";
   const scoreBig = document.createElement("div"); scoreBig.className = "hvi-score-big";
-  scoreBig.innerHTML = `<span class="hvi-score-num">${Math.round(p.hvi * 100)}</span><span class="hvi-score-denom">/100</span>`;
+  scoreBig.innerHTML = `<span class="hvi-score-num">${Math.round(p.hvi*100)}</span><span class="hvi-score-denom">/100</span>`;
   const rankEl = document.createElement("div"); rankEl.className = "hvi-rank";
-  if (rank && stats) rankEl.innerHTML = `<span class="hvi-rank-num">#${rank}</span> ${isNL ? "van" : "of"} ${stats.total}`;
-  scoreRow.append(scoreBig, rankEl);
-  dash.appendChild(scoreRow);
-  dash.appendChild(_makeBar(p.hvi, color, null));
+  if (rank && stats) rankEl.innerHTML = `<span class="hvi-rank-num">#${rank}</span> ${isNL?"van":"of"} ${stats.total}`;
+  scoreRow.append(scoreBig, rankEl); dash.appendChild(scoreRow);
+  dash.appendChild(_makeBar(p.hvi, color));
 
-  // ── Key findings ──
   const centroid = _featureCentroid(feature);
   const nearest  = _nearestKoelteplek(centroid);
   const driver   = stats ? _dominantDriver(p, stats, isNL) : null;
   const findings = [];
-  if (driver) findings.push({ icon: "⚠", text: (isNL ? "Belangrijkste factor: " : "Main driver: ") + driver });
-  if (nearest) findings.push({ icon: "📍", text: (isNL ? "Dichtstbijzijnde koelteplek: " : "Nearest cooling spot: ") + nearest.name + " — " + fmtDist(nearest.dist) });
+  if (driver)  findings.push({ icon:"⚠", text:(isNL?"Belangrijkste factor: ":"Main driver: ")+driver });
+  if (nearest) findings.push({ icon:"📍", text:(isNL?"Dichtstbijzijnde koelteplek: ":"Nearest cooling spot: ")+nearest.name+" — "+fmtDist(nearest.dist) });
   if (p.lisa_cluster && !["Not significant","Not computed"].includes(p.lisa_cluster))
-    findings.push({ icon: "🔴", text: "LISA: " + p.lisa_cluster });
+    findings.push({ icon:"🔴", text:"LISA: "+p.lisa_cluster });
 
   if (findings.length) {
     const findSec = document.createElement("div"); findSec.className = "hvi-section";
@@ -1433,37 +1404,27 @@ function renderHviDetailContent(feature, container) {
       row.innerHTML = `<span class="hvi-finding-icon">${f.icon}</span><span>${f.text}</span>`;
       findSec.appendChild(row);
     });
-    if (p.quadrant) {
-      const qdiv = document.createElement("div"); qdiv.className = "hvi-quadrant";
-      qdiv.textContent = p.quadrant;
-      findSec.appendChild(qdiv);
-    }
+    if (p.quadrant) { const qdiv = document.createElement("div"); qdiv.className = "hvi-quadrant"; qdiv.textContent = p.quadrant; findSec.appendChild(qdiv); }
     dash.appendChild(findSec);
   }
 
-  // ── Charts (only rendered if city-wide stats are available) ──
   let radarId, distId;
   if (stats) {
     const radarSec = document.createElement("div"); radarSec.className = "hvi-section";
     const radarTitle = document.createElement("div"); radarTitle.className = "hvi-section-title";
     radarTitle.textContent = isNL ? "Componentenprofiel" : "Component profile";
     radarId = "hvi-radar-" + Date.now();
-    const radarCanvas = document.createElement("canvas");
-    radarCanvas.id = radarId; radarCanvas.className = "hvi-chart-canvas";
-    radarSec.append(radarTitle, radarCanvas);
-    dash.appendChild(radarSec);
+    const radarCanvas = document.createElement("canvas"); radarCanvas.id = radarId; radarCanvas.className = "hvi-chart-canvas";
+    radarSec.append(radarTitle, radarCanvas); dash.appendChild(radarSec);
 
     const distSec = document.createElement("div"); distSec.className = "hvi-section";
     const distTitle = document.createElement("div"); distTitle.className = "hvi-section-title";
     distTitle.textContent = isNL ? "Verdeling over de stad (rood = deze buurt)" : "City distribution (red = this buurt)";
     distId = "hvi-dist-" + Date.now();
-    const distCanvas = document.createElement("canvas");
-    distCanvas.id = distId; distCanvas.className = "hvi-chart-canvas hvi-chart-dist";
-    distSec.append(distTitle, distCanvas);
-    dash.appendChild(distSec);
+    const distCanvas = document.createElement("canvas"); distCanvas.id = distId; distCanvas.className = "hvi-chart-canvas hvi-chart-dist";
+    distSec.append(distTitle, distCanvas); dash.appendChild(distSec);
   }
 
-  // ── What-if analysis ──
   if (stats) {
     const whatIf = _whatIf(p, stats);
     const wiSec = document.createElement("div"); wiSec.className = "hvi-section";
@@ -1472,25 +1433,16 @@ function renderHviDetailContent(feature, container) {
     wiSec.appendChild(wiTitle);
     whatIf.forEach(s => {
       const row = document.createElement("div"); row.className = "hvi-wi-row";
-      const lbl = document.createElement("span"); lbl.className = "hvi-wi-label";
-      lbl.textContent = isNL ? s.label_nl : s.label_en;
+      const lbl = document.createElement("span"); lbl.className = "hvi-wi-label"; lbl.textContent = isNL?s.label_nl:s.label_en;
       const right = document.createElement("div"); right.className = "hvi-wi-right";
-      const pts = document.createElement("span");
-      pts.className = "hvi-wi-pts hvi-wi-pts--" + (s.delta <= 0 ? "better" : "worse");
-      pts.textContent = (s.delta <= 0 ? "−" : "+") + Math.abs(s.delta) + " pts";
+      const pts = document.createElement("span"); pts.className = "hvi-wi-pts hvi-wi-pts--"+(s.delta<=0?"better":"worse"); pts.textContent = (s.delta<=0?"−":"+")+Math.abs(s.delta)+" pts";
       right.appendChild(pts);
-      if (s.newTier < s.curTier) {
-        const tierChg = document.createElement("span"); tierChg.className = "hvi-wi-tier";
-        tierChg.textContent = `Tier ${s.curTier} → ${s.newTier}`;
-        right.appendChild(tierChg);
-      }
-      row.append(lbl, right);
-      wiSec.appendChild(row);
+      if (s.newTier < s.curTier) { const tc = document.createElement("span"); tc.className = "hvi-wi-tier"; tc.textContent = `Tier ${s.curTier} → ${s.newTier}`; right.appendChild(tc); }
+      row.append(lbl, right); wiSec.appendChild(row);
     });
     dash.appendChild(wiSec);
   }
 
-  // ── Similar buurten ──
   const similar = _similarBuurten(p);
   if (similar.length) {
     const simSec = document.createElement("div"); simSec.className = "hvi-section";
@@ -1499,44 +1451,23 @@ function renderHviDetailContent(feature, container) {
     simSec.appendChild(simTitle);
     similar.forEach(s => {
       const row = document.createElement("div"); row.className = "hvi-sim-row";
-      const dot = document.createElement("span"); dot.className = "hvi-tier-dot";
-      dot.style.cssText = `background:${_hviTierColor(s.hvi_tier)};flex-shrink:0;`;
+      const dot = document.createElement("span"); dot.className = "hvi-tier-dot"; dot.style.cssText = `background:${_hviTierColor(s.hvi_tier)};flex-shrink:0;`;
       const name = document.createElement("span"); name.className = "hvi-sim-name"; name.textContent = s.buurtnaam;
-      const score = document.createElement("span"); score.className = "hvi-sim-score";
-      score.textContent = Math.round((s.hvi || 0) * 100) + "/100";
-      row.append(dot, name, score);
-      simSec.appendChild(row);
+      const score = document.createElement("span"); score.className = "hvi-sim-score"; score.textContent = Math.round((s.hvi||0)*100)+"/100";
+      row.append(dot, name, score); simSec.appendChild(row);
     });
     dash.appendChild(simSec);
   }
 
-  body.appendChild(dash);
-  container.appendChild(body);
-
-  // Render charts after DOM is inserted — only if city stats are available
+  body.appendChild(dash); container.appendChild(body);
   if (stats) {
     requestAnimationFrame(() => {
-      const buurtVals  = [Math.round((p.hi_norm || 0) * 100), Math.round((p.svi_pca || 0) * 100), Math.round((1 - (p.cooling_access || 0)) * 100)];
-      const medianVals = [Math.round(stats.hi_norm * 100), Math.round(stats.svi * 100), Math.round((1 - stats.access) * 100)];
-      _renderRadarChart(radarId, buurtVals, medianVals, isNL);
+      const bv = [Math.round((p.hi_norm||0)*100), Math.round((p.svi_pca||0)*100), Math.round((1-(p.cooling_access||0))*100)];
+      const mv = [Math.round(stats.hi_norm*100), Math.round(stats.svi*100), Math.round((1-stats.access)*100)];
+      _renderRadarChart(radarId, bv, mv, isNL);
       _renderDistributionChart(distId, stats.allHvi, p.hvi, isNL);
     });
   }
-}
-
-function _makeBar(value, color, labelNum) {
-  const wrap = document.createElement("div"); wrap.className = "hvi-bar-wrap";
-  const track = document.createElement("div"); track.className = "hvi-bar-track";
-  const fill = document.createElement("div"); fill.className = "hvi-bar-fill";
-  fill.style.width = Math.round((value || 0) * 100) + "%";
-  fill.style.background = color;
-  track.appendChild(fill); wrap.appendChild(track);
-  if (labelNum != null) {
-    const num = document.createElement("span"); num.className = "hvi-bar-num";
-    num.textContent = labelNum;
-    wrap.appendChild(num);
-  }
-  return wrap;
 }
 
 // ── Layer loading ──────────────────────────────────────────────────────────
@@ -1544,33 +1475,17 @@ function loadAllLayers() {
   LAYER_DEFS.forEach(def => {
     setLoading(true);
     if (def.cat === "koelteplekken") {
-      _loadKoelteplekkenFromSheets(def)
+      _loadKoelteplekken(def)
         .catch(e => console.error("koelteplekken", e))
         .finally(() => setLoading(false));
     } else if (def.cat === "shade") {
       setLoading(false); // loaded on-demand when toggled on
     } else if (def.type === "choropleth") {
-      fetch(def.src)
-        .then(r => r.json())
-        .then(data => buildHviLayer(def, data))
-        .catch(e => console.error(def.cat, e))
-        .finally(() => setLoading(false));
+      fetch(def.src).then(r=>r.json()).then(data=>buildHviLayer(def,data)).catch(e=>console.error(def.cat,e)).finally(()=>setLoading(false));
     } else if (def.type === "temperature") {
-        fetch(def.src)
-          .then(r => r.json())
-          .then(data => buildTemperatureLayer(def, data))
-          .catch(e => console.error(def.cat, e))
-          .finally(() => setLoading(false));
-    } else if (
-      def.type === "ndvi" ||
-      def.type === "cooling_assets" ||
-      def.type === "healthcare_distance"
-    ) {
-      fetch(def.src)
-        .then(r => r.json())
-        .then(data => buildStakeholderLayer(def, data))
-        .catch(e => console.error(def.cat, e))
-        .finally(() => setLoading(false));
+      fetch(def.src).then(r=>r.json()).then(data=>buildTemperatureLayer(def,data)).catch(e=>console.error(def.cat,e)).finally(()=>setLoading(false));
+    } else if (def.type === "ndvi" || def.type === "cooling_assets" || def.type === "healthcare_distance") {
+      fetch(def.src).then(r=>r.json()).then(data=>buildStakeholderLayer(def,data)).catch(e=>console.error(def.cat,e)).finally(()=>setLoading(false));
     } else {
       fetch(def.src)
         .then(r => r.json())
@@ -1617,21 +1532,21 @@ function _renderKoelteplekkenLayerInner(def, features) {
     pointToLayer: (_f, ll) => {
       const isActive = _f.properties?.active !== false;
       const typeColor = getCategoryColor(_f.properties?.type);
-      const col = isActive ? typeColor : "#9CA3AF";
+      const col = isActive ? typeColor : "#767676";
       const cls = isActive ? "koelte-marker" : "koelte-marker koelte-marker--inactive";
       const icon = L.divIcon({
         className: "",
-        html: `<div class="${cls}" style="--mc:${col}"><div class="koelte-marker-dot"><svg class="koelte-marker-icon" width="10" height="10" viewBox="0 0 14 14" fill="none" aria-hidden="true"><line x1="7" y1="1" x2="7" y2="13" stroke="white" stroke-width="2" stroke-linecap="round"/><line x1="1" y1="7" x2="13" y2="7" stroke="white" stroke-width="2" stroke-linecap="round"/><line x1="2.9" y1="2.9" x2="11.1" y2="11.1" stroke="white" stroke-width="2" stroke-linecap="round"/><line x1="11.1" y1="2.9" x2="2.9" y2="11.1" stroke="white" stroke-width="2" stroke-linecap="round"/></svg></div></div>`,
-        iconSize:    [28, 28],
-        iconAnchor:  [14, 14],
-        popupAnchor: [0, -14],
+        html: `<div class="${cls}" style="--mc:${col}">${adsIcon("HouseFill", { size: 15, fill: "white" })}</div>`,
+        iconSize:    [26, 26],
+        iconAnchor:  [13, 13],
+        popupAnchor: [0, -13],
       });
       return L.marker(ll, { icon });
     },
     onEachFeature: (f, l) => {
       const p = f.properties || {};
       const isActive = p.active !== false;
-      const col = isActive ? getCategoryColor(p.type) : "#9CA3AF";
+      const col = isActive ? getCategoryColor(p.type) : "#767676";
       const sub = [p.neighborhood, p.district].filter(Boolean).join(" · ");
       // Hover card: skip entirely on touch devices — only show for true mouse hover
       if (!IS_TOUCH_DEVICE) {
@@ -1752,37 +1667,46 @@ function _nearestShadeSlot() {
   return best.key;
 }
 
-function _shadeStyle(feature) {
-  const pct = feature.properties?.s ?? 0;
-  const t   = Math.min(1, Math.max(0, pct / 100));
-  // Dark shadow overlay: opacity proportional to shade coverage.
-  // Transparent where there is no shade, dark navy-shadow where fully shaded.
-  return {
-    fillColor:   "#1a2744",
-    fillOpacity: t * 0.60,
-    color:       "transparent",
-    weight:      0,
-  };
+// Current slot's property key (s1000 / s1300 / s1530 / s1800), set on render.
+let _shadeSlotKey = "1300";
+
+/** Show the approximate time of day the shade snapshot represents. */
+function _updateShadeTime() {
+  const el = document.getElementById("shade-time");
+  if (!el) return;
+  const k = _shadeSlotKey;
+  el.textContent = `${t("shade_around")} ${k.slice(0, 2)}:${k.slice(2)}`;
 }
 
-// Prefetch promise — resolved with the GeoJSON or null on error
-const _shadePromise = {};
+function _shadeStyle(feature) {
+  const pct = feature.properties?.["s" + _shadeSlotKey] ?? 0;
+  const t = Math.min(1, Math.max(0, pct / 100));
+  if (t >= 0.5) {
+    // In shade — dark navy overlay, opacity proportional to shade
+    return { fillColor: "#004699", fillOpacity: (t - 0.5) * 2 * 0.65, color: "transparent", weight: 0 };
+  } else {
+    // In full sun — warm yellow overlay, opacity proportional to sunlight
+    return { fillColor: "#ffe600", fillOpacity: (0.5 - t) * 2 * 0.30, color: "transparent", weight: 0 };
+  }
+}
+
+// Single combined file holds every slot's shade as properties s1000…s1800,
+// so the geometry is downloaded only once. Prefetch resolves it (or null).
+let _shadePromise = null;
 
 function _prefetchShade() {
-  const key = _nearestShadeSlot();
-  if (_shadePromise[key]) return;
-  _shadePromise[key] = fetch(`data/shade_${key}.geojson`)
-    .then(r => r.json())
-    .catch(() => null);
+  if (_shadePromise) return;
+  _shadePromise = fetch("data/shade.geojson").then(r => r.json()).catch(() => null);
 }
 
 async function _renderShadeLayer() {
   if (state.layers.shade) { state.map.removeLayer(state.layers.shade); state.layers.shade = null; }
   if (!state.on.shade) return;
 
-  const key = _nearestShadeSlot();
+  _shadeSlotKey = _nearestShadeSlot();
+  _updateShadeTime();
   _prefetchShade(); // no-op if already started
-  const gj = await _shadePromise[key];
+  const gj = await _shadePromise;
   if (!gj || !state.on.shade) return;
 
   state.layers.shade = L.geoJSON(gj, {
@@ -1833,10 +1757,10 @@ function _renderSwimmingPoolsLayerInner(def, features) {
   if (countEl) countEl.textContent = filtered.length.toLocaleString();
 }
 
-function makeSwimmingSquareIcon(color = "#00b4c8") {
+function makeSwimmingSquareIcon(color = "#009de6") {
   return L.divIcon({
     className: "swim-icon-marker",
-    html: `<div style="width:22px;height:22px;background:${color};border:2.5px solid rgba(255,255,255,0.92);border-radius:50%;display:flex;align-items:center;justify-content:center;box-shadow:0 1px 5px rgba(0,0,0,0.28);box-sizing:border-box;"><svg width="11" height="9" viewBox="0 0 20 14" fill="none" aria-hidden="true"><path d="M1 4c2.4-2.8 5-2.8 7.5 0s5 2.8 7.5 0" stroke="white" stroke-width="2.5" stroke-linecap="round"/><path d="M1 10c2.4-2.8 5-2.8 7.5 0s5 2.8 7.5 0" stroke="white" stroke-width="2.5" stroke-linecap="round"/></svg></div>`,
+    html: `<div style="width:22px;height:22px;background:${color};border:2.5px solid rgba(255,255,255,0.92);border-radius:50%;display:flex;align-items:center;justify-content:center;box-shadow:0 1px 5px rgba(0,0,0,0.28);box-sizing:border-box;">${adsIcon("PersonSwimming", { size: 12, fill: "white" })}</div>`,
     iconSize:    [22, 22],
     iconAnchor:  [11, 11],
     popupAnchor: [0, -11],
@@ -1929,14 +1853,62 @@ function animateCount(cat, target) {
   requestAnimationFrame(tick);
 }
 
-// ── Mode toggle ────────────────────────────────────────────────────────────
+// ── View mode (Community / Policy) ────────────────────────────────────────
+function _applyViewMode(mode) {
+  state.viewMode = mode;
+  localStorage.setItem("koeltekaart_view", mode);
+  document.body.classList.toggle("view-community", mode === "community");
+  document.body.classList.toggle("view-policy",    mode === "policy");
+
+  // Show/hide layers based on mode
+  LAYER_DEFS.forEach(def => {
+    const isCommunity = COMMUNITY_LAYER_CATS.has(def.cat);
+    const isPolicy    = POLICY_LAYER_CATS.has(def.cat);
+    if (!state.layers[def.cat]) return;
+    if (mode === "community") {
+      if (isCommunity && state.on[def.cat]) state.map.addLayer(state.layers[def.cat]);
+      if (isPolicy) state.map.removeLayer(state.layers[def.cat]);
+    } else {
+      if (isPolicy    && state.on[def.cat]) state.map.addLayer(state.layers[def.cat]);
+      if (isCommunity) state.map.removeLayer(state.layers[def.cat]);
+    }
+  });
+
+  // Update dropdown button label
+  const viewLabel = document.getElementById("view-mode-label");
+  if (viewLabel) {
+    const isNL = state.lang === "nl";
+    viewLabel.textContent = mode === "community"
+      ? (isNL ? "Bewonerskaart" : "Community View")
+      : (isNL ? "Beleidskaart"  : "Policy View");
+  }
+
+  // Show/hide relevant sidebar sections
+  document.querySelectorAll(".sidebar-community-section").forEach(el => el.classList.toggle("hidden-view", mode === "policy"));
+  document.querySelectorAll(".sidebar-policy-section").forEach(el => el.classList.toggle("hidden-view", mode === "community"));
+}
+
 function setupModeToggle() {
-  document.body.classList.add("mode-user");
+  document.body.classList.add("mode-user"); // legacy body class for CSS targeting
+  _applyViewMode(state.viewMode); // apply persisted / default mode
+
+  // Dropdown items
+  document.querySelectorAll("[data-view-mode]").forEach(btn => {
+    btn.addEventListener("click", () => {
+      const newMode = btn.dataset.viewMode;
+      _applyViewMode(newMode);
+      // close dropdown
+      const dd = document.getElementById("view-mode-dropdown");
+      if (dd) dd.removeAttribute("open");
+    });
+  });
+
+  // Legacy .mode-btn support
   document.querySelectorAll(".mode-btn").forEach(btn => {
     btn.addEventListener("click", () => {
       document.querySelectorAll(".mode-btn").forEach(b => b.classList.remove("active"));
       btn.classList.add("active");
-      document.body.classList.toggle("mode-user", btn.dataset.mode==="user");
+      document.body.classList.toggle("mode-user", btn.dataset.mode === "user");
     });
   });
 }
@@ -1956,18 +1928,24 @@ function setupToggles() {
         else if (state.layers.shade) state.map.removeLayer(state.layers.shade);
         return;
       }
-      if (cat === "hvi") {
-        const legend = document.getElementById("hvi-legend");
-        if (legend) legend.hidden = !on;
-        if (!state.layers.hvi) return;
-        if (on) state.map.addLayer(state.layers.hvi);
-        else state.map.removeLayer(state.layers.hvi);
-        return;
-      }
       if (!state.layers[cat]) return;
       if (on) state.map.addLayer(state.layers[cat]);
       else    state.map.removeLayer(state.layers[cat]);
     });
+  });
+}
+
+/** Place a white ADS glyph inside each legend dot so the legend mirrors the map. */
+function decorateLegendIcons() {
+  const glyphs = {
+    koelteplekken:  "HouseFill",
+    water_taps:     "WaterDrop",
+    swimming_pools: "PersonSwimming",
+    parks:          "Park",
+  };
+  Object.entries(glyphs).forEach(([cat, key]) => {
+    const dot = document.querySelector(`.layer-row[data-cat="${cat}"] .l-dot`);
+    if (dot) dot.innerHTML = adsIcon(key, { size: 16, fill: "white" });
   });
 }
 
@@ -2038,19 +2016,29 @@ function toggleFilter(key, btn) {
     c.setAttribute("aria-pressed", String(state.filters[key]));
   });
   rebuildKoelteplekkenLayer();
+  renderMobileFilterBar();
 }
 
 // ── Mobile filter bar ─────────────────────────────────────────────────────
 // Compact single-row: "Filters" button + scrollable strip of active chips
+/**
+ * Recompute the floating filter badge count and refresh the active-filter
+ * chip strip shown on mobile. Called after any filter state change.
+ * Badge counts: active category chips + active amenity filters +
+ *   active swim-type filters + default-ON layers that were turned off.
+ */
 function renderMobileFilterBar() {
   const stripEl = document.getElementById("mfb-active-strip");
   const fabCount = document.getElementById("fab-active-count");
 
-  // Count active filters: active categories + active amenities + off-layers
+  // Count active filter pills (layer on/off toggles are NOT filters):
+  //   - each active category chip (default: none active)
+  //   - each active amenity filter (default: off)
+  //   - each active swim-type filter (default: off)
   let count = 0;
   count += state.activeCategories.size;
   count += Object.values(state.filters).filter(Boolean).length;
-  count += LAYER_DEFS.filter(d => state.on[d.cat] === false).length;
+  count += Object.values(state.swimTypes || {}).filter(Boolean).length;
 
   // Update the floating FAB badge
   if (fabCount) {
@@ -2092,34 +2080,52 @@ function renderMobileFilterBar() {
     const chip = document.createElement("button");
     chip.className = "mfb-strip-chip mfb-strip-chip--active";
     chip.textContent = state.lang === "nl" ? def.label_nl : def.label_en;
-    chip.addEventListener("click", () => { toggleFilter(def.key, chip); renderMobileFilterBar(); });
+    chip.addEventListener("click", () => toggleFilter(def.key, chip));
     stripEl.appendChild(chip);
   });
 
-  // Off-layers in strip
-  LAYER_DEFS.filter(d => state.on[d.cat] === false).forEach(def => {
-    const chip = document.createElement("button");
-    chip.className = "mfb-strip-chip";
-    chip.style.opacity = "0.6";
-    const layerKey = def.cat === "koelteplekken"  ? "koelteplekken_label"
-                   : def.cat === "water_taps"    ? "water_label"
-                   : def.cat === "parks"         ? "parks_label"
-                   : def.cat === "swimming_pools" ? "swimming_pools_label"
-                   : def.cat === "shade"          ? "shade_label" : def.cat;
-    chip.textContent = "✕ " + t(layerKey);
-    chip.addEventListener("click", () => {
-      state.on[def.cat] = true;
-      const row = document.querySelector(`.layer-row[data-cat="${def.cat}"]`);
-      if (row) { row.classList.add("on"); row.setAttribute("aria-checked","true"); }
-      if (state.layers[def.cat]) state.map.addLayer(state.layers[def.cat]);
-      refreshListIfActive();
-      renderMobileFilterBar();
-    });
-    stripEl.appendChild(chip);
-  });
+  updateClearFiltersBtn();
 }
 
 // ── Mobile filter bar collapse — no longer needed (sidebar bottom-sheet used instead)
+/** Show/hide both clear-filter controls based on whether any filters are active. */
+function updateClearFiltersBtn() {
+  const hasActiveFilters =
+    state.activeCategories.size > 0 ||
+    Object.values(state.filters).some(Boolean) ||
+    Object.values(state.swimTypes || {}).some(Boolean);
+  const headerBtn = document.getElementById("btn-clear-filters");
+  if (headerBtn) headerBtn.hidden = !hasActiveFilters;
+  const row = document.getElementById("filter-clear-row");
+  if (row) row.hidden = !hasActiveFilters;
+}
+
+function clearAllFilters() {
+  // Reset only the filter pills — category, amenity, and swim-type filters.
+  // Layer on/off toggles are left untouched (they are not "filters").
+  state.activeCategories.clear();
+  Object.keys(state.filters).forEach(k => { state.filters[k] = false; });
+  Object.keys(state.swimTypes || {}).forEach(k => { state.swimTypes[k] = false; });
+
+  // Re-sync chip UI states
+  setupCategoryFilter();
+  rebuildFilterChips();
+  rebuildSwimmingPoolChips();
+  rebuildKoelteplekkenLayer();
+  rebuildSwimmingPoolsLayer();
+  renderMobileFilterBar();
+  updateClearFiltersBtn();
+  refreshListIfActive();
+}
+
+function setupClearFilters() {
+  // Two triggers: the mobile header pill and the desktop sidebar text link
+  ["btn-clear-filters", "btn-clear-filters-desktop"].forEach(id => {
+    const btn = document.getElementById(id);
+    if (btn) btn.addEventListener("click", clearAllFilters);
+  });
+}
+
 function setupMobileFilterCollapse() { /* noop — see setupSidebarToggle */ }
 
 // ── Desktop sidebar collapse tab ──────────────────────────────────────────
@@ -2254,9 +2260,9 @@ function enterDetailMode(feature, renderFn, backTo) {
   const hdrBack = document.getElementById("panel-hdr-back");
 
   if (!isDesktop()) {
-    // Show the panel full-screen on mobile
+    // Show the panel full-screen on mobile; mark as detail view to hide FAB
     if (listEl) listEl.hidden = false;
-    document.body.classList.add("mobile-panel-open");
+    document.body.classList.add("mobile-panel-open", "mobile-detail-open");
   }
 
   if (hdrList) hdrList.hidden = true;
@@ -2278,7 +2284,14 @@ function exitDetailMode() {
   state.currentDetailRenderFn = null;
 
   const mapSection = document.getElementById("map-section");
-  if (mapSection) mapSection.classList.remove("detail-open");
+  if (mapSection) {
+    // Snap the right-panel collapse toggle to the list-panel edge instead of
+    // letting it slide in from the wider detail position.
+    mapSection.classList.add("detail-snap");
+    mapSection.classList.remove("detail-open");
+    void mapSection.offsetWidth; // commit the new position with no transition
+    mapSection.classList.remove("detail-snap");
+  }
 
   const hdrList = document.getElementById("panel-hdr-list");
   const hdrBack = document.getElementById("panel-hdr-back");
@@ -2290,7 +2303,7 @@ function exitDetailMode() {
       // Return to map — hide the panel, restore FAB
       const listEl = document.getElementById("list-view");
       if (listEl) listEl.hidden = true;
-      document.body.classList.remove("mobile-panel-open");
+      document.body.classList.remove("mobile-panel-open", "mobile-detail-open");
       state.mobileView = "map";
       document.querySelectorAll(".view-btn").forEach(b => {
         b.classList.toggle("active", b.dataset.view === "map");
@@ -2299,7 +2312,8 @@ function exitDetailMode() {
       requestAnimationFrame(() => { if (state.map) state.map.invalidateSize(); });
       return;
     }
-    // Return to list — panel stays open, keep mobile-panel-open
+    // Return to list — panel stays open but clear detail-specific class
+    document.body.classList.remove("mobile-detail-open");
     document.body.classList.add("mobile-panel-open");
   }
 
@@ -2320,7 +2334,22 @@ function rerenderCurrentDetailPanel() {
 
 
 // ── Generic helper: open any feature in the detail panel ──────────────────
+/**
+ * Open the right-side detail panel for the given GeoJSON feature.
+ * On desktop, auto-expands the panel if it was collapsed.
+ * On mobile, switches to the panel view.
+ * @param {Object} feature - GeoJSON Feature to display.
+ * @param {Function} renderFn - Function(feature, containerEl) that populates the panel.
+ */
 function openDetailPanel(feature, renderFn) {
+  // Auto-expand right panel if collapsed
+  const section = document.getElementById("map-section");
+  if (section && isDesktop() && section.classList.contains("right-panel-collapsed")) {
+    section.classList.remove("right-panel-collapsed");
+    const btn = document.getElementById("right-panel-toggle");
+    if (btn) { btn.setAttribute("aria-expanded", "true"); btn.setAttribute("aria-label", "Locatiepaneel inklappen"); }
+    setTimeout(() => { if (state.map) state.map.invalidateSize(); }, 260);
+  }
   const backTo = isDesktop() ? "list" : (state.mobileView === "list" ? "list" : "map");
   enterDetailMode(feature, renderFn, backTo);
 }
@@ -2387,27 +2416,6 @@ function renderKoelteDetailContent(feature, container) {
   }
 
   info.append(catLbl, nameEl);
-  if (statusTag.className) info.appendChild(statusTag);
-
-  // ── Heat plan hours note (when heatplan hours are being shown) ──
-  if (useHeat) {
-    const heatNote = document.createElement("div"); heatNote.className = "detail-heat-hours-note";
-    heatNote.innerHTML = `<svg width="12" height="12" viewBox="0 0 14 14" fill="none" aria-hidden="true"><circle cx="7" cy="7" r="6" stroke="currentColor" stroke-width="1.5"/><line x1="7" y1="4" x2="7" y2="7.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><circle cx="7" cy="10" r="0.7" fill="currentColor"/></svg>${state.lang === "nl" ? "Hitteplan-openingstijden worden getoond" : "Heat plan opening hours shown"}`;
-    info.appendChild(heatNote);
-  }
-
-  // ── Hours block ──
-  const hoursBlock = renderHoursBlock(hoursToShow);
-  // Hide the status row — shown inline above
-  const statusRow = hoursBlock.querySelector(".hours-status");
-  if (statusRow) statusRow.style.display = "none";
-  info.appendChild(hoursBlock);
-
-  if (p.hours_note) {
-    const noteEl = document.createElement("div"); noteEl.className = "hours-note";
-    noteEl.textContent = p.hours_note;
-    info.appendChild(noteEl);
-  }
 
   // ── Amenity chips — ALL amenities; present=green, absent=gray with "No" prefix ──
   if (AMENITY_DEFS.length) {
@@ -2432,6 +2440,28 @@ function renderKoelteDetailContent(feature, container) {
     if (chipsWrap.children.length) info.appendChild(chipsWrap);
   }
 
+  if (statusTag.className) info.appendChild(statusTag);
+
+  // ── Heat plan hours note (when heatplan hours are being shown) ──
+  if (useHeat) {
+    const heatNote = document.createElement("div"); heatNote.className = "detail-heat-hours-note";
+    heatNote.innerHTML = `<svg width="12" height="12" viewBox="0 0 14 14" fill="none" aria-hidden="true"><circle cx="7" cy="7" r="6" stroke="currentColor" stroke-width="1.5"/><line x1="7" y1="4" x2="7" y2="7.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><circle cx="7" cy="10" r="0.7" fill="currentColor"/></svg>${state.lang === "nl" ? "Hitteplan-openingstijden worden getoond" : "Heat plan opening hours shown"}`;
+    info.appendChild(heatNote);
+  }
+
+  // ── Hours block ──
+  const hoursBlock = renderHoursBlock(hoursToShow);
+  // Hide the status row — shown inline above
+  const statusRow = hoursBlock.querySelector(".hours-status");
+  if (statusRow) statusRow.style.display = "none";
+  info.appendChild(hoursBlock);
+
+  if (p.hours_note) {
+    const noteEl = document.createElement("div"); noteEl.className = "hours-note";
+    noteEl.textContent = p.hours_note;
+    info.appendChild(noteEl);
+  }
+
   if (p.notes) {
     const notesBox = document.createElement("div"); notesBox.className = "detail-notes";
     notesBox.textContent = p.notes;
@@ -2443,7 +2473,7 @@ function renderKoelteDetailContent(feature, container) {
   if (p.website_url) {
     const a = document.createElement("a");
     a.className = "btn-website"; a.href = p.website_url; a.target = "_blank"; a.rel = "noopener noreferrer";
-    a.innerHTML = `<svg width="13" height="13" viewBox="0 0 13 13" fill="none" aria-hidden="true"><circle cx="6.5" cy="6.5" r="5.5" stroke="white" stroke-width="1.5"/><path d="M6.5 1S4.5 3 4.5 6.5 6.5 12 6.5 12" stroke="white" stroke-width="1.2"/><path d="M6.5 1S8.5 3 8.5 6.5 6.5 12 6.5 12" stroke="white" stroke-width="1.2"/><line x1="1" y1="6.5" x2="12" y2="6.5" stroke="white" stroke-width="1.2"/></svg>${t("website_hours")}`;
+    a.innerHTML = `${adsIcon("MapMarkerOnMap", { size: 13, fill: "white" })}${t("website_hours")}`;
     actions.appendChild(a);
   }
   const [lon, lat] = feature.geometry.coordinates;
@@ -2553,7 +2583,7 @@ function renderTapDetailContent(feature, container) {
   const nameEl = document.createElement("div"); nameEl.className = "detail-panel-name"; nameEl.textContent = tapDisplayName(p);
   const iconBadge = document.createElement("div"); iconBadge.className = "detail-icon-badge";
   iconBadge.style.cssText = `background:${col}1a;border-color:${col}33;`;
-  iconBadge.innerHTML = `<svg width="22" height="16" viewBox="0 0 22 16" fill="none" aria-hidden="true" style="color:${col}"><path d="M7 1C7 1 1 8 1 11a6 6 0 0 0 12 0C13 8 7 1 7 1Z" stroke="currentColor" stroke-width="1.5" fill="none"/><circle cx="17" cy="6" r="3" stroke="currentColor" stroke-width="1.5" fill="none"/><line x1="17" y1="9" x2="17" y2="15" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>`;
+  iconBadge.innerHTML = adsIcon("WaterDrop", { size: 22, fill: col });
   hdrInfo.append(catLbl, nameEl);
   hdrRow.append(hdrInfo, iconBadge);
   info.appendChild(hdrRow);
@@ -2562,7 +2592,6 @@ function renderTapDetailContent(feature, container) {
   grid.append(
     cell(t("status"),     translateTapStatus(p.Status)),
     cell(t("type_label"), translateTapType(p["Subtype afnamepunt"])),
-    cell(t("district"),   p.District),
   );
   if (p.Aanlegjaar) grid.appendChild(cell(t("installed"), String(p.Aanlegjaar).replace(".0", "")));
   info.appendChild(grid);
@@ -2589,11 +2618,12 @@ function renderParkDetailContent(feature, container) {
 
   const hdrRow = document.createElement("div"); hdrRow.className = "detail-header-row";
   const hdrInfo = document.createElement("div"); hdrInfo.className = "detail-header-info";
-  const catLbl = document.createElement("div"); catLbl.className = "dp-cat"; catLbl.textContent = t("parks_label");
+  const catLbl = document.createElement("div"); catLbl.className = "dp-cat";
+  catLbl.textContent = [t("parks_label"), p.Stadsdeel].filter(Boolean).join(" · ");
   const nameEl = document.createElement("div"); nameEl.className = "detail-panel-name"; nameEl.textContent = p.Naam || "Park";
   const iconBadge = document.createElement("div"); iconBadge.className = "detail-icon-badge";
   iconBadge.style.cssText = `background:${col}1a;border-color:${col}33;`;
-  iconBadge.innerHTML = `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true" style="color:${col}"><path d="M12 3C9 3 6 6 6 9c0 4 6 12 6 12s6-8 6-12c0-3-3-6-6-6Z" stroke="currentColor" stroke-width="1.5" fill="none"/><circle cx="12" cy="9" r="2.5" stroke="currentColor" stroke-width="1.5" fill="none"/></svg>`;
+  iconBadge.innerHTML = adsIcon("Park", { size: 22, fill: col });
   hdrInfo.append(catLbl, nameEl);
   hdrRow.append(hdrInfo, iconBadge);
   info.appendChild(hdrRow);
@@ -2602,8 +2632,29 @@ function renderParkDetailContent(feature, container) {
   const area = p.Oppervlakte_m2
     ? (p.Oppervlakte_m2 >= 10000 ? (p.Oppervlakte_m2 / 10000).toFixed(1) + " ha" : p.Oppervlakte_m2.toLocaleString() + " m²")
     : null;
-  grid.append(cell(t("district"), p.Stadsdeel), cell(t("area"), area), cell(t("city_park"), p.Stadspark === "J" ? t("yes") : t("no")));
+  grid.append(cell(t("area"), area), cell(t("city_park"), p.Stadspark === "J" ? t("yes") : t("no")));
   info.appendChild(grid);
+
+  // Navigation: compute centroid of the polygon for directions
+  const geom = feature.geometry;
+  if (geom) {
+    let lat, lon;
+    if (geom.type === "Point") {
+      [lon, lat] = geom.coordinates;
+    } else {
+      const ring = geom.type === "Polygon" ? geom.coordinates[0]
+                 : geom.type === "MultiPolygon" ? geom.coordinates[0][0] : null;
+      if (ring) {
+        lon = ring.reduce((s, c) => s + c[0], 0) / ring.length;
+        lat = ring.reduce((s, c) => s + c[1], 0) / ring.length;
+      }
+    }
+    if (lat && lon) {
+      const actions = document.createElement("div"); actions.className = "detail-actions";
+      actions.appendChild(makeDirectionsBtn(lat, lon));
+      info.appendChild(actions);
+    }
+  }
 
   body.appendChild(info);
   container.appendChild(body);
@@ -2616,7 +2667,7 @@ function showParkDetail(feature) { openDetailPanel(feature, renderParkDetailCont
 function renderSwimmingPoolDetailContent(feature, container) {
   const p = feature.properties || {};
   const swimType = getSwimTypeDef(swimCategory(p));
-  const col = "#00b4c8";
+  const col = "#009de6";
 
   const body = document.createElement("div"); body.className = "detail-panel-body";
 
@@ -2633,14 +2684,13 @@ function renderSwimmingPoolDetailContent(feature, container) {
   nameEl.textContent = p.name || p.Naam_locatie || p.Naam || "Zwemplek";
   const iconBadge = document.createElement("div"); iconBadge.className = "detail-icon-badge";
   iconBadge.style.cssText = `background:${col}1a;border-color:${col}33;`;
-  iconBadge.innerHTML = `<svg width="24" height="18" viewBox="0 0 24 18" fill="none" aria-hidden="true" style="color:${col}"><path d="M1 6c2.4-3.2 5-3.2 7.5 0s5 3.2 7.5 0 5-3.2 7.5 0" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"/><path d="M1 13c2.4-3.2 5-3.2 7.5 0s5 3.2 7.5 0 5-3.2 7.5 0" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"/></svg>`;
+  iconBadge.innerHTML = adsIcon("PersonSwimming", { size: 22, fill: col });
   hdrInfo.append(catLbl, nameEl);
   hdrRow.append(hdrInfo, iconBadge);
   info.appendChild(hdrRow);
 
   const grid = document.createElement("div"); grid.className = "prop-grid";
   grid.append(cell(t("type_label"), state.lang === "nl" ? swimType.label_nl : swimType.label_en));
-  if (p.id) grid.appendChild(cell("ID", String(p.id)));
   info.appendChild(grid);
 
   if (feature.geometry?.type === "Point") {
@@ -2661,11 +2711,41 @@ function makeDirectionsBtn(lat, lon) {
   const href=isIOS?`maps://?daddr=${lat},${lon}`:`https://www.google.com/maps/dir/?api=1&destination=${lat},${lon}`;
   const a=document.createElement("a");
   a.className="btn-directions"; a.href=href; a.target="_blank"; a.rel="noopener noreferrer";
-  a.innerHTML=`<svg width="13" height="13" viewBox="0 0 13 13" fill="none" aria-hidden="true"><path d="M1.5 11.5L11.5 1.5M11.5 1.5H4.5M11.5 1.5V8.5" stroke="white" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>${t("get_directions")}`;
+  a.innerHTML = `${adsIcon("CrossHair", { size: 13, fill: "white" })}${t("get_directions")}`;
   return a;
 }
 
-// ── Search ─────────────────────────────────────────────────────────────────
+// ── Search placeholder — short version when input is too narrow ────────────
+/**
+ * Switch the search input placeholder between the full and short versions
+ * based on the current pixel width of the search wrapper.
+ * Called by a ResizeObserver so it tracks sidebar-toggle and window-resize.
+ */
+let _measureCtx = null;
+/** Width in px of `text` rendered with `font` (cached canvas). */
+function _measureText(text, font) {
+  if (!_measureCtx) _measureCtx = document.createElement("canvas").getContext("2d");
+  _measureCtx.font = font;
+  return _measureCtx.measureText(text).width;
+}
+
+// Placeholder variants from longest to shortest — pick the longest that fits.
+const _SEARCH_PLACEHOLDERS = ["search_placeholder", "search_placeholder_medium", "search_placeholder_short"];
+
+function updateSearchPlaceholder() {
+  const si = document.getElementById("search-input");
+  if (!si) return;
+  const cs   = getComputedStyle(si);
+  const avail = si.clientWidth
+    - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight) - 6; // safety margin
+  const font = `${cs.fontStyle} ${cs.fontWeight} ${cs.fontSize} ${cs.fontFamily}`;
+  let chosen = _SEARCH_PLACEHOLDERS[_SEARCH_PLACEHOLDERS.length - 1];
+  for (const key of _SEARCH_PLACEHOLDERS) {
+    if (_measureText(t(key), font) <= avail) { chosen = key; break; }
+  }
+  si.placeholder = t(chosen);
+}
+
 function setupSearch() {
   const input=document.getElementById("search-input"), results=document.getElementById("search-results");
   if (!input) return;
@@ -2679,6 +2759,12 @@ function setupSearch() {
   });
   input.addEventListener("keydown",e=>{if(e.key==="Escape"){results.setAttribute("hidden","");input.blur();}});
   document.addEventListener("click",e=>{if(!e.target.closest("#search-wrap"))results.setAttribute("hidden","");});
+
+  // Update placeholder when the search wrap resizes (sidebar toggle, window resize)
+  if (typeof ResizeObserver !== "undefined") {
+    const wrap = document.getElementById("search-wrap");
+    if (wrap) new ResizeObserver(updateSearchPlaceholder).observe(wrap);
+  }
 }
 
 async function doSearch(query) {
@@ -2690,16 +2776,17 @@ async function doSearch(query) {
   const qLower = q.toLowerCase();
 
   // Local koelteplekken matches first
-  const localMatches = state.features.koelteplekken
+  const localMatches = (state.features.koelteplekken || [])
     .filter(f => {
       const p = f.properties || {};
       return (
         (p.name || "").toLowerCase().includes(qLower) ||
         (p.neighborhood || "").toLowerCase().includes(qLower) ||
+        (p.district || "").toLowerCase().includes(qLower) ||
         (p.address || "").toLowerCase().includes(qLower)
       );
     })
-    .slice(0, 3);
+    .slice(0, 4);
 
   localMatches.forEach(f => {
     const p = f.properties || {};
@@ -2722,18 +2809,25 @@ async function doSearch(query) {
   });
 
   try {
-    const url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(q + " Amsterdam")}&format=json&countrycodes=nl&limit=6&viewbox=4.72,52.48,5.08,52.26&bounded=1`;
-    const response = await fetch(url, { headers: { "Accept-Language": state.lang === "nl" ? "nl" : "en" } });
+    // PDOK Locatieserver "suggest" — autocomplete/prefix matching (the "free"
+    // endpoint only matches whole word-tokens, so partial input returned nothing).
+    const url = `https://api.pdok.nl/bzk/locatieserver/search/v3_1/suggest?q=${encodeURIComponent(q)}&rows=6&fq=gemeentenaam:Amsterdam`;
+    const response = await fetch(url);
     if (!response.ok) throw new Error("Search request failed");
-    const items = await response.json();
+    const docs = (await response.json())?.response?.docs || [];
 
-    items.forEach(item => {
-      const parts = item.display_name.split(", ");
+    docs.forEach(doc => {
+      const parts = (doc.weergavenaam || "").split(", ");
       const el = document.createElement("div");
       el.className = "sr-item";
       el.innerHTML = `<div class="sr-name">${parts[0]}</div><div class="sr-sub">${parts.slice(1, 3).join(", ")}</div>`;
-      el.addEventListener("click", () => {
-        state.map.setView([parseFloat(item.lat), parseFloat(item.lon)], 16);
+      el.addEventListener("click", async () => {
+        // suggest returns no coordinates — resolve them for the chosen item.
+        try {
+          const lr = await fetch(`https://api.pdok.nl/bzk/locatieserver/search/v3_1/lookup?id=${encodeURIComponent(doc.id)}&fl=centroide_ll`);
+          const m = /POINT\(([-\d.]+) ([-\d.]+)\)/.exec((await lr.json())?.response?.docs?.[0]?.centroide_ll || "");
+          if (m) state.map.setView([parseFloat(m[2]), parseFloat(m[1])], 16);
+        } catch (_) { /* keep the map where it is if lookup fails */ }
         results.setAttribute("hidden", "");
         document.getElementById("search-input").value = parts[0];
         closeSidebarMobile();
@@ -3174,13 +3268,16 @@ document.addEventListener("DOMContentLoaded", () => {
   setupLandingIntro();
   initMap();
   loadAllLayers();
-  _prefetchShade(); // start download in background before user toggles it
+  // Shade is off by default and the dataset is large — load it lazily on first
+  // toggle (see _renderShadeLayer) rather than downloading it for every visitor.
   setupBanner();
   setupLang();
   setupModeToggle();
   setupToggles();
+  decorateLegendIcons();
   setupCategoryFilter();
   setupFilters();
+  setupClearFilters();
   setupNearBtn();
   setupTipsBtn();
   setupSearch();
