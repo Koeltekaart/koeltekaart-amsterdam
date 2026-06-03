@@ -1145,15 +1145,38 @@ body.mode-user #sidebar-policy { display: none; }
 }
 
 .view-btn {
-  display: flex; align-items: center; gap: 6px;
-  padding: 8px 20px; border: none; border-radius: 100px;
-  background: transparent; color: rgba(255,255,255,0.58);
-  font-family: var(--font); font-size: 13px; font-weight: 600;
-  cursor: pointer; transition: background 0.15s, color 0.15s;
-  white-space: nowrap; letter-spacing: -0.01em;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 20px;
+  border: none;
+  border-radius: 100px;
+
+  /* Not clicked: regular Amsterdam blue + white text */
+  background: var(--navy);
+  color: var(--white);
+
+  font-family: var(--font);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+  white-space: nowrap;
+  letter-spacing: -0.01em;
 }
-.view-btn.active { background: rgba(255,255,255,0.22); color: #fff; font-weight: 700; }
-.view-btn:hover:not(.active) { color: rgba(255,255,255,0.75); }
+
+.view-btn.active {
+  /* Clicked: white background + regular Amsterdam blue text */
+  background: var(--white);
+  color: var(--navy);
+  font-weight: 700;
+}
+
+.view-btn:hover:not(.active) {
+  background: var(--ams-color-interactive-hover);
+  color: var(--white);
+}
+
 
 /* ── Right panel (list + detail) ─────────────────────────────────────────── */
 #list-view {
