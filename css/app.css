@@ -1166,15 +1166,26 @@ body.mode-user #sidebar-policy { display: none; }
   overflow-y: auto;
   overflow-x: hidden;
   padding: 0 0 48px;
+  scrollbar-width: auto;
+  scrollbar-color: var(--navy) rgba(0,0,0,0.04);
 }
 
 #list-view-inner::-webkit-scrollbar {
-  width: 3px;
+  width: 10px;
+}
+
+#list-view-inner::-webkit-scrollbar-track {
+  background: transparent;
 }
 
 #list-view-inner::-webkit-scrollbar-thumb {
-  background: rgba(0,0,0,0.09);
-  border-radius: 2px;
+  background: var(--navy);
+  border-radius: 6px;
+  border: 2px solid rgba(0,0,0,0.04);
+}
+
+#list-view-inner::-webkit-scrollbar-thumb:hover {
+  background: var(--ams-color-interactive-hover);
 }
 
 @media (min-width: 901px) and (hover: hover) and (pointer: fine) {
