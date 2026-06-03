@@ -283,6 +283,7 @@ const TR = {
     org: "GGD Amsterdam",
     title: "Koeltekaart Amsterdam",
     search_placeholder: "Zoek straat, buurt of locatie…",
+    search_placeholder_medium: "Zoek locatie…",
     search_placeholder_short: "Zoeken…",
     near_me: "In mijn buurt",
     stay_cool: "Blijf koel",
@@ -406,6 +407,7 @@ const TR = {
     org: "GGD Amsterdam",
     title: "Cool Map Amsterdam",
     search_placeholder: "Search street, neighbourhood or place…",
+    search_placeholder_medium: "Search place…",
     search_placeholder_short: "Search…",
     near_me: "Near me",
     stay_cool: "Stay cool",
@@ -555,7 +557,7 @@ const state = {
 // Desktop = wide AND a true (non-touch) pointer. Mirrors the CSS breakpoint so
 // touch tablets (e.g. iPads in landscape) use the mobile layout regardless of width.
 function isDesktop() {
-  return window.matchMedia("(min-width: 769px) and (hover: hover) and (pointer: fine)").matches;
+  return window.matchMedia("(min-width: 901px) and (hover: hover) and (pointer: fine)").matches;
 }
 
 // ── Loader ─────────────────────────────────────────────────────────────────
@@ -2257,12 +2259,29 @@ function makeDirectionsBtn(lat, lon) {
  * based on the current pixel width of the search wrapper.
  * Called by a ResizeObserver so it tracks sidebar-toggle and window-resize.
  */
+let _measureCtx = null;
+/** Width in px of `text` rendered with `font` (cached canvas). */
+function _measureText(text, font) {
+  if (!_measureCtx) _measureCtx = document.createElement("canvas").getContext("2d");
+  _measureCtx.font = font;
+  return _measureCtx.measureText(text).width;
+}
+
+// Placeholder variants from longest to shortest — pick the longest that fits.
+const _SEARCH_PLACEHOLDERS = ["search_placeholder", "search_placeholder_medium", "search_placeholder_short"];
+
 function updateSearchPlaceholder() {
-  const si   = document.getElementById("search-input");
-  const wrap = document.getElementById("search-wrap");
-  if (!si || !wrap) return;
-  const short = wrap.offsetWidth < 180;
-  si.placeholder = t(short ? "search_placeholder_short" : "search_placeholder");
+  const si = document.getElementById("search-input");
+  if (!si) return;
+  const cs   = getComputedStyle(si);
+  const avail = si.clientWidth
+    - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight) - 6; // safety margin
+  const font = `${cs.fontStyle} ${cs.fontWeight} ${cs.fontSize} ${cs.fontFamily}`;
+  let chosen = _SEARCH_PLACEHOLDERS[_SEARCH_PLACEHOLDERS.length - 1];
+  for (const key of _SEARCH_PLACEHOLDERS) {
+    if (_measureText(t(key), font) <= avail) { chosen = key; break; }
+  }
+  si.placeholder = t(chosen);
 }
 
 function setupSearch() {
