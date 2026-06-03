@@ -348,8 +348,21 @@ body {
   transition: width 0.24s cubic-bezier(0.4,0,0.2,1),
               border-color 0.24s ease;
 }
-#sidebar::-webkit-scrollbar { width: 3px; }
-#sidebar::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.08); border-radius: 2px; }
+#sidebar {
+  /* Improve visibility of the sidebar scrollbar: thicker and branded color */
+  scrollbar-width: auto; /* Firefox: auto or thin */
+  scrollbar-color: var(--navy) rgba(0,0,0,0.04);
+}
+
+/* WebKit-based browsers (Chrome, Edge, Safari) */
+#sidebar::-webkit-scrollbar { width: 10px; }
+#sidebar::-webkit-scrollbar-track { background: transparent; }
+#sidebar::-webkit-scrollbar-thumb {
+  background: var(--navy);
+  border-radius: 6px;
+  border: 2px solid rgba(0,0,0,0.04);
+}
+#sidebar::-webkit-scrollbar-thumb:hover { background: var(--ams-color-interactive-hover); }
 
 /* Desktop-only legend header (collapsible). Hidden on mobile, where the
    sidebar is a full overlay with its own .sidebar-mobile-header. */
