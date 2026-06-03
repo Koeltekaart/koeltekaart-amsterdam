@@ -1683,6 +1683,58 @@ function setupSidebarCollapseDesktop() {
   });
 }
 
+function setupSidebarResizeHandle() {
+  const sidebar = document.getElementById("sidebar");
+  if (!sidebar) return;
+
+  let startY = 0;
+  let startHeight = 0;
+  let activePointerId = null;
+
+  const minHeight = 220;
+
+  function clampHeight(nextHeight) {
+    const maxHeight = Math.max(minHeight, window.innerHeight - 28);
+    return Math.min(maxHeight, Math.max(minHeight, nextHeight));
+  }
+
+  function applyHeight(nextHeight) {
+    sidebar.style.maxHeight = `${clampHeight(nextHeight)}px`;
+    if (state.map) state.map.invalidateSize();
+  }
+
+  sidebar.addEventListener("pointerdown", e => {
+    if (!isDesktop()) return;
+    const rect = sidebar.getBoundingClientRect();
+    const hitbox = parseInt(getComputedStyle(sidebar).getPropertyValue("--sidebar-resize-hitbox"), 10) || 14;
+    if (e.clientY < rect.bottom - hitbox) return;
+    e.preventDefault();
+    activePointerId = e.pointerId;
+    startY = e.clientY;
+    startHeight = sidebar.getBoundingClientRect().height;
+    document.body.style.userSelect = "none";
+    document.body.style.cursor = "ns-resize";
+  });
+
+  window.addEventListener("pointermove", e => {
+    if (activePointerId !== e.pointerId) return;
+    applyHeight(startHeight + (e.clientY - startY));
+  });
+
+  function stopResize() {
+    if (activePointerId == null) return;
+    activePointerId = null;
+    document.body.style.userSelect = "";
+    document.body.style.cursor = "";
+  }
+
+  window.addEventListener("pointerup", stopResize);
+  sidebar.addEventListener("pointercancel", stopResize);
+  window.addEventListener("resize", () => {
+    applyHeight(sidebar.getBoundingClientRect().height);
+  });
+}
+
 // ── Mobile sidebar ─────────────────────────────────────────────────────────
 function openSidebarMobile() {
   document.body.classList.add("sidebar-open");
@@ -2822,6 +2874,7 @@ document.addEventListener("DOMContentLoaded", () => {
   setupSearch();
   setupSidebarToggle();
   setupSidebarCollapseDesktop();
+  setupSidebarResizeHandle();
   setupMobileFilterCollapse();
   setupKeyboard();
   setupViewToggle();

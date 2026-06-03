@@ -420,6 +420,20 @@ body {
   #map-section.sidebar-collapsed .legend-body { display: none; }
   #map-section.sidebar-collapsed .legend-header { border-bottom: none; }
   #map-section.sidebar-collapsed #sidebar-collapse-btn svg { transform: rotate(0deg); }
+  #sidebar {
+    --sidebar-resize-hitbox: 14px;
+  }
+  #sidebar::after {
+    content: "";
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    height: var(--sidebar-resize-hitbox);
+    cursor: ns-resize;
+    background: transparent;
+    z-index: 4;
+  }
 
   /* ── Right detail/list panel collapse tab (vertical tab, unchanged) ───── */
   #right-panel-toggle {
