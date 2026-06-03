@@ -9,6 +9,9 @@ const LAYER_DEFS = [
   { cat: "shade",          label: "Sidewalk shade",   color: "#1a56db",   type: "shade" },
   { cat: "hvi",            label: "Kwetsbaarheidskaart", color: "#CA0020", src: "data/hvi_map.geojson", type: "choropleth" },
   { cat: "temperature",    label: "Surface Temperature",color: "#CA0020",src: "data/stakeholders/temp_mean.geojson",type: "temperature"},
+  { cat: "ndvi",           label: "Vegetation Index",color: "#00893c",src: "data/stakeholders/ndvi.geojson", type: "ndvi"},
+  { cat: "cooling_assets", label: "Cooling Asset Distance",color: "#004699",src: "data/stakeholders/cooling_asset_distance.geojson",type: "cooling_assets"},
+  { cat: "healthcare_distance",label: "Healthcare Distance",color: "#a00078",src: "data/stakeholders/healthcare_distance.geojson",type: "healthcare_distance"},
 ];
 
 // ── Google Sheets data sources ─────────────────────────────────────────────
@@ -420,8 +423,8 @@ function t(key) { return TR[state.lang]?.[key] ?? TR.en[key] ?? key; }
 const state = {
   map: null,
   layers: {},
-  on: { koelteplekken: true, water_taps: true, parks: true, swimming_pools: true, shade: false, hvi: false, temperature: false},
-  features: { koelteplekken: [], water_taps: [], parks: [], swimming_pools: [], hvi: [], temperature: [] },
+  on: { koelteplekken: true, water_taps: true, parks: true, swimming_pools: true, shade: false, hvi: false, temperature: false, ndvi: false, cooling_assets: false, healthcare_distance: false},
+  features: { koelteplekken: [], water_taps: [], parks: [], swimming_pools: [], hvi: [], temperature: [], ndvi: [], cooling_assets: [], healthcare_distance: [] },
   userMarker: null,
   userPos: null,
   rings: [],
@@ -1030,7 +1033,160 @@ function _renderTemperatureLayer(def, features) {
     state.layers.temperature.addTo(state.map);
   }
 }
+// other stakeholder layers
+function interpolateColor(value, min, max, colors) {
+  const t = Math.max(0, Math.min(1, (value - min) / (max - min)));
+  const n = colors.length - 1;
+  const idx = Math.min(Math.floor(t * n), n - 1);
+  const frac = t * n - idx;
 
+  const c1 = colors[idx];
+  const c2 = colors[idx + 1];
+
+  const r = Math.round(c1[0] + frac * (c2[0] - c1[0]));
+  const g = Math.round(c1[1] + frac * (c2[1] - c1[1]));
+  const b = Math.round(c1[2] + frac * (c2[2] - c1[2]));
+
+  return `rgb(${r},${g},${b})`;
+}
+
+function getStakeholderValue(def, p) {
+  if (def.cat === "ndvi") return Number(p.ndvi_mean);
+  if (def.cat === "cooling_assets") return Number(p.cooling_asset_distance_index);
+  if (def.cat === "healthcare_distance") return Number(p.healthcare_distance_index);
+  return null;
+}
+
+function getStakeholderColor(def, value) {
+  if (!Number.isFinite(value)) return "#D1D5DB";
+
+  if (def.cat === "ndvi") {
+    return interpolateColor(value, 0, 0.7, [
+      [255, 255, 204],
+      [194, 230, 153],
+      [120, 198, 121],
+      [49, 163, 84],
+      [0, 104, 55]
+    ]);
+  }
+
+  if (def.cat === "cooling_assets") {
+    return interpolateColor(value, -1.5, 2.5, [
+      [216, 243, 220],
+      [149, 213, 178],
+      [255, 255, 191],
+      [253, 174, 97],
+      [215, 48, 39]
+    ]);
+  }
+
+  if (def.cat === "healthcare_distance") {
+    return interpolateColor(value, -1.5, 2.5, [
+      [224, 236, 244],
+      [158, 188, 218],
+      [255, 255, 191],
+      [241, 163, 64],
+      [153, 52, 4]
+    ]);
+  }
+
+  return "#D1D5DB";
+}
+
+function getStakeholderLabel(def, value) {
+  if (!Number.isFinite(value)) return "Geen data";
+
+  if (def.cat === "ndvi") {
+    return `NDVI: ${value.toFixed(2)}`;
+  }
+
+  if (def.cat === "cooling_assets") {
+    return `Cooling asset distance index: ${value.toFixed(2)}`;
+  }
+
+  if (def.cat === "healthcare_distance") {
+    return `Healthcare distance index: ${value.toFixed(2)}`;
+  }
+
+  return value.toFixed(2);
+}
+
+function buildStakeholderLayer(def, data) {
+  state.features[def.cat] = data.features || [];
+  renderStakeholderLayer(def, state.features[def.cat]);
+}
+
+function renderStakeholderLayer(def, features) {
+  if (state.layers[def.cat]) {
+    state.map.removeLayer(state.layers[def.cat]);
+  }
+
+  state.layers[def.cat] = L.geoJSON(
+    {
+      type: "FeatureCollection",
+      features
+    },
+    {
+      pane: "hviPane",
+
+      style: f => {
+        const p = f.properties || {};
+        const value = getStakeholderValue(def, p);
+        const color = getStakeholderColor(def, value);
+
+        return {
+          fillColor: color,
+          fillOpacity: 0.65,
+          color: "#ffffff",
+          weight: 0.5,
+          opacity: 0.5
+        };
+      },
+
+      onEachFeature: (f, l) => {
+        const p = f.properties || {};
+        const name = p.buurtnaam || "Buurt";
+        const value = getStakeholderValue(def, p);
+        const label = getStakeholderLabel(def, value);
+        const color = getStakeholderColor(def, value);
+
+        if (!IS_TOUCH_DEVICE) {
+          l.on("mouseover", e => {
+            l.setStyle({
+              fillOpacity: 0.85,
+              weight: 1.5,
+              color: "#333"
+            });
+
+            HC.show(
+              e.originalEvent.clientX,
+              e.originalEvent.clientY,
+              name,
+              label,
+              color
+            );
+          });
+
+          l.on("mouseout", () => {
+            state.layers[def.cat].resetStyle(l);
+            HC.hide();
+          });
+
+          l.on("mousemove", e =>
+            HC.move(
+              e.originalEvent.clientX,
+              e.originalEvent.clientY
+            )
+          );
+        }
+      }
+    }
+  );
+
+  if (state.on[def.cat]) {
+    state.layers[def.cat].addTo(state.map);
+  }
+}
 
 // ── HVI analytics — statistics, charts, spatial helpers ───────────────────
 let _hviStats = null;
@@ -1405,6 +1561,16 @@ function loadAllLayers() {
           .then(data => buildTemperatureLayer(def, data))
           .catch(e => console.error(def.cat, e))
           .finally(() => setLoading(false));
+    } else if (
+      def.type === "ndvi" ||
+      def.type === "cooling_assets" ||
+      def.type === "healthcare_distance"
+    ) {
+      fetch(def.src)
+        .then(r => r.json())
+        .then(data => buildStakeholderLayer(def, data))
+        .catch(e => console.error(def.cat, e))
+        .finally(() => setLoading(false));
     } else {
       fetch(def.src)
         .then(r => r.json())
