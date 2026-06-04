@@ -225,61 +225,124 @@
 
   </section><!-- /#landing-intro -->
 
+  <!-- ── Policy intro ─────────────────────────────────────────────────────
+       Takes over the hero + FAQ space when Policy View is active. Hidden in
+       Community View; #landing-intro is hidden in Policy View (see app.js). -->
+  <section id="policy-intro" class="hidden-view" hidden aria-label="Beleidsdashboard hittekwetsbaarheid">
+
+    <!-- Navy hero — headline + lead + formula on the left, live key figures right -->
+    <div class="pi-hero">
+      <div class="pi-hero-inner">
+
+        <div class="pi-hero-content">
+          <span class="pi-eyebrow">
+            <span class="lang-nl">Beleidsdashboard · Hittekwetsbaarheid</span>
+            <span class="lang-en">Policy dashboard · Heat vulnerability</span>
+          </span>
+          <h1 class="pi-headline">
+            <span class="lang-nl">Zie wáár hitte het hardst aankomt.</span>
+            <span class="lang-en">See where heat hits hardest.</span>
+          </h1>
+          <p class="pi-lead">
+            <span class="lang-nl">Deze kaart brengt hitteblootstelling, sociale kwetsbaarheid en toegang tot verkoeling
+              samen in één <strong>Hittekwetsbaarheidsindex (HVI)</strong> per buurt — zodat u maatregelen kunt
+              richten op de buurten waar ze het meeste opleveren.</span>
+            <span class="lang-en">This map combines heat exposure, social vulnerability and access to cooling into a single
+              <strong>Heat Vulnerability Index (HVI)</strong> per neighbourhood — so you can target measures where
+              they deliver the most.</span>
+          </p>
+          <div class="pi-formula">
+            <span class="pi-formula-eq">HVI</span>
+            <span class="pi-term pi-term--heat">0.40 · <span class="lang-nl">hitte</span><span class="lang-en">heat</span></span>
+            <span class="pi-plus">+</span>
+            <span class="pi-term pi-term--social">0.40 · <span class="lang-nl">sociaal</span><span class="lang-en">social</span></span>
+            <span class="pi-plus">+</span>
+            <span class="pi-term pi-term--access">0.20 · <span class="lang-nl">lage toegang</span><span class="lang-en">low access</span></span>
+          </div>
+          <button class="li-cta btn-li-enter">
+            <span class="lang-nl">Open de kaart</span><span class="lang-en">Open the map</span>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" clip-rule="evenodd" d="M13.0306 4.5L22.5 12L13.0306 19.5L11.6566 18.0758L18.6171 12.9999H1.5V11H18.6166L11.6566 5.92417L13.0306 4.5Z"/></svg>
+          </button>
+        </div>
+
+        <!-- Live key figures — populated by renderPolicyIntro() from HVI data -->
+        <div class="pi-figures" id="policy-intro-figures" aria-live="polite">
+          <div class="pi-fig">
+            <span class="pi-fig-val pi-fig-val--urgent" id="pif-priority">–</span>
+            <span class="pi-fig-lbl"><span class="lang-nl">Prioriteitsbuurten (tier 4–5)</span><span class="lang-en">Priority neighbourhoods (tier 4–5)</span></span>
+          </div>
+          <div class="pi-fig">
+            <span class="pi-fig-val pi-fig-val--warn" id="pif-gap">–</span>
+            <span class="pi-fig-lbl"><span class="lang-nl">Kwetsbaar én &gt; 1 km van verkoeling</span><span class="lang-en">Vulnerable &amp; &gt; 1 km from cooling</span></span>
+          </div>
+          <div class="pi-fig">
+            <span class="pi-fig-val" id="pif-count">–</span>
+            <span class="pi-fig-lbl"><span class="lang-nl">Buurten in de analyse</span><span class="lang-en">Neighbourhoods analysed</span></span>
+          </div>
+        </div>
+
+      </div><!-- /.pi-hero-inner -->
+    </div><!-- /.pi-hero -->
+
+    <!-- Info band — the three crucial findings from the analysis pipeline -->
+    <div class="pi-band">
+      <div class="pi-band-inner">
+
+        <div class="pi-band-col">
+          <span class="pi-band-tag"><span class="lang-nl">Fysieke drijvers</span><span class="lang-en">Physical drivers</span></span>
+          <p class="pi-band-stat pi-band-stat--heat">~20%</p>
+          <h2 class="pi-band-h"><span class="lang-nl">Verharding stuurt de hitte — bomen koelen</span><span class="lang-en">Paving drives the heat — trees cool it</span></h2>
+          <p class="pi-band-p">
+            <span class="lang-nl">Verharding is de sterkste fysieke oorzaak van stedelijke hitte; groen, water en straatbomen
+              werken beschermend. Tóch verklaart de fysieke vorm maar ~20% van het hitterisico — de rest is sociaal.
+              Bomen zijn daarbij de meest aanpakbare maatregel.</span>
+            <span class="lang-en">Surface sealing is the strongest physical cause of urban heat; greenery, water and street
+              trees protect against it. Yet physical form explains only ~20% of heat risk — the rest is social.
+              Trees are the most actionable lever.</span>
+          </p>
+        </div>
+
+        <div class="pi-band-col">
+          <span class="pi-band-tag"><span class="lang-nl">Milieurechtvaardigheid</span><span class="lang-en">Environmental justice</span></span>
+          <p class="pi-band-stat pi-band-stat--social"><span class="lang-nl">1 op 4</span><span class="lang-en">1 in 4</span></p>
+          <h2 class="pi-band-h"><span class="lang-nl">De dubbele benadeling</span><span class="lang-en">The double disadvantage</span></h2>
+          <p class="pi-band-p">
+            <span class="lang-nl">Sociaal kwetsbare buurten hebben systematisch de minste toegang tot verkoeling. Ongeveer
+              één op de vier buurten is tegelijk hoog kwetsbaar én slecht ontsloten — en het gat is het grootst
+              waar de toegang al het slechtst is.</span>
+            <span class="lang-en">Socially vulnerable neighbourhoods systematically have the least access to cooling. About
+              one in four is both highly vulnerable and poorly served — and the gap is widest where access is
+              already worst.</span>
+          </p>
+        </div>
+
+        <div class="pi-band-col">
+          <span class="pi-band-tag"><span class="lang-nl">Ruimtelijk patroon</span><span class="lang-en">Spatial pattern</span></span>
+          <p class="pi-band-stat pi-band-stat--access">Moran's I ≈ 0.32</p>
+          <h2 class="pi-band-h"><span class="lang-nl">Geclusterd, dus aanpakbaar</span><span class="lang-en">Clustered, so addressable</span></h2>
+          <p class="pi-band-p">
+            <span class="lang-nl">Hittekwetsbaarheid is significant geclusterd in het naoorlogse westen en zuidoosten — dus
+              gebiedsgerichte programma's lonen. Met slechts 12 officiële koelteplekken liggen veel
+              prioriteitsbuurten ver van verkoeling.</span>
+            <span class="lang-en">Heat vulnerability is significantly clustered in the post-war west and south-east — so
+              area-based programmes pay off. With only 12 official cooling spots, many priority neighbourhoods
+              sit far from relief.</span>
+          </p>
+        </div>
+
+      </div>
+    </div>
+
+  </section><!-- /#policy-intro -->
+
   <!-- ── Map + contact wrapper: sticky flex column, fills viewport below topbar -->
   <div id="map-contact-wrap">
 
-  <!-- Heat plan status strip — sits directly above the map, always visible while the map is -->
+  <!-- Heat plan status strip — sits directly above the map (Community View only) -->
   <div id="heat-banner" class="heat-banner heat-banner--inactive" role="status" aria-live="polite">
     <div class="banner-inner">
       <span class="banner-pulse" aria-hidden="true"></span>
       <span id="banner-text" class="banner-text"></span>
-    </div>
-  </div>
-
-  <!-- Policy view: methodology explainer above the map -->
-  <div id="policy-methodology" class="hidden-view" hidden>
-    <div class="pm-bar">
-      <div class="pm-bar-title">
-        <span class="lang-nl">Hittekwetsbaarheid in Amsterdam — methodologie</span>
-        <span class="lang-en">Heat vulnerability in Amsterdam — methodology</span>
-      </div>
-      <button id="pm-toggle" class="pm-toggle" aria-expanded="true">
-        <span class="lang-nl">Verbergen</span><span class="lang-en">Hide</span>
-      </button>
-    </div>
-    <div class="pm-body" id="pm-body">
-      <p class="pm-lead">
-        <span class="lang-nl">Deze kaart combineert hitteblootstelling, sociale kwetsbaarheid en toegang tot
-          verkoeling tot één <strong>Hittekwetsbaarheidsindex (HVI)</strong> per buurt, zodat beleidsmakers kunnen
-          zien wáár de meest kwetsbare bewoners de minste verkoeling hebben — en welke maatregelen het meeste opleveren.</span>
-        <span class="lang-en">This map combines heat exposure, social vulnerability and access to cooling into a single
-          <strong>Heat Vulnerability Index (HVI)</strong> per neighbourhood, so policymakers can see <em>where</em> the most
-          vulnerable residents have the least relief — and which measures deliver the most benefit.</span>
-      </p>
-      <div class="pm-grid">
-        <div class="pm-card">
-          <div class="pm-card-h"><span class="lang-nl">De index</span><span class="lang-en">The index</span></div>
-          <div class="pm-formula">HVI = 0.40·<span class="pm-h">heat</span> + 0.40·<span class="pm-s">social</span> + 0.20·<span class="pm-a">low&nbsp;access</span></div>
-          <p class="pm-card-p">
-            <span class="lang-nl">Gelijk gewogen hitte en sociale kwetsbaarheid, met koeltoegang als secundaire, beïnvloedbare factor. De ranglijst blijft stabiel bij ±10% andere gewichten.</span>
-            <span class="lang-en">Heat and social vulnerability weighted equally, with cooling access as a secondary, modifiable factor. The ranking is stable under ±10% reweighting.</span>
-          </p>
-        </div>
-        <div class="pm-card">
-          <div class="pm-card-h"><span class="lang-nl">Gegevens</span><span class="lang-en">Data</span></div>
-          <p class="pm-card-p">
-            <span class="lang-nl">Landsat-oppervlaktetemperatuur, het officiële Klimaatrisicokaarten-hitterisico, CBS-buurtcijfers 2022 (vergrijzing, eenpersoonshuishoudens, migratieachtergrond, laag inkomen) en ±322.000 stadsbomen.</span>
-            <span class="lang-en">Landsat surface temperature, the city's official Klimaatrisicokaarten heat-risk score, CBS 2022 neighbourhood statistics (ageing, single-person households, migration background, low income) and ≈322,000 street trees.</span>
-          </p>
-        </div>
-        <div class="pm-card">
-          <div class="pm-card-h"><span class="lang-nl">Tiers &amp; lagen</span><span class="lang-en">Tiers &amp; layers</span></div>
-          <p class="pm-card-p">
-            <span class="lang-nl">Buurten zijn in vijf tiers verdeeld via <em>natural breaks</em> (geen gelijke groepen, maar echte breekpunten). Zet links één analyselaag tegelijk aan; koelteplekken kunnen er overheen.</span>
-            <span class="lang-en">Neighbourhoods are split into five tiers by <em>natural breaks</em> (real gaps, not equal-sized groups). Toggle one analysis layer at a time on the left; cooling spots can overlay on top.</span>
-          </p>
-        </div>
-      </div>
     </div>
   </div>
 

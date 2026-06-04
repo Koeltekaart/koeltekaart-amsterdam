@@ -2176,32 +2176,131 @@ html[lang="en"] img.lang-en { display: block; }
   padding: 2px 6px; border-radius: 999px; flex-shrink: 0; }
 .pi-tag--gd { background: rgba(0,137,60,0.12); color: #00893c; }
 
-/* ── Policy methodology banner (above the map in Policy View) ────────────── */
-#policy-methodology {
-  background: #fff; border-bottom: 1px solid rgba(0,0,0,0.10);
-  flex-shrink: 0; max-height: 42vh; overflow: auto;
+/* ── Policy intro (takes over the hero + FAQ space in Policy View) ────────── */
+#policy-intro { background: transparent; }
+
+/* Navy hero — mirrors the community hero aesthetic, own classes so the two
+   never clash. Headline + lead + formula left, live key figures right. */
+.pi-hero { background: var(--navy); position: relative; overflow: hidden; }
+.pi-hero-inner {
+  display: flex; flex-direction: row; align-items: stretch;
+  width: min(1040px, 100%); margin: 0 auto;
 }
-#policy-methodology.pm-collapsed { max-height: none; overflow: visible; }
-.pm-bar {
-  display: flex; align-items: center; justify-content: space-between;
-  gap: 12px; padding: 10px 20px; background: var(--ams-blue, #004699); color: #fff;
-  position: sticky; top: 0; z-index: 2;
+.pi-hero-content {
+  flex: 1; min-width: 0;
+  padding: clamp(40px, 7vh, 80px) clamp(16px, 3vw, 40px) clamp(28px, 4vh, 44px) clamp(20px, 5vw, 56px);
 }
-.pm-bar-title { font-weight: 800; font-size: 15px; letter-spacing: -0.01em; }
-.pm-toggle {
-  background: rgba(255,255,255,0.16); color: #fff; border: none; cursor: pointer;
-  font: inherit; font-size: 13px; font-weight: 700; padding: 5px 12px; border-radius: 999px;
+.pi-eyebrow {
+  display: block; font-size: clamp(11px, 1vw, 12.5px); font-weight: 700;
+  text-transform: uppercase; letter-spacing: 0.08em;
+  color: rgba(255,255,255,0.55); margin-bottom: 14px;
 }
-.pm-toggle:hover { background: rgba(255,255,255,0.28); }
-.pm-collapsed .pm-body { display: none; }
-.pm-body { padding: 16px 20px 20px; }
-.pm-lead { font-size: 14.5px; line-height: 1.55; color: var(--text, #202020); margin: 0 0 14px; max-width: 70ch; }
-.pm-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 14px; }
-.pm-card { background: var(--surface, #f5f5f5); border: 1px solid rgba(0,0,0,0.07); border-radius: 10px; padding: 13px 15px; }
-.pm-card-h { font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.04em; color: var(--muted, #767676); margin-bottom: 7px; }
-.pm-formula { font-size: 14px; font-weight: 700; color: var(--text, #202020); margin-bottom: 8px; }
-.pm-formula .pm-h { color: #ec0000; } .pm-formula .pm-s { color: #a00078; } .pm-formula .pm-a { color: #004699; }
-.pm-card-p { font-size: 13px; line-height: 1.5; color: var(--text, #202020); margin: 0; }
+.pi-headline {
+  font-family: var(--font);
+  font-size: clamp(30px, 4.4vw, 54px);
+  font-weight: var(--ams-heading-font-weight);
+  line-height: 1.08; letter-spacing: -0.02em;
+  color: #fff; margin: 0 0 16px; text-wrap: balance; max-width: 16ch;
+}
+.pi-lead {
+  font-size: clamp(14px, 1.5vw, 17px); line-height: 1.6;
+  color: rgba(255,255,255,0.82); max-width: 56ch; margin: 0 0 22px;
+}
+.pi-lead strong { color: #fff; font-weight: 700; }
+
+/* Formula — a single restrained pill, light accents that read on navy */
+.pi-formula {
+  display: inline-flex; flex-wrap: wrap; align-items: center; gap: 8px 10px;
+  padding: 11px 16px; margin-bottom: 26px;
+  background: rgba(255,255,255,0.07); border: 1px solid rgba(255,255,255,0.14);
+  border-radius: 10px; font-variant-numeric: tabular-nums;
+}
+.pi-formula-eq { font-weight: 800; font-size: 15px; color: #fff; letter-spacing: 0.02em; }
+.pi-formula-eq::after { content: "="; margin-left: 8px; color: rgba(255,255,255,0.5); font-weight: 600; }
+.pi-term { font-size: 13.5px; font-weight: 700; color: #fff; white-space: nowrap; }
+.pi-term--heat   { color: #ff8a80; }
+.pi-term--social { color: #f48fb1; }
+.pi-term--access { color: #82b1ff; }
+.pi-plus { color: rgba(255,255,255,0.45); font-weight: 600; }
+
+#policy-intro .li-cta svg { flex-shrink: 0; }
+
+/* Right: live key figures — vertical, mirrors the weather column rhythm */
+.pi-figures {
+  display: flex; flex-direction: column;
+  width: clamp(200px, 24vw, 300px); flex-shrink: 0; position: relative;
+}
+.pi-figures::before {
+  content: ''; position: absolute; left: 0; top: 8%; height: 84%; width: 1px;
+  background: linear-gradient(to bottom, transparent, rgba(255,255,255,0.14) 20%, rgba(255,255,255,0.14) 80%, transparent);
+  pointer-events: none;
+}
+.pi-fig {
+  flex: 1; display: flex; flex-direction: column; align-items: flex-end; justify-content: center;
+  gap: 6px; padding: 16px clamp(16px, 2.5vw, 32px) 16px clamp(12px, 2vw, 22px);
+  border-bottom: 1px solid rgba(255,255,255,0.06); text-align: right;
+}
+.pi-fig:last-child { border-bottom: none; }
+.pi-fig-val {
+  font-size: clamp(30px, 3.4vw, 46px); font-weight: var(--ams-heading-font-weight);
+  color: #fff; line-height: 1; letter-spacing: -0.02em; font-variant-numeric: tabular-nums;
+}
+.pi-fig-val--urgent { color: #ff8a80; }
+.pi-fig-val--warn   { color: #ffc46b; }
+.pi-fig-lbl {
+  font-size: clamp(10px, 0.95vw, 11.5px); font-weight: 600; text-transform: uppercase;
+  letter-spacing: 0.06em; color: rgba(255,255,255,0.5); line-height: 1.35; max-width: 22ch;
+}
+
+/* Info band below the hero — three editorial columns (replaces FAQ accordions) */
+.pi-band { background: var(--surface); border-top: 1px solid var(--border); width: 100%; }
+.pi-band-inner {
+  max-width: min(1200px, 100%); margin: 0 auto;
+  padding: clamp(24px, 3.4vh, 40px) clamp(20px, 5vw, 56px);
+  display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 0; align-items: start;
+}
+.pi-band-col { min-width: 0; }
+.pi-band-col:not(:last-child)  { border-right: 1px solid rgba(0,0,0,0.09); padding-right: clamp(16px, 2.2vw, 32px); }
+.pi-band-col:not(:first-child) { padding-left: clamp(16px, 2.2vw, 32px); }
+.pi-band-tag {
+  display: block; font-size: 11px; font-weight: 700; text-transform: uppercase;
+  letter-spacing: 0.07em; color: var(--muted); margin-bottom: 10px;
+}
+.pi-band-stat {
+  font-size: clamp(26px, 2.6vw, 34px); font-weight: var(--ams-heading-font-weight);
+  line-height: 1; letter-spacing: -0.02em; margin: 0 0 8px; font-variant-numeric: tabular-nums;
+}
+.pi-band-stat--heat   { color: var(--red); }
+.pi-band-stat--social { color: #a00078; }
+.pi-band-stat--access { color: var(--navy); }
+.pi-band-h {
+  font-size: var(--ams-heading-4-font-size); font-weight: var(--ams-heading-font-weight);
+  letter-spacing: -0.01em; color: var(--text); margin: 0 0 8px; text-wrap: balance;
+}
+.pi-band-p { font-size: 14px; line-height: 1.65; color: var(--muted); margin: 0; }
+.pi-band-p em { font-style: italic; color: var(--text); }
+
+@media (max-width: 860px) {
+  .pi-hero-inner { flex-direction: column; }
+  .pi-hero-content { padding-bottom: 24px; }
+  .pi-figures { width: 100%; flex-direction: row; border-top: 1px solid rgba(255,255,255,0.10); }
+  .pi-figures::before { display: none; }
+  .pi-fig {
+    flex: 1; align-items: flex-start; text-align: left; padding: 16px clamp(20px, 5vw, 56px);
+    border-bottom: none; border-right: 1px solid rgba(255,255,255,0.08);
+  }
+  .pi-fig:last-child { border-right: none; }
+  .pi-fig-val { font-size: clamp(24px, 7vw, 34px); }
+}
+@media (max-width: 640px) {
+  .pi-band-inner { grid-template-columns: 1fr; gap: 20px; }
+  .pi-band-col:not(:last-child)  { border-right: none; padding-right: 0; }
+  .pi-band-col:not(:first-child) { padding-left: 0; padding-top: 20px; border-top: 1px solid rgba(0,0,0,0.09); }
+  .pi-fig { flex-direction: column; }
+}
+
+/* Heat-plan banner is Community-View only; hide it in Policy View */
+body.view-policy #heat-banner { display: none; }
 
 /* ── Active-overlay legend (floats over the map) ─────────────────────────── */
 #overlay-legend {
@@ -2238,11 +2337,10 @@ html[lang="en"] img.lang-en { display: block; }
 .bd-roi { margin-top: 12px; padding: 11px 13px; border-radius: 10px; background: rgba(0,70,153,0.05); border-left: 3px solid #004699; }
 .bd-h { font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.04em; color: var(--muted, #767676); margin-bottom: 5px; }
 
-/* Methodology banner adds a row to the map/contact grid; pin each child to an
-   explicit row so the map keeps the 1fr track (and the banner row collapses to
-   0 when the banner is hidden in Community View). */
-#map-contact-wrap { grid-template-rows: auto auto 1fr auto; }
-#heat-banner        { grid-row: 1; }
-#policy-methodology { grid-row: 2; }
-#map-section        { grid-row: 3; }
-#contact-footer     { grid-row: 4; }
+/* Pin the map/contact children to explicit grid rows. The heat banner is
+   display:none in Policy View; without an explicit row the map would auto-place
+   into the first `auto` track and collapse to ~0 height. Pinning keeps it in the
+   1fr track in both views. */
+#heat-banner    { grid-row: 1; }
+#map-section    { grid-row: 2; }
+#contact-footer { grid-row: 3; }

@@ -256,6 +256,8 @@ const TR = {
     search_placeholder: "Zoek straat, buurt of locatie…",
     search_placeholder_medium: "Zoek locatie…",
     search_placeholder_short: "Zoeken…",
+    search_placeholder_buurt: "Zoek een buurt…",
+    no_buurt_results: "Geen buurt gevonden",
     near_me: "In mijn buurt",
     stay_cool: "Blijf koel",
     heat_advice_btn: "Hitteadvies",
@@ -380,6 +382,8 @@ const TR = {
     search_placeholder: "Search street, neighbourhood or place…",
     search_placeholder_medium: "Search place…",
     search_placeholder_short: "Search…",
+    search_placeholder_buurt: "Search a neighbourhood…",
+    no_buurt_results: "No neighbourhood found",
     near_me: "Near me",
     stay_cool: "Stay cool",
     heat_advice_btn: "Heat advice",
@@ -1056,6 +1060,8 @@ function buildHviLayer(def, data) {
   _renderHviLayer(def, state.features.hvi);
   // Refresh the insight panel if it is the active right-panel view
   if (state.viewMode === "policy" && state.panelMode === "list" && isListViewActive()) renderListView();
+  // Backfill the Policy-intro hero figures now that HVI data is in.
+  if (state.viewMode === "policy") renderPolicyIntro();
 }
 
 function _renderHviLayer(def, features) {
@@ -1690,6 +1696,20 @@ function _renderQuadrantChart(canvasId, feats, isNL) {
   });
 }
 
+/** Fill the Policy-intro hero's live key figures from the HVI dataset.
+ *  Safe to call before data loads (shows placeholders) and again afterwards. */
+function renderPolicyIntro() {
+  const setVal = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
+  const feats = (state.features.hvi || []).map(f => f.properties);
+  const withHvi = feats.filter(p => p.hvi != null);
+  if (!withHvi.length) { setVal("pif-priority", "–"); setVal("pif-gap", "–"); setVal("pif-count", "–"); return; }
+  const priority45 = withHvi.filter(p => parseInt(p.hvi_tier) >= 4).length;
+  const shelterGap = feats.filter(p => parseInt(p.hvi_tier) >= 4 && Number(p.dist_koelteplek_m) > 1000).length;
+  setVal("pif-priority", priority45);
+  setVal("pif-gap", shelterGap);
+  setVal("pif-count", withHvi.length);
+}
+
 function renderPolicyInsightPanel(inner) {
   const isNL = state.lang === "nl";
   const feats = (state.features.hvi || []).map(f => f.properties);
@@ -1745,6 +1765,8 @@ function renderPolicyInsightPanel(inner) {
 
   _renderTierChart("pi-tier-chart", tierCounts, isNL);
   _renderQuadrantChart("pi-quad-chart", feats, isNL);
+
+  renderPolicyIntro();
 
   const list = inner.querySelector("#pi-rank-list");
   const featByName = new Map((state.features.hvi || []).map(f => [f.properties.buurtnaam, f]));
@@ -2190,15 +2212,24 @@ function _applyViewMode(mode) {
   document.querySelectorAll(".sidebar-community-section").forEach(el => el.classList.toggle("hidden-view", mode === "policy"));
   document.querySelectorAll(".sidebar-policy-section").forEach(el => el.classList.toggle("hidden-view", mode === "community"));
 
-  // Methodology explainer above the map (policy view only)
-  const pm = document.getElementById("policy-methodology");
-  if (pm) { pm.hidden = mode !== "policy"; pm.classList.toggle("hidden-view", mode !== "policy"); }
+  // Swap the landing area: community hero + FAQ vs. the policy dashboard intro.
+  const landing = document.getElementById("landing-intro");
+  const policyIntro = document.getElementById("policy-intro");
+  if (landing)     { landing.hidden = mode === "policy";     landing.classList.toggle("hidden-view", mode === "policy"); }
+  if (policyIntro) {
+    policyIntro.hidden = mode !== "policy";
+    policyIntro.classList.toggle("hidden-view", mode !== "policy");
+    if (mode === "policy") renderPolicyIntro();
+  }
+
+  // Search + "In mijn buurt" target neighbourhoods in Policy View — refresh the
+  // placeholder to match.
+  updateSearchPlaceholder();
 
   // Re-render the right panel for the new mode (community list <-> policy insight)
   if (state.panelMode === "detail") exitDetailMode();
   else if (typeof renderListView === "function") renderListView();
 
-  // The methodology banner changes the map height in policy view.
   if (state.map) setTimeout(() => state.map.invalidateSize(), 60);
 }
 
@@ -2226,19 +2257,6 @@ function setupModeToggle() {
     });
   });
 
-  // Methodology banner collapse/expand
-  const pmToggle = document.getElementById("pm-toggle");
-  const pm = document.getElementById("policy-methodology");
-  if (pmToggle && pm) {
-    pmToggle.addEventListener("click", () => {
-      const collapsed = pm.classList.toggle("pm-collapsed");
-      pmToggle.setAttribute("aria-expanded", String(!collapsed));
-      pmToggle.innerHTML = collapsed
-        ? '<span class="lang-nl">Tonen</span><span class="lang-en">Show</span>'
-        : '<span class="lang-nl">Verbergen</span><span class="lang-en">Hide</span>';
-      if (state.map) setTimeout(() => state.map.invalidateSize(), 250);
-    });
-  }
 }
 
 // ── Layer toggles ──────────────────────────────────────────────────────────
@@ -2547,9 +2565,20 @@ function setupNearBtn() {
     navigator.geolocation.getCurrentPosition(
       pos => {
         setLoading(false);
-        placeUserMarker(pos.coords.latitude, pos.coords.longitude);
-        state.map.setView([pos.coords.latitude, pos.coords.longitude], 15);
+        const { latitude: lat, longitude: lng } = pos.coords;
+        placeUserMarker(lat, lng);
         document.getElementById("btn-near").classList.add("active");
+
+        // Policy View: zoom to the neighbourhood the user is standing in and open it.
+        if (state.viewMode === "policy") {
+          const buurt = findBuurtFeatureAt(lat, lng);
+          if (buurt) { focusBuurt(buurt); return; }
+          // Outside the mapped buurten — just centre on the location.
+          state.map.setView([lat, lng], 14);
+        } else {
+          state.map.setView([lat, lng], 15);
+        }
+
         // Scroll into the map area so the user sees their location
         const mapSection = document.getElementById("map-section");
         if (mapSection) mapSection.scrollIntoView({ behavior: "smooth" });
@@ -3089,6 +3118,8 @@ const _SEARCH_PLACEHOLDERS = ["search_placeholder", "search_placeholder_medium",
 function updateSearchPlaceholder() {
   const si = document.getElementById("search-input");
   if (!si) return;
+  // Policy View searches neighbourhoods only — use a fixed, on-message placeholder.
+  if (state.viewMode === "policy") { si.placeholder = t("search_placeholder_buurt"); return; }
   const cs   = getComputedStyle(si);
   const avail = si.clientWidth
     - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight) - 6; // safety margin
@@ -3103,7 +3134,7 @@ function updateSearchPlaceholder() {
 function setupSearch() {
   const input=document.getElementById("search-input"), results=document.getElementById("search-results");
   if (!input) return;
-  input.placeholder=t("search_placeholder");
+  updateSearchPlaceholder(); // honours Policy View's neighbourhood placeholder
   let timer;
   input.addEventListener("input", () => {
     clearTimeout(timer);
@@ -3121,6 +3152,85 @@ function setupSearch() {
   }
 }
 
+// ── Neighbourhood (buurt) search + focus — Policy View ─────────────────────
+// Ray-casting point-in-polygon over the HVI buurt geometry, so "In mijn buurt"
+// and search can resolve a coordinate / name to the neighbourhood it sits in.
+function _pointInRing(lng, lat, ring) {
+  let inside = false;
+  for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) {
+    const xi = ring[i][0], yi = ring[i][1], xj = ring[j][0], yj = ring[j][1];
+    if (((yi > lat) !== (yj > lat)) && (lng < (xj - xi) * (lat - yi) / (yj - yi) + xi)) inside = !inside;
+  }
+  return inside;
+}
+function _polyContains(lng, lat, rings) {
+  if (!_pointInRing(lng, lat, rings[0])) return false;          // outside outer ring
+  for (let k = 1; k < rings.length; k++) if (_pointInRing(lng, lat, rings[k])) return false; // inside a hole
+  return true;
+}
+function _geomContains(lng, lat, geom) {
+  if (!geom) return false;
+  if (geom.type === "Polygon") return _polyContains(lng, lat, geom.coordinates);
+  if (geom.type === "MultiPolygon") return geom.coordinates.some(poly => _polyContains(lng, lat, poly));
+  return false;
+}
+function findBuurtFeatureAt(lat, lng) {
+  return (state.features.hvi || []).find(f => _geomContains(lng, lat, f.geometry)) || null;
+}
+
+/** Zoom to a buurt feature, scroll the map into view and open its detail panel. */
+function focusBuurt(feature) {
+  if (!feature || !state.map) return;
+  try {
+    const b = L.geoJSON(feature).getBounds();
+    if (b.isValid()) state.map.fitBounds(b, { maxZoom: 15, padding: [24, 24] });
+  } catch (_) { /* fall back to current view if bounds fail */ }
+  const ms = document.getElementById("map-section");
+  if (ms) ms.scrollIntoView({ behavior: "smooth" });
+  setTimeout(() => { if (state.map) state.map.invalidateSize(); }, 320);
+  if (typeof openDetailPanel === "function" && typeof renderBuurtDetail === "function") {
+    openDetailPanel(feature, renderBuurtDetail);
+  }
+  closeSidebarMobile();
+}
+
+function doBuurtSearch(qLower, results) {
+  const isNL = state.lang === "nl";
+  const matches = (state.features.hvi || [])
+    .filter(f => (f.properties?.buurtnaam || "").toLowerCase().includes(qLower))
+    .sort((a, b) => {
+      const an = a.properties.buurtnaam.toLowerCase(), bn = b.properties.buurtnaam.toLowerCase();
+      return (bn.startsWith(qLower) - an.startsWith(qLower)) || an.localeCompare(bn);
+    })
+    .slice(0, 8);
+
+  matches.forEach(f => {
+    const p = f.properties || {};
+    const tier = parseInt(p.hvi_tier);
+    const sub = [
+      tier ? `Tier ${tier}` : null,
+      p.hvi != null ? `HVI ${(p.hvi * 100).toFixed(0)}` : null,
+    ].filter(Boolean).join(" · ");
+    const el = document.createElement("div");
+    el.className = "sr-item";
+    el.innerHTML = `<div class="sr-name">${p.buurtnaam}</div><div class="sr-sub">${sub || (isNL ? "Buurt" : "Neighbourhood")}</div>`;
+    el.addEventListener("click", () => {
+      results.setAttribute("hidden", "");
+      document.getElementById("search-input").value = p.buurtnaam;
+      focusBuurt(f);
+    });
+    results.appendChild(el);
+  });
+
+  if (!matches.length) {
+    const el = document.createElement("div");
+    el.className = "sr-item";
+    el.innerHTML = `<div class="sr-name">${t("no_buurt_results")}</div>`;
+    results.appendChild(el);
+  }
+  results.removeAttribute("hidden");
+}
+
 async function doSearch(query) {
   const results = document.getElementById("search-results");
   if (!results) return;
@@ -3128,6 +3238,9 @@ async function doSearch(query) {
   results.innerHTML = "";
   const q = query.trim();
   const qLower = q.toLowerCase();
+
+  // Policy View: search neighbourhoods only (no addresses / cooling spots).
+  if (state.viewMode === "policy") { doBuurtSearch(qLower, results); return; }
 
   // Local koelteplekken matches first
   const localMatches = (state.features.koelteplekken || [])
