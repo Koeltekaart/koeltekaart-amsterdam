@@ -2,14 +2,13 @@
  * Koeltekaart Amsterdam — Main Application
  *
  * A fully client-side map showing cooling spots, parks, drinking water taps,
- * and swimming locations across Amsterdam. Location data is pulled live from
- * a published Google Sheet; no server-side code is required.
+ * and swimming locations across Amsterdam. Location data is loaded from a local
+ * static CSV (data/koeltekaart_data.csv); no server-side code is required.
  *
  * Key external dependencies (bundled in libs/):
  *   Leaflet 1.x   — interactive map
  *
  * Key external services (loaded at runtime):
- *   Google Sheets  — location data and heat-plan status
  *   Open-Meteo     — current weather data
  *   CartoDB tiles  — base map tiles
  */
@@ -58,7 +57,7 @@ function adsIcon(key, { size = 16, fill = "currentColor", cls = "" } = {}) {
 
 // ── Layer definitions ──────────────────────────────────────────────────────
 const COMMUNITY_LAYER_CATS = new Set(["koelteplekken","water_taps","parks","swimming_pools","shade"]);
-const POLICY_LAYER_CATS    = new Set(["hvi","temperature","ndvi","cooling_assets","healthcare_distance"]);
+const POLICY_LAYER_CATS    = new Set(["hvi","priority","double_disadvantage","hotspots","temperature","ndvi","cooling_assets","healthcare_distance"]);
 
 const LAYER_DEFS = [
   // Community layers
@@ -68,7 +67,10 @@ const LAYER_DEFS = [
   { cat: "swimming_pools",      label: "Swimming spots",          color: "#009de6",   src: "data/raw/zwemwater.geojson",                              type: "geojson", radius: 6 },
   { cat: "shade",               label: "Sidewalk shade",          color: "#004699",   type: "shade" },
   // Policy / analysis layers
-  { cat: "hvi",                 label: "Kwetsbaarheidskaart",     color: "#CA0020",   src: "data/hvi_map.geojson",                                    type: "choropleth" },
+  { cat: "hvi",                 label: "Kwetsbaarheidskaart",     color: "#CA0020",   src: "data/hvi_dashboard.geojson",                              type: "choropleth" },
+  { cat: "priority",            label: "Intervention priority",   color: "#bd0026",   src: "data/hvi_dashboard.geojson",                              type: "policy_overlay" },
+  { cat: "double_disadvantage", label: "Double disadvantage",     color: "#ec0000",   src: "data/hvi_dashboard.geojson",                              type: "policy_overlay" },
+  { cat: "hotspots",            label: "Hotspot clusters",        color: "#ca0020",   src: "data/hvi_dashboard.geojson",                              type: "policy_overlay" },
   { cat: "temperature",         label: "Surface Temperature",     color: "#CA0020",   src: "data/stakeholders/temp_mean.geojson",                     type: "temperature" },
   { cat: "ndvi",                label: "Vegetation Index",        color: "#00893c",   src: "data/stakeholders/ndvi.geojson",                          type: "ndvi" },
   { cat: "cooling_assets",      label: "Cooling Asset Distance",  color: "#004699",   src: "data/stakeholders/cooling_asset_distance.geojson",        type: "cooling_assets" },
@@ -76,71 +78,30 @@ const LAYER_DEFS = [
 ];
 
 // ── Data source ────────────────────────────────────────────────────────────
-// The site reads its location data + heat-plan settings from a published,
-// read-only source. It stays fully client-side: the browser fetches a public
-// URL with no credentials. Cooling-spot locations are public information, so
-// anonymous read is appropriate and safe.
+// Cooling-spot locations load from a local, static CSV shipped with the site
+// (data/koeltekaart_data.csv). The app stays fully client-side: locations are
+// public information and no external service is contacted.
 //
-// CURRENT: a published Google Sheet (CSV).
-//
-// TO MIGRATE TO MICROSOFT 365 (the planned amsterdam.nl setup):
-//   1. GGD maintains the locations in Excel / a SharePoint List, using the
-//      same columns as today (see docs/location-template.csv).
-//   2. A scheduled Power Automate flow publishes that list to a static file at
-//      a public, read-only URL on Gemeente / Azure hosting:
-//        • simplest:  export as CSV     → set type: "csv"
-//        • or:        export as GeoJSON → set type: "geojson"
-//   3. Set DATA_SOURCE.type and the two URLs below. Nothing else changes —
-//      the field mapping (_rowToFeature) and the entire app are source-agnostic.
-//
-// Source formats:
-//   csv / google-sheet — locations: same columns as the template;
-//                         settings:  two columns "key,value".
-//   geojson            — locations: FeatureCollection whose feature.properties
-//                         use the same field names as the template columns;
-//                         settings:  a flat JSON object { key: value, … }.
+// Source formats supported by the loader:
+//   csv      — same columns as data/koeltekaart_data.csv
+//   geojson  — FeatureCollection whose feature.properties use the same names
 const DATA_SOURCE = {
-  type: "google-sheet",            // "google-sheet" | "csv" | "geojson"
-
-  // Used when type === "google-sheet".
-  googleSheet: {
-    publishedId:  "2PACX-1vToR12t2LARCufEpqz2xv0An5XQqBHd1VvqBmS9k3OdlsvzUryxgmwXTpaVfIX4zMYE61DH0-ujlnqB",
-    locationsGid: "0",             // #gid of the locations tab (first tab = 0)
-    settingsGid:  "971775516",     // #gid of the settings tab
-  },
-
-  // Used when type === "csv" or "geojson" — static files published from M365.
-  locationsUrl: "",                // e.g. "data/locations.csv" or "https://…/locations.geojson"
-  settingsUrl:  "",                // e.g. "data/settings.csv"  or "https://…/settings.json"
+  type: "csv",                         // "csv" | "geojson"
+  locationsUrl: "data/koeltekaart_data.csv",
+  settingsUrl:  "",                    // optional "key,value" CSV; omitted on this build
 };
 
-/** Build a published-CSV URL for a Google Sheet tab gid. */
-function _googleSheetUrl(gid) {
-  return `https://docs.google.com/spreadsheets/d/e/${DATA_SOURCE.googleSheet.publishedId}/pub?gid=${gid}&single=true&output=csv`;
-}
-
 /** True when the configured data source has the details it needs to load. */
-function _dataReady() {
-  if (DATA_SOURCE.type === "google-sheet") {
-    const id = DATA_SOURCE.googleSheet.publishedId;
-    return !!id && !id.startsWith("PASTE_");
-  }
-  return !!DATA_SOURCE.locationsUrl;
-}
+function _dataReady() { return !!DATA_SOURCE.locationsUrl; }
 
 /** Resolve the locations request: { url, format: "csv" | "geojson" }. */
 function _locationsRequest() {
-  if (DATA_SOURCE.type === "google-sheet") {
-    return { url: _googleSheetUrl(DATA_SOURCE.googleSheet.locationsGid), format: "csv" };
-  }
   return { url: DATA_SOURCE.locationsUrl, format: DATA_SOURCE.type === "geojson" ? "geojson" : "csv" };
 }
 
-/** Resolve the settings request: { url, format: "csv" | "json" }. */
+/** Resolve the settings request, or null when no settings file is configured. */
 function _settingsRequest() {
-  if (DATA_SOURCE.type === "google-sheet") {
-    return { url: _googleSheetUrl(DATA_SOURCE.googleSheet.settingsGid), format: "csv" };
-  }
+  if (!DATA_SOURCE.settingsUrl) return null;
   return { url: DATA_SOURCE.settingsUrl, format: DATA_SOURCE.type === "geojson" ? "json" : "csv" };
 }
 
@@ -540,14 +501,15 @@ function t(key) { return TR[state.lang]?.[key] ?? TR.en[key] ?? key; }
 // to initialise state.on and to count how many layers deviate from default.
 const DEFAULT_LAYER_ON = Object.freeze({
   koelteplekken: true, water_taps: false, parks: true, swimming_pools: false, shade: false,
-  hvi: false, temperature: false, ndvi: false, cooling_assets: false, healthcare_distance: false,
+  hvi: false, priority: false, double_disadvantage: false, hotspots: false,
+  temperature: false, ndvi: false, cooling_assets: false, healthcare_distance: false,
 });
 
 const state = {
   map: null,
   layers: {},
   on: { ...DEFAULT_LAYER_ON },
-  features: { koelteplekken: [], water_taps: [], parks: [], swimming_pools: [], hvi: [], temperature: [], ndvi: [], cooling_assets: [], healthcare_distance: [] },
+  features: { koelteplekken: [], water_taps: [], parks: [], swimming_pools: [], hvi: [], priority: [], double_disadvantage: [], hotspots: [], temperature: [], ndvi: [], cooling_assets: [], healthcare_distance: [] },
   userMarker: null,
   userPos: null,
   rings: [],
@@ -558,6 +520,7 @@ const state = {
   activeCategories: new Set(),
   heatPlanActive: false,
   viewMode: localStorage.getItem("koeltekaart_view") || "community", // "community" | "policy"
+  activeOverlay: "hvi",   // the single active analysis choropleth in Policy View
   panelMode: "list",    // "list" | "detail"
   mobileView: "map",    // "map"  | "list"   — mobile only
   detailBackTo: "map",  // "map"  | "list"   — where back button returns to on mobile
@@ -651,8 +614,8 @@ function updateBannerText() {
   applyHeatPlanToMap();
 }
 
-// ── Google Sheets settings ─────────────────────────────────────────────────
-// Settings tab columns: key, value
+// ── Optional settings file (key,value CSV) ─────────────────────────────────
+// Settings columns: key, value
 // Supported keys:
 //   heat_plan_active       TRUE / FALSE
 //   category.<type>.en     English label  e.g. category.museum.en, Museum
@@ -666,8 +629,10 @@ let _settingsPromise = null;
 
 async function fetchSettings() {
   if (!_dataReady()) return;
+  const req = _settingsRequest();
+  if (!req) return;                       // no settings file configured on this build
   try {
-    const { url, format } = _settingsRequest();
+    const { url, format } = req;
     const r = await fetch(url);
     if (!r.ok) return;
     // Normalise both source formats to a list of { key, value } rows.
@@ -701,7 +666,7 @@ async function fetchSettings() {
         if (lang === "nl") AMENITY_LABELS[akey].nl = val;
       }
     });
-  } catch (_) { /* sheets may be unreachable */ }
+  } catch (_) { /* settings file may be unreachable */ }
 }
 
 function _ensureSettingsLoaded() {
@@ -996,7 +961,7 @@ function _resolvePhotoUrl(url) {
 
 /** Convert one CSV row into a GeoJSON Feature (returns null if row is invalid). */
 /**
- * Convert one Google Sheet CSV row into a GeoJSON Feature.
+ * Convert one CSV row into a GeoJSON Feature.
  * Normalises field names, parses opening hours, resolves Google Drive photo
  * URLs, and booleanises amenity columns.
  * @param {Object} row - A parsed CSV row object.
@@ -1087,8 +1052,10 @@ function _hviTierColor(tier) {
 
 function buildHviLayer(def, data) {
   state.features.hvi = data.features || [];
-  _hviStats = null;
+  _hviStats = null; _ddMed = null;
   _renderHviLayer(def, state.features.hvi);
+  // Refresh the insight panel if it is the active right-panel view
+  if (state.viewMode === "policy" && state.panelMode === "list" && isListViewActive()) renderListView();
 }
 
 function _renderHviLayer(def, features) {
@@ -1114,7 +1081,7 @@ function _renderHviLayer(def, features) {
         l.on("mouseout", () => { state.layers.hvi.resetStyle(l); HC.hide(); });
         l.on("mousemove", e => HC.move(e.originalEvent.clientX, e.originalEvent.clientY));
       }
-      l.on("click", e => { HC.hide(); L.DomEvent.stopPropagation(e); openDetailPanel(f, renderHviDetailContent); });
+      l.on("click", e => { HC.hide(); L.DomEvent.stopPropagation(e); openDetailPanel(f, renderBuurtDetail); });
     },
   });
   if (state.on.hvi) state.layers.hvi.addTo(state.map);
@@ -1347,6 +1314,84 @@ function _makeBar(value, color) {
   return wrap;
 }
 
+// ── Overlay-aware buurt detail ─────────────────────────────────────────────
+// In Policy View the click-through card adapts to the *active* analysis overlay:
+// a focused "lens" for that layer, plus a tab to the full neighbourhood profile.
+// With HVI (or in Community View) the full profile is shown directly.
+const OVERLAY_LENS_META = {
+  priority:            { nl: "Interventieprioriteit", en: "Intervention priority" },
+  double_disadvantage: { nl: "Dubbele benadeling",    en: "Double disadvantage" },
+  hotspots:            { nl: "Hotspot-cluster",        en: "Hotspot cluster" },
+};
+
+function _renderOverlayLens(p, overlay, el, isNL) {
+  const stats = _getHviStats();
+  const pct = v => (v == null ? "–" : Math.round(v * 100));
+  const nFeat = (state.features.hvi || []).length;
+  if (overlay === "priority") {
+    const ranked = (state.features.hvi || []).map(f => f.properties)
+      .filter(q => q.intervention_priority != null)
+      .sort((a, b) => b.intervention_priority - a.intervention_priority);
+    const rank = ranked.findIndex(q => q.buurtnaam === p.buurtnaam) + 1;
+    const lever = stats ? _whatIf(p, stats).slice().sort((a, b) => a.delta - b.delta)[0] : null;
+    el.innerHTML = `
+      <div class="bd-kpis">
+        <div class="bd-kpi"><span class="bd-kpi-v" style="color:#bd0026">${pct(p.intervention_priority)}</span><span class="bd-kpi-l">${isNL?"prioriteit / 100":"priority / 100"}</span></div>
+        <div class="bd-kpi"><span class="bd-kpi-v">#${rank||"–"}</span><span class="bd-kpi-l">${isNL?`van ${nFeat} buurten`:`of ${nFeat} buurten`}</span></div>
+      </div>
+      ${p.green_desert===true?`<div class="bd-flag bd-flag--gd">${isNL?"Groene woestijn — heeft zowel bomen als koelte nodig":"Green desert — needs both trees and cooling"}</div>`:""}
+      <div class="bd-line">${isNL?"Dichtstbijzijnde koelteplek":"Nearest cooling spot"}: <strong>${p.dist_koelteplek_m!=null?Math.round(p.dist_koelteplek_m)+" m":"–"}</strong></div>
+      ${lever?`<div class="bd-roi"><div class="bd-h">${isNL?"Grootste winst (ROI)":"Biggest win (ROI)"}</div>
+        <div class="bd-line">${isNL?lever.label_nl:lever.label_en}: <strong>${lever.delta} ${isNL?"HVI-punten":"HVI points"}</strong>${lever.newTier<lever.curTier?` · tier ${lever.curTier}→${lever.newTier}`:""}</div></div>`:""}`;
+  } else if (overlay === "double_disadvantage") {
+    const dd = _isDoubleDisadvantaged(p);
+    const m = _ddMedians();
+    el.innerHTML = `
+      <div class="bd-flag ${dd?"bd-flag--urgent":"bd-flag--ok"}">${dd?(isNL?"Hoge kwetsbaarheid én lage koeltoegang":"High vulnerability and low cooling access"):(isNL?"Niet in de urgente categorie":"Not in the urgent category")}</div>
+      <div class="bd-kpis">
+        <div class="bd-kpi"><span class="bd-kpi-v" style="color:#a00078">${pct(p.svi)}</span><span class="bd-kpi-l">${isNL?"sociale kwetsbaarheid":"social vulnerability"}</span></div>
+        <div class="bd-kpi"><span class="bd-kpi-v" style="color:#004699">${pct(p.cooling_access)}</span><span class="bd-kpi-l">${isNL?"koeltoegang":"cooling access"}</span></div>
+      </div>
+      <div class="bd-line bd-muted">${isNL?"Stadsmediaan":"City median"}: ${isNL?"kwetsbaarheid":"vulnerability"} ${pct(m.svi)}, ${isNL?"toegang":"access"} ${pct(m.access)}</div>`;
+  } else if (overlay === "hotspots") {
+    const s = LISA_STYLE[p.lisa];
+    const lbl = s ? (isNL ? s.label_nl : s.label_en) : (isNL ? "Niet significant" : "Not significant");
+    const expl = p.lisa === "hot-spot (HH)" ? (isNL?"Hoge kwetsbaarheid omringd door hoge kwetsbaarheid — een aaneengesloten probleemgebied, geschikt voor een gebiedsgerichte aanpak.":"High vulnerability surrounded by high vulnerability — a contiguous problem area, well-suited to an area-based programme.")
+      : p.lisa === "cold-spot (LL)" ? (isNL?"Lage kwetsbaarheid in een lage omgeving — een relatief beschermd gebied.":"Low vulnerability within low surroundings — a relatively protected area.")
+      : (isNL?"Geen statistisch significant ruimtelijk cluster.":"No statistically significant spatial cluster.");
+    el.innerHTML = `
+      <div class="bd-flag" style="background:${s?s.color+"22":"#eee"};border-left:3px solid ${s?s.color:"#bbb"}">${lbl}</div>
+      <div class="bd-line">${expl}</div>
+      <div class="bd-line bd-muted">HVI: <strong>${pct(p.hvi)}/100</strong> · tier ${p.hvi_tier||"–"}</div>`;
+  }
+}
+
+function renderBuurtDetail(feature, container) {
+  const p = feature.properties || {};
+  const isNL = state.lang === "nl";
+  const overlay = (state.viewMode === "policy" && state.activeOverlay
+                   && OVERLAY_LENS_META[state.activeOverlay]) ? state.activeOverlay : null;
+  if (!overlay) { renderHviDetailContent(feature, container); return; }   // HVI = the full profile
+
+  const body = document.createElement("div"); body.className = "detail-panel-body";
+  const hdr = document.createElement("div"); hdr.className = "hvi-dash-hdr";
+  const cat = document.createElement("div"); cat.className = "dp-cat";
+  cat.textContent = isNL ? OVERLAY_LENS_META[overlay].nl : OVERLAY_LENS_META[overlay].en;
+  const nm = document.createElement("div"); nm.className = "detail-panel-name"; nm.textContent = p.buurtnaam || "Buurt";
+  hdr.append(cat, nm); body.appendChild(hdr);
+
+  const tabs = document.createElement("div"); tabs.className = "bd-tabs";
+  const tL = document.createElement("button"); tL.className = "bd-tab on"; tL.textContent = isNL ? "Deze laag" : "This layer";
+  const tA = document.createElement("button"); tA.className = "bd-tab"; tA.textContent = isNL ? "Volledig profiel" : "Full profile";
+  tabs.append(tL, tA); body.appendChild(tabs);
+  const content = document.createElement("div"); content.className = "bd-content"; body.appendChild(content);
+  const showLens = () => { tL.classList.add("on"); tA.classList.remove("on"); content.innerHTML = ""; _renderOverlayLens(p, overlay, content, isNL); };
+  const showAll  = () => { tA.classList.add("on"); tL.classList.remove("on"); content.innerHTML = ""; renderHviDetailContent(feature, content); };
+  tL.addEventListener("click", showLens); tA.addEventListener("click", showAll);
+  showLens();
+  container.appendChild(body);
+}
+
 function renderHviDetailContent(feature, container) {
   const p = feature.properties || {};
   const tier = parseInt(p.hvi_tier) || null;
@@ -1471,6 +1516,251 @@ function renderHviDetailContent(feature, container) {
 }
 
 // ── Layer loading ──────────────────────────────────────────────────────────
+// ── Policy overlays: priority, double disadvantage, hotspot clusters ───────
+let _ddMed = null;
+function _ddMedians() {
+  if (_ddMed) return _ddMed;
+  const feats = (state.features.hvi || []).map(f => f.properties)
+    .filter(p => p.svi != null && p.cooling_access != null);
+  const med = arr => { const s = [...arr].sort((a,b)=>a-b); const m = Math.floor(s.length/2); return s.length ? (s.length%2?s[m]:(s[m-1]+s[m])/2) : 0; };
+  _ddMed = { svi: med(feats.map(p=>+p.svi)), access: med(feats.map(p=>+p.cooling_access)) };
+  return _ddMed;
+}
+function _isDoubleDisadvantaged(p) {
+  if (p.svi == null || p.cooling_access == null) return false;
+  const m = _ddMedians();
+  return +p.svi >= m.svi && +p.cooling_access < m.access;
+}
+
+function _priorityColor(v) {
+  if (!Number.isFinite(v)) return "#D1D5DB";
+  return _interpolateColor(v, 0, 1, [[255,255,178],[254,204,92],[253,141,60],[240,59,32],[189,0,38]]);
+}
+
+const LISA_STYLE = {
+  "hot-spot (HH)":   { color: "#ca0020", label_nl: "Hotspot (hoog-hoog)",  label_en: "Hot-spot (high-high)" },
+  "cold-spot (LL)":  { color: "#2166ac", label_nl: "Koudespot (laag-laag)",label_en: "Cold-spot (low-low)" },
+  "doughnut (LH)":   { color: "#ff9100", label_nl: "Laag in hoge omgeving",label_en: "Low in high surroundings" },
+  "diamond (HL)":    { color: "#a00078", label_nl: "Hoog in lage omgeving",label_en: "High in low surroundings" },
+};
+
+function _overlayStyle(cat, p) {
+  const faint = { fillColor: "#9CA3AF", fillOpacity: 0.06, color: "#fff", weight: 0.5, opacity: 0.4 };
+  if (cat === "priority") {
+    const v = Number(p.intervention_priority);
+    if (!Number.isFinite(v)) return faint;
+    return { fillColor: _priorityColor(v), fillOpacity: 0.72, color: "#fff", weight: 0.5, opacity: 0.5 };
+  }
+  if (cat === "double_disadvantage") {
+    if (_isDoubleDisadvantaged(p))
+      return { fillColor: "#ec0000", fillOpacity: 0.78, color: "#fff", weight: 0.6, opacity: 0.6 };
+    return faint;
+  }
+  if (cat === "hotspots") {
+    const s = LISA_STYLE[p.lisa];
+    if (!s) return faint;
+    return { fillColor: s.color, fillOpacity: 0.75, color: "#fff", weight: 0.5, opacity: 0.5 };
+  }
+  return faint;
+}
+
+function _overlayLabel(cat, p, isNL) {
+  if (cat === "priority")
+    return (isNL ? "Prioriteit: " : "Priority: ") + (p.intervention_priority != null ? (p.intervention_priority*100).toFixed(0) + "/100" : (isNL?"geen data":"no data"));
+  if (cat === "double_disadvantage")
+    return _isDoubleDisadvantaged(p) ? (isNL ? "Hoge kwetsbaarheid + lage toegang" : "High vulnerability + low access")
+                                     : (isNL ? "Niet dubbel benadeeld" : "Not double-disadvantaged");
+  if (cat === "hotspots") {
+    const s = LISA_STYLE[p.lisa];
+    return s ? (isNL ? s.label_nl : s.label_en) : (isNL ? "Niet significant" : "Not significant");
+  }
+  return "";
+}
+
+function buildPolicyOverlay(def, data) {
+  state.features[def.cat] = data.features || [];
+  if (!state.features.hvi?.length) { state.features.hvi = data.features || []; _hviStats = null; }
+  _ddMed = null;
+  _renderPolicyOverlay(def, state.features[def.cat]);
+}
+
+function _renderPolicyOverlay(def, features) {
+  if (state.layers[def.cat]) state.map.removeLayer(state.layers[def.cat]);
+  const cat = def.cat;
+  state.layers[cat] = L.geoJSON({ type: "FeatureCollection", features }, {
+    pane: "hviPane",
+    style: f => _overlayStyle(cat, f.properties || {}),
+    onEachFeature: (f, l) => {
+      const p = f.properties || {};
+      if (!IS_TOUCH_DEVICE) {
+        l.on("mouseover", e => {
+          l.setStyle({ fillOpacity: 0.9, weight: 1.5, color: "#333" });
+          HC.show(e.originalEvent.clientX, e.originalEvent.clientY, p.buurtnaam || "Buurt",
+                  _overlayLabel(cat, p, state.lang === "nl"), _overlayStyle(cat, p).fillColor);
+        });
+        l.on("mouseout", () => { state.layers[cat].resetStyle(l); HC.hide(); });
+        l.on("mousemove", e => HC.move(e.originalEvent.clientX, e.originalEvent.clientY));
+      }
+      l.on("click", e => { HC.hide(); L.DomEvent.stopPropagation(e); openDetailPanel(f, renderBuurtDetail); });
+    },
+  });
+  if (state.on[cat]) state.layers[cat].addTo(state.map);
+}
+
+// ── Active-overlay legend (floats over the map in Policy View) ─────────────
+function _overlayLegendSpec(cat, isNL) {
+  const T = (nl, en) => (isNL ? nl : en);
+  if (cat === "hvi") return { title: T("Kwetsbaarheidstier", "Vulnerability tier"),
+    items: HVI_TIER_COLORS.map((c, i) => ({ color: c,
+      label: ["1 " + T("laag","low"), "2", "3", "4", "5 " + T("hoog","high")][i] })) };
+  if (cat === "priority") return { title: T("Interventieprioriteit","Intervention priority"),
+    gradient: ["#ffffb2","#bd0026"], labels: [T("laag","low"), T("hoog","high")] };
+  if (cat === "double_disadvantage") return { title: T("Dubbele benadeling","Double disadvantage"),
+    items: [{ color:"#ec0000", label: T("hoge kwetsb. + lage toegang","high vuln. + low access") },
+            { color:"#e8e8e8", label: T("overig","other") }] };
+  if (cat === "hotspots") return { title: T("Hotspot-clusters","Hotspot clusters"),
+    items: Object.entries(LISA_STYLE).map(([k,v]) => ({ color: v.color, label: isNL ? v.label_nl : v.label_en })) };
+  if (cat === "temperature") return { title: T("Oppervlaktetemp.","Surface temp."),
+    gradient: ["#2166ac","#ca0020"], labels: [T("koel","cool"), T("heet","hot")] };
+  if (cat === "ndvi") return { title: "NDVI (" + T("groen","greenery") + ")",
+    gradient: ["#ffffcc","#006837"], labels: [T("kaal","bare"), T("groen","green")] };
+  if (cat === "cooling_assets") return { title: T("Afstand koelplaats","Cooling-asset distance"),
+    gradient: ["#d8f3dc","#d73027"], labels: [T("dichtbij","near"), T("ver","far")] };
+  if (cat === "healthcare_distance") return { title: T("Afstand zorg","Healthcare distance"),
+    gradient: ["#e0ecf4","#993404"], labels: [T("dichtbij","near"), T("ver","far")] };
+  return null;
+}
+
+function updateOverlayLegend() {
+  const section = document.getElementById("map-section");
+  if (!section) return;
+  let el = document.getElementById("overlay-legend");
+  if (!el) { el = document.createElement("div"); el.id = "overlay-legend"; section.appendChild(el); }
+  const show = state.viewMode === "policy" && state.activeOverlay && state.on[state.activeOverlay];
+  el.hidden = !show;
+  if (!show) return;
+  const spec = _overlayLegendSpec(state.activeOverlay, state.lang === "nl");
+  if (!spec) { el.hidden = true; return; }
+  let body = "";
+  if (spec.items) {
+    body = spec.items.map(it => `<div class="ol-row"><span class="ol-sw" style="background:${it.color}"></span>${it.label}</div>`).join("");
+  } else if (spec.gradient) {
+    body = `<div class="ol-grad" style="background:linear-gradient(90deg,${spec.gradient[0]},${spec.gradient[1]})"></div>`
+         + `<div class="ol-grad-lbl"><span>${spec.labels[0]}</span><span>${spec.labels[1]}</span></div>`;
+  }
+  el.innerHTML = `<div class="ol-title">${spec.title}</div>${body}`;
+}
+
+// ── Policy insight panel (right panel default in policy mode) ──────────────
+function _renderTierChart(canvasId, counts, isNL) {
+  _destroyChart(canvasId);
+  const ctx = document.getElementById(canvasId)?.getContext("2d");
+  if (!ctx || typeof Chart === "undefined") return;
+  const labels = isNL ? ["1 Laag","2","3","4","5 Hoog"] : ["1 Low","2","3","4","5 High"];
+  _charts[canvasId] = new Chart(ctx, {
+    type: "bar",
+    data: { labels, datasets: [{ data: counts, backgroundColor: HVI_TIER_COLORS, borderRadius: 3 }] },
+    options: { responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false }, tooltip: { callbacks: { title: c => (isNL?"Tier ":"Tier ") + c[0].label, label: c => `${c.parsed.y} ${isNL?"buurten":"neighbourhoods"}` } } },
+      scales: { x: { grid: { display: false }, ticks: { font: { size: 9 } } },
+                y: { grid: { color: "rgba(0,0,0,0.06)" }, ticks: { font: { size: 9 }, precision: 0 } } } },
+  });
+}
+
+function _renderQuadrantChart(canvasId, feats, isNL) {
+  _destroyChart(canvasId);
+  const ctx = document.getElementById(canvasId)?.getContext("2d");
+  if (!ctx || typeof Chart === "undefined") return;
+  const m = _ddMedians();
+  const pts = feats.filter(p => p.svi != null && p.cooling_access != null)
+    .map(p => ({ x: +p.svi, y: +p.cooling_access, dd: _isDoubleDisadvantaged(p) }));
+  _charts[canvasId] = new Chart(ctx, {
+    type: "scatter",
+    data: { datasets: [
+      { label: isNL ? "Dubbel benadeeld" : "Double disadvantage",
+        data: pts.filter(p=>p.dd), backgroundColor: "#ec0000", pointRadius: 3 },
+      { label: isNL ? "Overige buurten" : "Other neighbourhoods",
+        data: pts.filter(p=>!p.dd), backgroundColor: "rgba(0,70,153,0.30)", pointRadius: 2.5 },
+    ]},
+    options: { responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { position: "bottom", labels: { font: { size: 9 }, boxWidth: 9, padding: 6 } },
+                 tooltip: { enabled: false } },
+      scales: { x: { title: { display: true, text: isNL ? "Sociale kwetsbaarheid →" : "Social vulnerability →", font: { size: 9 } }, ticks: { font: { size: 8 } }, grid: { color: "rgba(0,0,0,0.06)" } },
+                y: { title: { display: true, text: isNL ? "Koeltoegang →" : "Cooling access →", font: { size: 9 } }, ticks: { font: { size: 8 } }, grid: { color: "rgba(0,0,0,0.06)" } } } },
+  });
+}
+
+function renderPolicyInsightPanel(inner) {
+  const isNL = state.lang === "nl";
+  const feats = (state.features.hvi || []).map(f => f.properties);
+  const withHvi = feats.filter(p => p.hvi != null);
+  if (!withHvi.length) {
+    inner.innerHTML = `<div class="lv-empty"><div class="lv-empty-title">${isNL?"Analysegegevens laden…":"Loading analysis…"}</div></div>`;
+    return;
+  }
+  const tierCounts = [1,2,3,4,5].map(t => withHvi.filter(p => parseInt(p.hvi_tier) === t).length);
+  const priority45 = tierCounts[3] + tierCounts[4];
+  const ddCount = feats.filter(_isDoubleDisadvantaged).length;
+  const greenDeserts = feats.filter(p => p.green_desert === true || p.green_desert === "True").length;
+  const medHvi = [...withHvi.map(p=>+p.hvi)].sort((a,b)=>a-b)[Math.floor(withHvi.length/2)];
+  const shelterGap = feats.filter(p => parseInt(p.hvi_tier) >= 4 && Number(p.dist_koelteplek_m) > 1000).length;
+  const topPriority = [...feats].filter(p => p.intervention_priority != null)
+    .sort((a,b) => b.intervention_priority - a.intervention_priority).slice(0, 10);
+
+  const kpi = (val, label, color) =>
+    `<div class="pi-kpi"><div class="pi-kpi-val" style="color:${color}">${val}</div><div class="pi-kpi-lbl">${label}</div></div>`;
+
+  inner.innerHTML = `
+    <div class="pi-wrap">
+      <p class="pi-intro">${isNL
+        ? "Stadsbreed overzicht van hittekwetsbaarheid. Klik een buurt op de kaart voor details, of schakel analyselagen in de zijbalk in."
+        : "City-wide overview of heat vulnerability. Click a neighbourhood on the map for details, or toggle analysis layers in the sidebar."}</p>
+      <div class="pi-kpi-grid">
+        ${kpi(priority45, isNL?"Prioriteitsbuurten (tier 4–5)":"Priority neighbourhoods (tier 4–5)", "#ca0020")}
+        ${kpi(ddCount, isNL?"Dubbel benadeeld":"Double-disadvantaged", "#ec0000")}
+        ${kpi(greenDeserts, isNL?"Groene woestijnen":"Green deserts", "#00893c")}
+        ${kpi((medHvi*100).toFixed(0), isNL?"Mediane HVI / 100":"Median HVI / 100", "#004699")}
+      </div>
+      <div class="pi-note">${isNL
+        ? `<strong>${shelterGap}</strong> kwetsbare buurten (tier 4–5) liggen verder dan 1 km van een koelteplek.`
+        : `<strong>${shelterGap}</strong> vulnerable neighbourhoods (tier 4–5) sit more than 1 km from any cooling spot.`}</div>
+
+      <div class="pi-section">
+        <div class="pi-h">${isNL?"Verdeling kwetsbaarheidstiers":"Vulnerability tier distribution"}</div>
+        <div class="pi-chart"><canvas id="pi-tier-chart"></canvas></div>
+      </div>
+
+      <div class="pi-section">
+        <div class="pi-h">${isNL?"Dubbele benadeling":"Double disadvantage"}</div>
+        <div class="pi-sub">${isNL?"Hoge sociale kwetsbaarheid én lage koeltoegang (rood)":"High social vulnerability and low cooling access (red)"}</div>
+        <div class="pi-chart"><canvas id="pi-quad-chart"></canvas></div>
+      </div>
+
+      <div class="pi-section">
+        <div class="pi-h">${isNL?"Top-10 interventieprioriteit":"Top-10 intervention priority"}</div>
+        <div class="pi-sub">${isNL?"Grootste verwachte baat van koelmaatregelen":"Greatest expected benefit from cooling measures"}</div>
+        <ol class="pi-rank" id="pi-rank-list"></ol>
+      </div>
+    </div>`;
+
+  _renderTierChart("pi-tier-chart", tierCounts, isNL);
+  _renderQuadrantChart("pi-quad-chart", feats, isNL);
+
+  const list = inner.querySelector("#pi-rank-list");
+  const featByName = new Map((state.features.hvi || []).map(f => [f.properties.buurtnaam, f]));
+  topPriority.forEach(p => {
+    const li = document.createElement("li"); li.className = "pi-rank-item"; li.tabIndex = 0;
+    li.innerHTML = `<span class="pi-rank-dot" style="background:${_hviTierColor(p.hvi_tier)}"></span>
+      <span class="pi-rank-name">${p.buurtnaam}</span>
+      ${p.green_desert === true ? `<span class="pi-tag pi-tag--gd">${isNL?"groene woestijn":"green desert"}</span>` : ""}
+      <span class="pi-rank-score">${(p.intervention_priority*100).toFixed(0)}</span>`;
+    const open = () => { const f = featByName.get(p.buurtnaam); if (f) openDetailPanel(f, renderBuurtDetail); };
+    li.addEventListener("click", open);
+    li.addEventListener("keydown", e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); open(); } });
+    list.appendChild(li);
+  });
+}
+
 function loadAllLayers() {
   LAYER_DEFS.forEach(def => {
     setLoading(true);
@@ -1484,6 +1774,8 @@ function loadAllLayers() {
       fetch(def.src).then(r=>r.json()).then(data=>buildHviLayer(def,data)).catch(e=>console.error(def.cat,e)).finally(()=>setLoading(false));
     } else if (def.type === "temperature") {
       fetch(def.src).then(r=>r.json()).then(data=>buildTemperatureLayer(def,data)).catch(e=>console.error(def.cat,e)).finally(()=>setLoading(false));
+    } else if (def.type === "policy_overlay") {
+      fetch(def.src).then(r=>r.json()).then(data=>buildPolicyOverlay(def,data)).catch(e=>console.error(def.cat,e)).finally(()=>setLoading(false));
     } else if (def.type === "ndvi" || def.type === "cooling_assets" || def.type === "healthcare_distance") {
       fetch(def.src).then(r=>r.json()).then(data=>buildStakeholderLayer(def,data)).catch(e=>console.error(def.cat,e)).finally(()=>setLoading(false));
     } else {
@@ -1860,19 +2152,30 @@ function _applyViewMode(mode) {
   document.body.classList.toggle("view-community", mode === "community");
   document.body.classList.toggle("view-policy",    mode === "policy");
 
-  // Show/hide layers based on mode
+  // In Policy View, ensure exactly one analysis overlay is on so the map is never blank.
+  if (mode === "policy") {
+    const anyOn = [...POLICY_CHOROPLETH].some(c => state.on[c]);
+    if (!anyOn) { state.activeOverlay = state.activeOverlay || "hvi"; state.on[state.activeOverlay] = true; }
+  }
+
+  // Show/hide layers based on mode. Cooling spots (koelteplekken) are useful
+  // context in BOTH views, so they are exempt from the community/policy split.
   LAYER_DEFS.forEach(def => {
-    const isCommunity = COMMUNITY_LAYER_CATS.has(def.cat);
-    const isPolicy    = POLICY_LAYER_CATS.has(def.cat);
     if (!state.layers[def.cat]) return;
-    if (mode === "community") {
-      if (isCommunity && state.on[def.cat]) state.map.addLayer(state.layers[def.cat]);
-      if (isPolicy) state.map.removeLayer(state.layers[def.cat]);
-    } else {
-      if (isPolicy    && state.on[def.cat]) state.map.addLayer(state.layers[def.cat]);
-      if (isCommunity) state.map.removeLayer(state.layers[def.cat]);
-    }
+    const both = def.cat === "koelteplekken";
+    const allowed = both || (mode === "community"
+      ? COMMUNITY_LAYER_CATS.has(def.cat)
+      : POLICY_LAYER_CATS.has(def.cat));
+    if (allowed && state.on[def.cat]) state.map.addLayer(state.layers[def.cat]);
+    else state.map.removeLayer(state.layers[def.cat]);
   });
+  // Sync sidebar row UI for whichever analysis overlay is active.
+  if (mode === "policy" && state.activeOverlay) {
+    document.querySelectorAll(`.layer-row[data-cat="${state.activeOverlay}"]`).forEach(r => {
+      if (state.on[state.activeOverlay]) { r.classList.add("on"); r.setAttribute("aria-checked", "true"); }
+    });
+  }
+  updateOverlayLegend();
 
   // Update dropdown button label
   const viewLabel = document.getElementById("view-mode-label");
@@ -1886,6 +2189,17 @@ function _applyViewMode(mode) {
   // Show/hide relevant sidebar sections
   document.querySelectorAll(".sidebar-community-section").forEach(el => el.classList.toggle("hidden-view", mode === "policy"));
   document.querySelectorAll(".sidebar-policy-section").forEach(el => el.classList.toggle("hidden-view", mode === "community"));
+
+  // Methodology explainer above the map (policy view only)
+  const pm = document.getElementById("policy-methodology");
+  if (pm) { pm.hidden = mode !== "policy"; pm.classList.toggle("hidden-view", mode !== "policy"); }
+
+  // Re-render the right panel for the new mode (community list <-> policy insight)
+  if (state.panelMode === "detail") exitDetailMode();
+  else if (typeof renderListView === "function") renderListView();
+
+  // The methodology banner changes the map height in policy view.
+  if (state.map) setTimeout(() => state.map.invalidateSize(), 60);
 }
 
 function setupModeToggle() {
@@ -1911,26 +2225,66 @@ function setupModeToggle() {
       document.body.classList.toggle("mode-user", btn.dataset.mode === "user");
     });
   });
+
+  // Methodology banner collapse/expand
+  const pmToggle = document.getElementById("pm-toggle");
+  const pm = document.getElementById("policy-methodology");
+  if (pmToggle && pm) {
+    pmToggle.addEventListener("click", () => {
+      const collapsed = pm.classList.toggle("pm-collapsed");
+      pmToggle.setAttribute("aria-expanded", String(!collapsed));
+      pmToggle.innerHTML = collapsed
+        ? '<span class="lang-nl">Tonen</span><span class="lang-en">Show</span>'
+        : '<span class="lang-nl">Verbergen</span><span class="lang-en">Hide</span>';
+      if (state.map) setTimeout(() => state.map.invalidateSize(), 250);
+    });
+  }
 }
 
 // ── Layer toggles ──────────────────────────────────────────────────────────
+// Buurt-fill analysis overlays are mutually exclusive — only one can colour the
+// map at a time (otherwise the semi-transparent fills stack into mush). Point /
+// context layers (cooling spots) are free to overlay on top of whichever is active.
+const POLICY_CHOROPLETH = new Set(["hvi","priority","double_disadvantage","hotspots",
+                                   "temperature","ndvi","cooling_assets","healthcare_distance"]);
+
+/** Set a layer on/off and sync its sidebar row UI + the map. */
+function setLayerOn(cat, on) {
+  state.on[cat] = on;
+  document.querySelectorAll(`.layer-row[data-cat="${cat}"]`).forEach(row => {
+    row.classList.toggle("on", on); row.setAttribute("aria-checked", String(on));
+  });
+  if (cat === "shade") {
+    const sl = document.getElementById("shade-legend"); if (sl) sl.hidden = !on;
+    if (on) _renderShadeLayer();
+    else if (state.layers.shade) state.map.removeLayer(state.layers.shade);
+    return;
+  }
+  if (!state.layers[cat]) return;
+  if (on) state.map.addLayer(state.layers[cat]);
+  else    state.map.removeLayer(state.layers[cat]);
+}
+
 function setupToggles() {
   document.querySelectorAll(".layer-row[data-cat]").forEach(row => {
     row.addEventListener("click", () => {
-      const cat=row.dataset.cat, on=row.classList.toggle("on");
-      row.setAttribute("aria-checked",String(on));
-      state.on[cat]=on;
-      refreshListIfActive();
-      if (cat === "shade") {
-        const shadeLegend = document.getElementById("shade-legend");
-        if (shadeLegend) shadeLegend.hidden = !on;
-        if (on) _renderShadeLayer();
-        else if (state.layers.shade) state.map.removeLayer(state.layers.shade);
-        return;
+      const cat = row.dataset.cat;
+      const turningOn = !row.classList.contains("on");
+
+      if (POLICY_CHOROPLETH.has(cat)) {
+        if (turningOn) {
+          // Radio behaviour: switch off any other active analysis overlay first.
+          POLICY_CHOROPLETH.forEach(other => { if (other !== cat && state.on[other]) setLayerOn(other, false); });
+          state.activeOverlay = cat;
+        } else if (state.activeOverlay === cat) {
+          state.activeOverlay = null;
+        }
+        updateOverlayLegend();
       }
-      if (!state.layers[cat]) return;
-      if (on) state.map.addLayer(state.layers[cat]);
-      else    state.map.removeLayer(state.layers[cat]);
+
+      setLayerOn(cat, turningOn);
+      refreshListIfActive();
+      rerenderCurrentDetailPanel();   // keep an open detail card in sync with the active overlay
     });
   });
 }
@@ -3041,6 +3395,17 @@ function renderListView() {
   const inner = document.getElementById("list-view-inner");
   if (!inner) return;
   inner.innerHTML = "";
+
+  // Policy mode: the right panel is a city-wide insight dashboard, not a location list.
+  if (state.viewMode === "policy") {
+    const isNL = state.lang === "nl";
+    const titleEl = document.getElementById("panel-hdr-title");
+    const countEl = document.getElementById("panel-hdr-count");
+    if (titleEl) titleEl.textContent = isNL ? "Beleidsoverzicht" : "Policy overview";
+    if (countEl) countEl.textContent = isNL ? "Hittekwetsbaarheid Amsterdam" : "Amsterdam heat vulnerability";
+    renderPolicyInsightPanel(inner);
+    return;
+  }
 
   const items = getListItems();
 

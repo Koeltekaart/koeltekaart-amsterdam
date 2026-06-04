@@ -236,6 +236,53 @@
     </div>
   </div>
 
+  <!-- Policy view: methodology explainer above the map -->
+  <div id="policy-methodology" class="hidden-view" hidden>
+    <div class="pm-bar">
+      <div class="pm-bar-title">
+        <span class="lang-nl">Hittekwetsbaarheid in Amsterdam — methodologie</span>
+        <span class="lang-en">Heat vulnerability in Amsterdam — methodology</span>
+      </div>
+      <button id="pm-toggle" class="pm-toggle" aria-expanded="true">
+        <span class="lang-nl">Verbergen</span><span class="lang-en">Hide</span>
+      </button>
+    </div>
+    <div class="pm-body" id="pm-body">
+      <p class="pm-lead">
+        <span class="lang-nl">Deze kaart combineert hitteblootstelling, sociale kwetsbaarheid en toegang tot
+          verkoeling tot één <strong>Hittekwetsbaarheidsindex (HVI)</strong> per buurt, zodat beleidsmakers kunnen
+          zien wáár de meest kwetsbare bewoners de minste verkoeling hebben — en welke maatregelen het meeste opleveren.</span>
+        <span class="lang-en">This map combines heat exposure, social vulnerability and access to cooling into a single
+          <strong>Heat Vulnerability Index (HVI)</strong> per neighbourhood, so policymakers can see <em>where</em> the most
+          vulnerable residents have the least relief — and which measures deliver the most benefit.</span>
+      </p>
+      <div class="pm-grid">
+        <div class="pm-card">
+          <div class="pm-card-h"><span class="lang-nl">De index</span><span class="lang-en">The index</span></div>
+          <div class="pm-formula">HVI = 0.40·<span class="pm-h">heat</span> + 0.40·<span class="pm-s">social</span> + 0.20·<span class="pm-a">low&nbsp;access</span></div>
+          <p class="pm-card-p">
+            <span class="lang-nl">Gelijk gewogen hitte en sociale kwetsbaarheid, met koeltoegang als secundaire, beïnvloedbare factor. De ranglijst blijft stabiel bij ±10% andere gewichten.</span>
+            <span class="lang-en">Heat and social vulnerability weighted equally, with cooling access as a secondary, modifiable factor. The ranking is stable under ±10% reweighting.</span>
+          </p>
+        </div>
+        <div class="pm-card">
+          <div class="pm-card-h"><span class="lang-nl">Gegevens</span><span class="lang-en">Data</span></div>
+          <p class="pm-card-p">
+            <span class="lang-nl">Landsat-oppervlaktetemperatuur, het officiële Klimaatrisicokaarten-hitterisico, CBS-buurtcijfers 2022 (vergrijzing, eenpersoonshuishoudens, migratieachtergrond, laag inkomen) en ±322.000 stadsbomen.</span>
+            <span class="lang-en">Landsat surface temperature, the city's official Klimaatrisicokaarten heat-risk score, CBS 2022 neighbourhood statistics (ageing, single-person households, migration background, low income) and ≈322,000 street trees.</span>
+          </p>
+        </div>
+        <div class="pm-card">
+          <div class="pm-card-h"><span class="lang-nl">Tiers &amp; lagen</span><span class="lang-en">Tiers &amp; layers</span></div>
+          <p class="pm-card-p">
+            <span class="lang-nl">Buurten zijn in vijf tiers verdeeld via <em>natural breaks</em> (geen gelijke groepen, maar echte breekpunten). Zet links één analyselaag tegelijk aan; koelteplekken kunnen er overheen.</span>
+            <span class="lang-en">Neighbourhoods are split into five tiers by <em>natural breaks</em> (real gaps, not equal-sized groups). Toggle one analysis layer at a time on the left; cooling spots can overlay on top.</span>
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- ── Map section (flex:1 inside wrapper) ────────────────────────────── -->
   <div id="map-section">
     
@@ -407,6 +454,21 @@
             <span class="l-name"><span class="lang-nl">Kwetsbaarheidskaart</span><span class="lang-en">Vulnerability Index</span></span>
             <span class="l-sw" aria-hidden="true"></span>
           </div>
+          <div class="layer-row" data-cat="priority" role="switch" aria-checked="false" tabindex="0">
+            <span class="l-dot" style="background:linear-gradient(135deg,#ffffb2,#bd0026);"></span>
+            <span class="l-name"><span class="lang-nl">Interventieprioriteit</span><span class="lang-en">Intervention priority</span></span>
+            <span class="l-sw" aria-hidden="true"></span>
+          </div>
+          <div class="layer-row" data-cat="double_disadvantage" role="switch" aria-checked="false" tabindex="0">
+            <span class="l-dot" style="background:#ec0000;"></span>
+            <span class="l-name"><span class="lang-nl">Dubbele benadeling</span><span class="lang-en">Double disadvantage</span></span>
+            <span class="l-sw" aria-hidden="true"></span>
+          </div>
+          <div class="layer-row" data-cat="hotspots" role="switch" aria-checked="false" tabindex="0">
+            <span class="l-dot" style="background:linear-gradient(135deg,#2166ac,#ca0020);"></span>
+            <span class="l-name"><span class="lang-nl">Hotspot-clusters</span><span class="lang-en">Hotspot clusters</span></span>
+            <span class="l-sw" aria-hidden="true"></span>
+          </div>
           <div class="layer-row" data-cat="temperature" role="switch" aria-checked="false" tabindex="0">
             <span class="l-dot" style="background:linear-gradient(135deg,#009de6,#CA0020);"></span>
             <span class="l-name"><span class="lang-nl">Oppervlaktetemperatuur</span><span class="lang-en">Surface Temperature</span></span>
@@ -425,6 +487,21 @@
           <div class="layer-row" data-cat="healthcare_distance" role="switch" aria-checked="false" tabindex="0">
             <span class="l-dot" style="background:#a00078;"></span>
             <span class="l-name"><span class="lang-nl">Afstand gezondheidszorg</span><span class="lang-en">Healthcare Distance</span></span>
+            <span class="l-sw" aria-hidden="true"></span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Policy view: context layers (can overlay on top of an analysis layer) -->
+      <div class="filter-group filter-group--static sidebar-policy-section hidden-view">
+        <div class="filter-group-label">
+          <span class="lang-nl">Context</span>
+          <span class="lang-en">Context</span>
+        </div>
+        <div class="filter-group-body">
+          <div class="layer-row" data-cat="koelteplekken" role="switch" aria-checked="false" tabindex="0">
+            <span class="l-dot" style="background:#004699;"></span>
+            <span class="l-name"><span class="lang-nl">Koelteplekken</span><span class="lang-en">Cooling spots</span></span>
             <span class="l-sw" aria-hidden="true"></span>
           </div>
         </div>

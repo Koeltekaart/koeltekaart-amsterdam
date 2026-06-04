@@ -2137,3 +2137,112 @@ html[lang="en"] img.lang-en { display: block; }
 .hvi-sim-name  { flex: 1; font-size: 12px; color: var(--text, #202020); }
 .hvi-sim-score { font-size: 11.5px; font-weight: 600; color: var(--muted, #767676); flex-shrink: 0; }
 
+
+/* ── Policy insight panel (right panel in Policy View) ───────────────────── */
+.pi-wrap { padding: 16px 18px 32px; }
+.pi-intro { font-size: 13px; line-height: 1.55; color: var(--muted, #767676); margin: 0 0 16px; }
+.pi-kpi-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.pi-kpi {
+  background: var(--surface, #f5f5f5); border: 1px solid rgba(0,0,0,0.07);
+  border-radius: 10px; padding: 12px 14px;
+}
+.pi-kpi-val { font-size: 28px; font-weight: 800; line-height: 1.05; letter-spacing: -0.02em; }
+.pi-kpi-lbl { font-size: 11.5px; line-height: 1.35; color: var(--muted, #767676); margin-top: 4px; }
+.pi-note {
+  margin: 14px 0 4px; padding: 11px 13px; border-radius: 10px;
+  background: rgba(236,0,0,0.06); border-left: 3px solid #ec0000;
+  font-size: 12.5px; line-height: 1.5; color: var(--text, #202020);
+}
+.pi-note strong { font-weight: 800; color: #ec0000; }
+.pi-section { margin-top: 22px; }
+.pi-h { font-size: 14px; font-weight: 700; color: var(--text, #202020); margin-bottom: 2px; }
+.pi-sub { font-size: 11.5px; color: var(--muted, #767676); margin-bottom: 10px; line-height: 1.4; }
+.pi-chart { position: relative; height: 180px; }
+.pi-rank { list-style: none; margin: 0; padding: 0; counter-reset: pirank; }
+.pi-rank-item {
+  display: flex; align-items: center; gap: 9px; padding: 8px 6px;
+  border-bottom: 1px solid rgba(0,0,0,0.06); cursor: pointer; border-radius: 6px;
+}
+.pi-rank-item:hover, .pi-rank-item:focus-visible { background: var(--surface, #f5f5f5); outline: none; }
+.pi-rank-item::before {
+  counter-increment: pirank; content: counter(pirank);
+  font-size: 11px; font-weight: 700; color: var(--muted, #767676);
+  width: 18px; text-align: right; flex-shrink: 0;
+}
+.pi-rank-dot { width: 11px; height: 11px; border-radius: 3px; flex-shrink: 0; }
+.pi-rank-name { flex: 1; font-size: 13px; color: var(--text, #202020); }
+.pi-rank-score { font-size: 13px; font-weight: 800; color: #ca0020; flex-shrink: 0; }
+.pi-tag { font-size: 9.5px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.03em;
+  padding: 2px 6px; border-radius: 999px; flex-shrink: 0; }
+.pi-tag--gd { background: rgba(0,137,60,0.12); color: #00893c; }
+
+/* ── Policy methodology banner (above the map in Policy View) ────────────── */
+#policy-methodology {
+  background: #fff; border-bottom: 1px solid rgba(0,0,0,0.10);
+  flex-shrink: 0; max-height: 42vh; overflow: auto;
+}
+#policy-methodology.pm-collapsed { max-height: none; overflow: visible; }
+.pm-bar {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 12px; padding: 10px 20px; background: var(--ams-blue, #004699); color: #fff;
+  position: sticky; top: 0; z-index: 2;
+}
+.pm-bar-title { font-weight: 800; font-size: 15px; letter-spacing: -0.01em; }
+.pm-toggle {
+  background: rgba(255,255,255,0.16); color: #fff; border: none; cursor: pointer;
+  font: inherit; font-size: 13px; font-weight: 700; padding: 5px 12px; border-radius: 999px;
+}
+.pm-toggle:hover { background: rgba(255,255,255,0.28); }
+.pm-collapsed .pm-body { display: none; }
+.pm-body { padding: 16px 20px 20px; }
+.pm-lead { font-size: 14.5px; line-height: 1.55; color: var(--text, #202020); margin: 0 0 14px; max-width: 70ch; }
+.pm-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 14px; }
+.pm-card { background: var(--surface, #f5f5f5); border: 1px solid rgba(0,0,0,0.07); border-radius: 10px; padding: 13px 15px; }
+.pm-card-h { font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.04em; color: var(--muted, #767676); margin-bottom: 7px; }
+.pm-formula { font-size: 14px; font-weight: 700; color: var(--text, #202020); margin-bottom: 8px; }
+.pm-formula .pm-h { color: #ec0000; } .pm-formula .pm-s { color: #a00078; } .pm-formula .pm-a { color: #004699; }
+.pm-card-p { font-size: 13px; line-height: 1.5; color: var(--text, #202020); margin: 0; }
+
+/* ── Active-overlay legend (floats over the map) ─────────────────────────── */
+#overlay-legend {
+  position: absolute; left: 12px; bottom: 22px; z-index: 500;
+  background: rgba(255,255,255,0.96); border: 1px solid rgba(0,0,0,0.10);
+  border-radius: 10px; padding: 10px 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.12);
+  font-size: 12px; max-width: 220px;
+}
+.ol-title { font-weight: 800; font-size: 11.5px; margin-bottom: 6px; color: var(--text, #202020); }
+.ol-row { display: flex; align-items: center; gap: 7px; line-height: 1.5; color: var(--text, #202020); }
+.ol-sw { width: 13px; height: 13px; border-radius: 3px; flex-shrink: 0; }
+.ol-grad { height: 12px; border-radius: 3px; margin-top: 2px; }
+.ol-grad-lbl { display: flex; justify-content: space-between; font-size: 10.5px; color: var(--muted, #767676); margin-top: 3px; }
+
+/* ── Overlay-aware buurt detail (lens + tabs) ───────────────────────────── */
+.bd-tabs { display: flex; gap: 6px; margin: 4px 0 14px; }
+.bd-tab {
+  flex: 1; background: var(--surface, #f5f5f5); border: 1px solid rgba(0,0,0,0.08);
+  border-radius: 999px; padding: 6px 10px; font: inherit; font-size: 12.5px; font-weight: 700;
+  color: var(--muted, #767676); cursor: pointer;
+}
+.bd-tab.on { background: var(--ams-blue, #004699); border-color: var(--ams-blue, #004699); color: #fff; }
+.bd-content { display: block; }
+.bd-kpis { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px; }
+.bd-kpi { background: var(--surface, #f5f5f5); border: 1px solid rgba(0,0,0,0.07); border-radius: 10px; padding: 11px 13px; }
+.bd-kpi-v { display: block; font-size: 25px; font-weight: 800; line-height: 1.05; letter-spacing: -0.02em; }
+.bd-kpi-l { display: block; font-size: 11px; color: var(--muted, #767676); margin-top: 3px; line-height: 1.3; }
+.bd-flag { font-size: 13px; font-weight: 600; padding: 9px 12px; border-radius: 8px; margin-bottom: 12px; line-height: 1.4; }
+.bd-flag--gd { background: rgba(0,137,60,0.10); color: #00893c; border-left: 3px solid #00893c; }
+.bd-flag--urgent { background: rgba(236,0,0,0.08); color: #ec0000; border-left: 3px solid #ec0000; }
+.bd-flag--ok { background: var(--surface, #f5f5f5); color: var(--muted, #767676); border-left: 3px solid #cbd5e1; }
+.bd-line { font-size: 13.5px; line-height: 1.5; color: var(--text, #202020); margin-bottom: 8px; }
+.bd-muted { color: var(--muted, #767676); font-size: 12.5px; }
+.bd-roi { margin-top: 12px; padding: 11px 13px; border-radius: 10px; background: rgba(0,70,153,0.05); border-left: 3px solid #004699; }
+.bd-h { font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.04em; color: var(--muted, #767676); margin-bottom: 5px; }
+
+/* Methodology banner adds a row to the map/contact grid; pin each child to an
+   explicit row so the map keeps the 1fr track (and the banner row collapses to
+   0 when the banner is hidden in Community View). */
+#map-contact-wrap { grid-template-rows: auto auto 1fr auto; }
+#heat-banner        { grid-row: 1; }
+#policy-methodology { grid-row: 2; }
+#map-section        { grid-row: 3; }
+#contact-footer     { grid-row: 4; }
