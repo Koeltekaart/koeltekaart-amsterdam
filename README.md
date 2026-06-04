@@ -82,13 +82,18 @@ the basemap, search and weather widget require an internet connection.
 ## Run it
 
 **Website** — any static server from the `frontend/` folder:
-
+for mac user:
 ```bash
 cd frontend
 python3 -m http.server 8000
 # open http://localhost:8000
 ```
-
+for windows user:
+```bash
+cd frontend
+python3 -m http.server 8000
+# open http://localhost:8000
+```
 Deep-link a view with `?view=policy` or `?view=community`.
 
 **Analysis pipeline** — regenerates `hvi_dashboard.geojson` and all figures:
@@ -118,10 +123,3 @@ Data_analysis/         Reproducible analysis
   inputs/  outputs/    Source tables and generated scores/figures
 ```
 
-## Submission packaging
-
-- **Canvas (code ZIP):** `frontend/` + `Data_analysis/` **excluding** `inputs/trees_raw.json` (273 MB).
-  The derived tree columns are already in `ams_features.csv`, so the notebook runs without it for every
-  step except the from-scratch tree spatial join.
-- **SURF File Sender:** `trees_raw.json` (appendix dataset for full reproduction) and the video
-  walkthrough. Reference both in the Canvas submission comment.
