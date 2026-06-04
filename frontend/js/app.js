@@ -297,6 +297,8 @@ const TR = {
     banner_active_short: "Hitteplan actief — koelteplekken open",
     banner_inactive: "Geen hitteplan actief - locaties worden niet als koelteplek ingezet",
     banner_inactive_short: "Geen hitteplan actief",
+    heatplan_btn_activate: "Hitteplan aanzetten",
+    heatplan_btn_deactivate: "Hitteplan uitzetten",
     banner_toggle: "Wijzig status",
     open_now: "Open",
     closed_now: "Gesloten",
@@ -423,6 +425,8 @@ const TR = {
     banner_active_short: "Heat Plan active — cooling spots open",
     banner_inactive: "No heat plan active — locations are not available as cooling spots",
     banner_inactive_short: "No heat plan active",
+    heatplan_btn_activate: "Turn on heat plan",
+    heatplan_btn_deactivate: "Turn off heat plan",
     banner_toggle: "Toggle status",
     open_now: "Open now",
     closed_now: "Closed",
@@ -523,7 +527,9 @@ const state = {
   lang: localStorage.getItem("koeltekaart_lang") || "nl",
   activeCategories: new Set(),
   heatPlanActive: false,
-  viewMode: localStorage.getItem("koeltekaart_view") || "community", // "community" | "policy"
+  viewMode: (new URLSearchParams(location.search).get("view") === "policy" ? "policy"
+            : new URLSearchParams(location.search).get("view") === "community" ? "community"
+            : localStorage.getItem("koeltekaart_view")) || "community", // "community" | "policy" (?view= deep-links)
   activeOverlay: "hvi",   // the single active analysis choropleth in Policy View
   panelMode: "list",    // "list" | "detail"
   mobileView: "map",    // "map"  | "list"   — mobile only
@@ -577,6 +583,7 @@ function applyLanguage() {
     if (def) btn.textContent = state.lang === "nl" ? def.label_nl : def.label_en;
   });
   updateBannerText();
+  if (state.viewMode === "policy") buildPolicyViewNav();
   rebuildFilterChips();
   rebuildSwimmingPoolChips();
   renderMobileFilterBar();
@@ -588,7 +595,9 @@ function applyLanguage() {
 }
 
 function setupLang() {
-  document.getElementById("btn-lang").addEventListener("click", () => {
+  const btn = document.getElementById("btn-lang");
+  if (!btn) return;
+  btn.addEventListener("click", () => {
     state.lang = state.lang === "nl" ? "en" : "nl";
     localStorage.setItem("koeltekaart_lang", state.lang);
     applyLanguage();
@@ -615,7 +624,41 @@ function updateBannerText() {
   if (text) {
     text.textContent = t(state.heatPlanActive ? "banner_active" : "banner_inactive");
   }
+  // Keep the demo toggle button in sync (label + pressed state).
+  const toggle = document.getElementById("heatplan-toggle");
+  if (toggle) {
+    toggle.setAttribute("aria-pressed", String(state.heatPlanActive));
+    const lbl = toggle.querySelector(".heatplan-toggle-label");
+    if (lbl) lbl.textContent = t(state.heatPlanActive ? "heatplan_btn_deactivate" : "heatplan_btn_activate");
+  }
   applyHeatPlanToMap();
+}
+
+// Re-render whatever the right panel is currently showing (list or open detail),
+// so heat-plan-dependent content like opening hours updates immediately.
+function refreshOpenPanel() {
+  if (state.panelMode === "detail" && state.currentDetailFeature) {
+    const inner = document.getElementById("list-view-inner");
+    if (inner) {
+      inner.innerHTML = "";
+      (state.currentDetailRenderFn || renderKoelteDetailContent)(state.currentDetailFeature, inner);
+    }
+  } else {
+    refreshListIfActive();
+  }
+}
+
+// Manual heat-plan toggle — lets reviewers demonstrate the heat-plan feature
+// (banner, marker pulse, koelteplek heat-hours) without waiting for a real
+// KNMI warning. The live CSV value still sets the initial state on load.
+function setupHeatPlanToggle() {
+  const toggle = document.getElementById("heatplan-toggle");
+  if (!toggle) return;
+  toggle.addEventListener("click", () => {
+    state.heatPlanActive = !state.heatPlanActive;
+    updateBannerText();      // banner text/classes + pulse + button label
+    refreshOpenPanel();      // refresh hours in any open koelteplek detail/list
+  });
 }
 
 // ── Optional settings file (key,value CSV) ─────────────────────────────────
@@ -1087,7 +1130,7 @@ function _renderHviLayer(def, features) {
         l.on("mouseout", () => { state.layers.hvi.resetStyle(l); HC.hide(); });
         l.on("mousemove", e => HC.move(e.originalEvent.clientX, e.originalEvent.clientY));
       }
-      l.on("click", e => { HC.hide(); L.DomEvent.stopPropagation(e); openDetailPanel(f, renderBuurtDetail); });
+      l.on("click", e => { HC.hide(); L.DomEvent.stopPropagation(e); focusBuurt(f); });
     },
   });
   if (state.on.hvi) state.layers.hvi.addTo(state.map);
@@ -1119,6 +1162,7 @@ function _renderTemperatureLayer(def, features) {
         l.on("mouseout", () => { state.layers.temperature.resetStyle(l); HC.hide(); });
         l.on("mousemove", e => HC.move(e.originalEvent.clientX, e.originalEvent.clientY));
       }
+      l.on("click", e => { HC.hide(); L.DomEvent.stopPropagation(e); focusBuurt(f); });
     },
   });
   if (state.on.temperature) state.layers.temperature.addTo(state.map);
@@ -1181,6 +1225,7 @@ function _renderStakeholderLayer(def, features) {
         l.on("mouseout", () => { state.layers[def.cat].resetStyle(l); HC.hide(); });
         l.on("mousemove", e => HC.move(e.originalEvent.clientX, e.originalEvent.clientY));
       }
+      l.on("click", e => { HC.hide(); L.DomEvent.stopPropagation(e); focusBuurt(f); });
     },
   });
   if (state.on[def.cat]) state.layers[def.cat].addTo(state.map);
@@ -1199,8 +1244,8 @@ function _getHviStats() {
   _hviStats = {
     total: feats.length,
     hvi: median(feats.map(p=>p.hvi)),
-    hi_norm: median(feats.filter(p=>p.hi_norm!=null).map(p=>p.hi_norm)),
-    svi: median(feats.filter(p=>p.svi_pca!=null).map(p=>p.svi_pca)),
+    hi_norm: median(feats.filter(p=>p.heat_exposure!=null).map(p=>p.heat_exposure)),
+    svi: median(feats.filter(p=>p.social_vuln!=null).map(p=>p.social_vuln)),
     access: median(feats.filter(p=>p.cooling_access!=null).map(p=>p.cooling_access)),
     sortedDesc: [...sorted].reverse(),
     allHvi: sorted,
@@ -1244,26 +1289,26 @@ function _nearestKoelteplek(centroid) {
 function _similarBuurten(p, n = 5) {
   return (state.features.hvi || [])
     .map(f => f.properties)
-    .filter(q => q.buurtnaam !== p.buurtnaam && q.hi_norm != null && q.svi_pca != null && q.cooling_access != null)
-    .map(q => ({ buurtnaam: q.buurtnaam, hvi: q.hvi, hvi_tier: q.hvi_tier, dist: Math.sqrt((q.hi_norm-p.hi_norm)**2+(q.svi_pca-p.svi_pca)**2+(q.cooling_access-p.cooling_access)**2) }))
+    .filter(q => q.buurtnaam !== p.buurtnaam && q.heat_exposure != null && q.social_vuln != null && q.cooling_access != null)
+    .map(q => ({ buurtnaam: q.buurtnaam, hvi: q.hvi, hvi_tier: q.hvi_tier, dist: Math.sqrt((q.heat_exposure-p.heat_exposure)**2+(q.social_vuln-p.social_vuln)**2+(q.cooling_access-p.cooling_access)**2) }))
     .sort((a,b) => a.dist - b.dist).slice(0, n);
 }
 
 function _whatIf(p, stats) {
   const W_H=0.40, W_S=0.40, W_A=0.20;
   const hvi = (h,s,a) => W_H*h + W_S*s + W_A*(1-a);
-  const cur = hvi(p.hi_norm??stats.hi_norm, p.svi_pca??stats.svi, p.cooling_access??stats.access);
+  const cur = hvi(p.heat_exposure??stats.hi_norm, p.social_vuln??stats.svi, p.cooling_access??stats.access);
   return [
-    { key:"access",  label_nl:"Koeltoegang → stadsmed.",        label_en:"Cooling access → median",     newHvi: hvi(p.hi_norm, p.svi_pca, Math.max(p.cooling_access, stats.access)) },
-    { key:"social",  label_nl:"Sociale kwetsb. → stadsmed.",    label_en:"Social vulnerability → med.", newHvi: hvi(p.hi_norm, Math.min(p.svi_pca, stats.svi), p.cooling_access) },
-    { key:"heat",    label_nl:"Hitteblootstelling → stadsmed.", label_en:"Heat exposure → median",      newHvi: hvi(Math.min(p.hi_norm, stats.hi_norm), p.svi_pca, p.cooling_access) },
+    { key:"access",  label_nl:"Koeltoegang → stadsmed.",        label_en:"Cooling access → median",     newHvi: hvi(p.heat_exposure, p.social_vuln, Math.max(p.cooling_access, stats.access)) },
+    { key:"social",  label_nl:"Sociale kwetsb. → stadsmed.",    label_en:"Social vulnerability → med.", newHvi: hvi(p.heat_exposure, Math.min(p.social_vuln, stats.svi), p.cooling_access) },
+    { key:"heat",    label_nl:"Hitteblootstelling → stadsmed.", label_en:"Heat exposure → median",      newHvi: hvi(Math.min(p.heat_exposure, stats.hi_norm), p.social_vuln, p.cooling_access) },
   ].map(s => ({ ...s, delta: Math.round((s.newHvi-cur)*100), newTier: _hviGetTier(s.newHvi), curTier: _hviGetTier(cur) }));
 }
 
 function _dominantDriver(p, stats, isNL) {
   const excess = [
-    { label: isNL?"Hitteblootstelling":"Heat exposure",        val: Math.max(0,(p.hi_norm??0)-stats.hi_norm)*0.40 },
-    { label: isNL?"Sociale kwetsbaarheid":"Social vulnerability", val: Math.max(0,(p.svi_pca??0)-stats.svi)*0.40 },
+    { label: isNL?"Hitteblootstelling":"Heat exposure",        val: Math.max(0,(p.heat_exposure??0)-stats.hi_norm)*0.40 },
+    { label: isNL?"Sociale kwetsbaarheid":"Social vulnerability", val: Math.max(0,(p.social_vuln??0)-stats.svi)*0.40 },
     { label: isNL?"Slechte koeltoegang":"Poor cooling access",  val: Math.max(0,stats.access-(p.cooling_access??0))*0.20 },
   ].sort((a,b)=>b.val-a.val);
   return excess[0].val > 0 ? excess[0].label : null;
@@ -1325,6 +1370,7 @@ function _makeBar(value, color) {
 // a focused "lens" for that layer, plus a tab to the full neighbourhood profile.
 // With HVI (or in Community View) the full profile is shown directly.
 const OVERLAY_LENS_META = {
+  temperature:         { nl: "Hitteblootstelling",    en: "Heat exposure" },
   priority:            { nl: "Interventieprioriteit", en: "Intervention priority" },
   double_disadvantage: { nl: "Dubbele benadeling",    en: "Double disadvantage" },
   hotspots:            { nl: "Hotspot-cluster",        en: "Hotspot cluster" },
@@ -1334,7 +1380,19 @@ function _renderOverlayLens(p, overlay, el, isNL) {
   const stats = _getHviStats();
   const pct = v => (v == null ? "–" : Math.round(v * 100));
   const nFeat = (state.features.hvi || []).length;
-  if (overlay === "priority") {
+  if (overlay === "temperature") {
+    const ranked = (state.features.hvi || []).map(f => f.properties)
+      .filter(q => q.heat_exposure != null)
+      .sort((a, b) => b.heat_exposure - a.heat_exposure);
+    const rank = ranked.findIndex(q => q.buurtnaam === p.buurtnaam) + 1;
+    el.innerHTML = `
+      <div class="bd-kpis">
+        <div class="bd-kpi"><span class="bd-kpi-v" style="color:#ca0020">${p.temp_mean != null ? (+p.temp_mean).toFixed(1) + "°" : "–"}</span><span class="bd-kpi-l">${isNL ? "oppervlaktetemp." : "surface temp."}</span></div>
+        <div class="bd-kpi"><span class="bd-kpi-v">#${rank || "–"}</span><span class="bd-kpi-l">${isNL ? `heetst van ${nFeat}` : `hottest of ${nFeat}`}</span></div>
+      </div>
+      <div class="bd-line">${isNL ? "Hitteblootstelling" : "Heat exposure"}: <strong>${pct(p.heat_exposure)}/100</strong></div>
+      <div class="bd-line bd-muted">${isNL ? "Groen & bomen koelen" : "Greenery & trees cool"} — NDVI <strong>${p.ndvi_mean != null ? (+p.ndvi_mean).toFixed(2) : "–"}</strong> · ${isNL ? "bomen" : "trees"} <strong>${p.tree_density_per_km2 != null ? Math.round(p.tree_density_per_km2) + "/km²" : "–"}</strong></div>`;
+  } else if (overlay === "priority") {
     const ranked = (state.features.hvi || []).map(f => f.properties)
       .filter(q => q.intervention_priority != null)
       .sort((a, b) => b.intervention_priority - a.intervention_priority);
@@ -1355,7 +1413,7 @@ function _renderOverlayLens(p, overlay, el, isNL) {
     el.innerHTML = `
       <div class="bd-flag ${dd?"bd-flag--urgent":"bd-flag--ok"}">${dd?(isNL?"Hoge kwetsbaarheid én lage koeltoegang":"High vulnerability and low cooling access"):(isNL?"Niet in de urgente categorie":"Not in the urgent category")}</div>
       <div class="bd-kpis">
-        <div class="bd-kpi"><span class="bd-kpi-v" style="color:#a00078">${pct(p.svi)}</span><span class="bd-kpi-l">${isNL?"sociale kwetsbaarheid":"social vulnerability"}</span></div>
+        <div class="bd-kpi"><span class="bd-kpi-v" style="color:#a00078">${pct(p.social_vuln)}</span><span class="bd-kpi-l">${isNL?"sociale kwetsbaarheid":"social vulnerability"}</span></div>
         <div class="bd-kpi"><span class="bd-kpi-v" style="color:#004699">${pct(p.cooling_access)}</span><span class="bd-kpi-l">${isNL?"koeltoegang":"cooling access"}</span></div>
       </div>
       <div class="bd-line bd-muted">${isNL?"Stadsmediaan":"City median"}: ${isNL?"kwetsbaarheid":"vulnerability"} ${pct(m.svi)}, ${isNL?"toegang":"access"} ${pct(m.access)}</div>`;
@@ -1379,7 +1437,7 @@ function renderBuurtDetail(feature, container) {
                    && OVERLAY_LENS_META[state.activeOverlay]) ? state.activeOverlay : null;
   if (!overlay) { renderHviDetailContent(feature, container); return; }   // HVI = the full profile
 
-  const body = document.createElement("div"); body.className = "detail-panel-body";
+  const body = document.createElement("div"); body.className = "detail-panel-body bd-lens";
   const hdr = document.createElement("div"); hdr.className = "hvi-dash-hdr";
   const cat = document.createElement("div"); cat.className = "dp-cat";
   cat.textContent = isNL ? OVERLAY_LENS_META[overlay].nl : OVERLAY_LENS_META[overlay].en;
@@ -1440,10 +1498,10 @@ function renderHviDetailContent(feature, container) {
   const nearest  = _nearestKoelteplek(centroid);
   const driver   = stats ? _dominantDriver(p, stats, isNL) : null;
   const findings = [];
-  if (driver)  findings.push({ icon:"⚠", text:(isNL?"Belangrijkste factor: ":"Main driver: ")+driver });
-  if (nearest) findings.push({ icon:"📍", text:(isNL?"Dichtstbijzijnde koelteplek: ":"Nearest cooling spot: ")+nearest.name+" — "+fmtDist(nearest.dist) });
+  if (driver)  findings.push({ color:"#ec0000", text:(isNL?"Belangrijkste factor: ":"Main driver: ")+driver });
+  if (nearest) findings.push({ color:"#004699", text:(isNL?"Dichtstbijzijnde koelteplek: ":"Nearest cooling spot: ")+nearest.name+" — "+fmtDist(nearest.dist) });
   if (p.lisa_cluster && !["Not significant","Not computed"].includes(p.lisa_cluster))
-    findings.push({ icon:"🔴", text:"LISA: "+p.lisa_cluster });
+    findings.push({ color:"#a00078", text:"LISA: "+p.lisa_cluster });
 
   if (findings.length) {
     const findSec = document.createElement("div"); findSec.className = "hvi-section";
@@ -1452,7 +1510,7 @@ function renderHviDetailContent(feature, container) {
     findSec.appendChild(findTitle);
     findings.forEach(f => {
       const row = document.createElement("div"); row.className = "hvi-finding";
-      row.innerHTML = `<span class="hvi-finding-icon">${f.icon}</span><span>${f.text}</span>`;
+      row.innerHTML = `<span class="hvi-finding-dot" style="background:${f.color}"></span><span>${f.text}</span>`;
       findSec.appendChild(row);
     });
     if (p.quadrant) { const qdiv = document.createElement("div"); qdiv.className = "hvi-quadrant"; qdiv.textContent = p.quadrant; findSec.appendChild(qdiv); }
@@ -1506,6 +1564,12 @@ function renderHviDetailContent(feature, container) {
       const name = document.createElement("span"); name.className = "hvi-sim-name"; name.textContent = s.buurtnaam;
       const score = document.createElement("span"); score.className = "hvi-sim-score"; score.textContent = Math.round((s.hvi||0)*100)+"/100";
       row.append(dot, name, score); simSec.appendChild(row);
+      // Click a similar neighbourhood to jump straight to it (zoom + detail).
+      const sf = (state.features.hvi || []).find(f => f.properties.buurtnaam === s.buurtnaam);
+      if (sf) { row.style.cursor = "pointer"; row.tabIndex = 0;
+        row.addEventListener("click", () => focusBuurt(sf));
+        row.addEventListener("keydown", ev => { if (ev.key === "Enter" || ev.key === " ") { ev.preventDefault(); focusBuurt(sf); } });
+      }
     });
     dash.appendChild(simSec);
   }
@@ -1513,7 +1577,7 @@ function renderHviDetailContent(feature, container) {
   body.appendChild(dash); container.appendChild(body);
   if (stats) {
     requestAnimationFrame(() => {
-      const bv = [Math.round((p.hi_norm||0)*100), Math.round((p.svi_pca||0)*100), Math.round((1-(p.cooling_access||0))*100)];
+      const bv = [Math.round((p.heat_exposure||0)*100), Math.round((p.social_vuln||0)*100), Math.round((1-(p.cooling_access||0))*100)];
       const mv = [Math.round(stats.hi_norm*100), Math.round(stats.svi*100), Math.round((1-stats.access)*100)];
       _renderRadarChart(radarId, bv, mv, isNL);
       _renderDistributionChart(distId, stats.allHvi, p.hvi, isNL);
@@ -1527,15 +1591,15 @@ let _ddMed = null;
 function _ddMedians() {
   if (_ddMed) return _ddMed;
   const feats = (state.features.hvi || []).map(f => f.properties)
-    .filter(p => p.svi != null && p.cooling_access != null);
+    .filter(p => p.social_vuln != null && p.cooling_access != null);
   const med = arr => { const s = [...arr].sort((a,b)=>a-b); const m = Math.floor(s.length/2); return s.length ? (s.length%2?s[m]:(s[m-1]+s[m])/2) : 0; };
-  _ddMed = { svi: med(feats.map(p=>+p.svi)), access: med(feats.map(p=>+p.cooling_access)) };
+  _ddMed = { svi: med(feats.map(p=>+p.social_vuln)), access: med(feats.map(p=>+p.cooling_access)) };
   return _ddMed;
 }
 function _isDoubleDisadvantaged(p) {
-  if (p.svi == null || p.cooling_access == null) return false;
+  if (p.social_vuln == null || p.cooling_access == null) return false;
   const m = _ddMedians();
-  return +p.svi >= m.svi && +p.cooling_access < m.access;
+  return +p.social_vuln >= m.svi && +p.cooling_access < m.access;
 }
 
 function _priorityColor(v) {
@@ -1607,7 +1671,7 @@ function _renderPolicyOverlay(def, features) {
         l.on("mouseout", () => { state.layers[cat].resetStyle(l); HC.hide(); });
         l.on("mousemove", e => HC.move(e.originalEvent.clientX, e.originalEvent.clientY));
       }
-      l.on("click", e => { HC.hide(); L.DomEvent.stopPropagation(e); openDetailPanel(f, renderBuurtDetail); });
+      l.on("click", e => { HC.hide(); L.DomEvent.stopPropagation(e); focusBuurt(f); });
     },
   });
   if (state.on[cat]) state.layers[cat].addTo(state.map);
@@ -1678,8 +1742,8 @@ function _renderQuadrantChart(canvasId, feats, isNL) {
   const ctx = document.getElementById(canvasId)?.getContext("2d");
   if (!ctx || typeof Chart === "undefined") return;
   const m = _ddMedians();
-  const pts = feats.filter(p => p.svi != null && p.cooling_access != null)
-    .map(p => ({ x: +p.svi, y: +p.cooling_access, dd: _isDoubleDisadvantaged(p) }));
+  const pts = feats.filter(p => p.social_vuln != null && p.cooling_access != null)
+    .map(p => ({ x: +p.social_vuln, y: +p.cooling_access, dd: _isDoubleDisadvantaged(p) }));
   _charts[canvasId] = new Chart(ctx, {
     type: "scatter",
     data: { datasets: [
@@ -1776,7 +1840,7 @@ function renderPolicyInsightPanel(inner) {
       <span class="pi-rank-name">${p.buurtnaam}</span>
       ${p.green_desert === true ? `<span class="pi-tag pi-tag--gd">${isNL?"groene woestijn":"green desert"}</span>` : ""}
       <span class="pi-rank-score">${(p.intervention_priority*100).toFixed(0)}</span>`;
-    const open = () => { const f = featByName.get(p.buurtnaam); if (f) openDetailPanel(f, renderBuurtDetail); };
+    const open = () => { const f = featByName.get(p.buurtnaam); if (f) focusBuurt(f); };
     li.addEventListener("click", open);
     li.addEventListener("keydown", e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); open(); } });
     list.appendChild(li);
@@ -2222,6 +2286,14 @@ function _applyViewMode(mode) {
     if (mode === "policy") renderPolicyIntro();
   }
 
+  // Four-view nav strip above the map (policy view only).
+  const pvNav = document.getElementById("policy-view-nav");
+  if (pvNav) {
+    pvNav.hidden = mode !== "policy";
+    pvNav.classList.toggle("hidden-view", mode !== "policy");
+    if (mode === "policy") buildPolicyViewNav();
+  }
+
   // Search + "In mijn buurt" target neighbourhoods in Policy View — refresh the
   // placeholder to match.
   updateSearchPlaceholder();
@@ -2305,6 +2377,95 @@ function setupToggles() {
       rerenderCurrentDetailPanel();   // keep an open detail card in sync with the active overlay
     });
   });
+}
+
+// ── Policy four-view navigation ─────────────────────────────────────────────
+// Four top-level views (one per research question), each backed by one analysis
+// overlay. The strip above the map explains, for the active view, WHAT it shows,
+// WHICH datasets it comes from, and HOW to read the colours — clarity first.
+const POLICY_VIEWS = [
+  {
+    id: "heat", overlay: "temperature",
+    label_nl: "Hitteblootstelling", label_en: "Heat exposure",
+    what_nl: "Hoe heet het stadsoppervlak wordt op een zomerse dag — de hittedreiging zelf.",
+    what_en: "How hot the urban surface gets on a summer day — the heat hazard itself.",
+    data_nl: "Landsat-satelliettemperatuur (zomermediaan 2023), gecombineerd met de blootstellings- en gevoelstemperatuurscores (PET) van de Klimaatrisicokaart.",
+    data_en: "Landsat surface temperature (2023 summer median), blended with the exposure and perceived-temperature (PET) scores of the Klimaatrisicokaart.",
+    read_nl: "Donkerrood = heetst.", read_en: "Dark red = hottest.",
+  },
+  {
+    id: "social", overlay: "double_disadvantage",
+    label_nl: "Sociale kwetsbaarheid", label_en: "Social vulnerability",
+    what_nl: "Waar de meest kwetsbare bewoners óók de minste toegang tot verkoeling hebben — de ‘dubbele benadeling’.",
+    what_en: "Where the most vulnerable residents also have the least access to cooling — the ‘double disadvantage’.",
+    data_nl: "Officiële gevoeligheidsscore van de Klimaatrisicokaart (65-plus, laagopgeleid, chronisch ziek, beperkt mobiel, laag inkomen), aangevuld met CBS-eenpersoonshuishoudens en migratieachtergrond, afgezet tegen de afstand tot koele plekken.",
+    data_en: "The Klimaatrisicokaart official sensitivity score (over-65s, low-education, chronically ill, limited mobility, low income), plus CBS single-person households and migration background, set against distance to cool places.",
+    read_nl: "Rood = hoog kwetsbaar én slechte koeltoegang.", read_en: "Red = highly vulnerable and poor cooling access.",
+  },
+  {
+    id: "hvi", overlay: "hvi",
+    label_nl: "Hittekwetsbaarheidsindex", label_en: "Heat Vulnerability Index",
+    what_nl: "De samengestelde index per buurt — combineert hitte, sociale kwetsbaarheid en gebrek aan verkoeling tot één score.",
+    what_en: "The composite index per neighbourhood — combines heat, social vulnerability and lack of cooling into one score.",
+    data_nl: "HVI = 0,40 × hitteblootstelling + 0,40 × sociale kwetsbaarheid + 0,20 × gebrek aan koeltoegang. Drie onafhankelijke pijlers, verdeeld in vijf tiers via natural breaks.",
+    data_en: "HVI = 0.40 × heat exposure + 0.40 × social vulnerability + 0.20 × lack of cooling access. Three independent pillars, split into five tiers by natural breaks.",
+    read_nl: "Tier 5 (donkerrood) = meest kwetsbaar.", read_en: "Tier 5 (dark red) = most vulnerable.",
+  },
+  {
+    id: "priority", overlay: "priority",
+    label_nl: "Prioriteit voor actie", label_en: "Priority for action",
+    what_nl: "Waar koelmaatregelen het meeste opleveren — de buurten om eerst aan te pakken.",
+    what_en: "Where cooling measures deliver the most — the neighbourhoods to tackle first.",
+    data_nl: "Percentielrangen van hitte, sociale kwetsbaarheid, lage koeltoegang en lage boomdichtheid (de meest beïnvloedbare knop), gecombineerd tot één interventiescore.",
+    data_en: "Percentile ranks of heat, social vulnerability, low cooling access and low tree density (the most actionable lever), combined into one intervention score.",
+    read_nl: "Donkerrood = hoogste prioriteit.", read_en: "Dark red = highest priority.",
+  },
+];
+
+/** Activate one analysis overlay (radio behaviour), syncing map, legend + panels. */
+function selectPolicyView(overlay) {
+  POLICY_CHOROPLETH.forEach(c => { if (c !== overlay && state.on[c]) setLayerOn(c, false); });
+  state.activeOverlay = overlay;
+  setLayerOn(overlay, true);
+  updateOverlayLegend();
+  refreshListIfActive();
+  if (typeof rerenderCurrentDetailPanel === "function") rerenderCurrentDetailPanel();
+}
+
+/** Render the four-view tab strip + per-view explanation + cooling-spots switch. */
+function buildPolicyViewNav() {
+  const nav = document.getElementById("policy-view-nav");
+  if (!nav) return;
+  const isNL = state.lang === "nl";
+  const view = POLICY_VIEWS.find(v => v.overlay === state.activeOverlay) || POLICY_VIEWS[2];
+  state.activeOverlay = view.overlay;
+  nav.innerHTML = `
+    <div class="pv-bar">
+      <div class="pv-tabs" role="tablist" aria-label="${isNL ? "Analyseweergave" : "Analysis view"}">
+        ${POLICY_VIEWS.map(v => `
+          <button class="pv-tab${v.overlay === view.overlay ? " on" : ""}" role="tab" type="button"
+                  data-overlay="${v.overlay}" aria-selected="${v.overlay === view.overlay}">
+            ${isNL ? v.label_nl : v.label_en}
+          </button>`).join("")}
+      </div>
+      <label class="pv-spots" title="${isNL ? "Toon koelteplekken op de kaart" : "Show cooling spots on the map"}">
+        <input type="checkbox" id="pv-spots-toggle" ${state.on.koelteplekken ? "checked" : ""}>
+        <span class="pv-spots-track" aria-hidden="true"><span class="pv-spots-thumb"></span></span>
+        <span class="pv-spots-label">${isNL ? "Koelteplekken" : "Cooling spots"}</span>
+      </label>
+    </div>
+    <div class="pv-explain">
+      <p class="pv-what">${isNL ? view.what_nl : view.what_en}</p>
+      <p class="pv-meta"><span class="pv-meta-h">${isNL ? "Gegevens" : "Data"}</span>${isNL ? view.data_nl : view.data_en}</p>
+      <p class="pv-meta"><span class="pv-meta-h">${isNL ? "Lezen" : "Reading"}</span>${isNL ? view.read_nl : view.read_en}</p>
+    </div>`;
+
+  nav.querySelectorAll(".pv-tab").forEach(btn => btn.addEventListener("click", () => {
+    selectPolicyView(btn.dataset.overlay);
+    buildPolicyViewNav();
+  }));
+  const spots = nav.querySelector("#pv-spots-toggle");
+  if (spots) spots.addEventListener("change", () => setLayerOn("koelteplekken", spots.checked));
 }
 
 /** Place a white ADS glyph inside each legend dot so the legend mirrors the map. */
@@ -2513,6 +2674,59 @@ function setupSidebarCollapseDesktop() {
       collapsed ? "Filter zijbalk uitklappen" : "Filter zijbalk inklappen");
     // Redraw map tiles once the CSS transition has finished
     setTimeout(() => { if (state.map) state.map.invalidateSize(); }, 260);
+  });
+}
+
+// Drag the bottom edge of the legend/sidebar to resize its height (desktop only).
+// Ported from main (commit 99839db).
+function setupSidebarResizeHandle() {
+  const sidebar = document.getElementById("sidebar");
+  if (!sidebar) return;
+
+  let startY = 0;
+  let startHeight = 0;
+  let activePointerId = null;
+  const minHeight = 220;
+
+  function clampHeight(nextHeight) {
+    const maxHeight = Math.max(minHeight, window.innerHeight - 28);
+    return Math.min(maxHeight, Math.max(minHeight, nextHeight));
+  }
+
+  function applyHeight(nextHeight) {
+    sidebar.style.maxHeight = `${clampHeight(nextHeight)}px`;
+    if (state.map) state.map.invalidateSize();
+  }
+
+  sidebar.addEventListener("pointerdown", e => {
+    if (!isDesktop()) return;
+    const rect = sidebar.getBoundingClientRect();
+    const hitbox = parseInt(getComputedStyle(sidebar).getPropertyValue("--sidebar-resize-hitbox"), 10) || 14;
+    if (e.clientY < rect.bottom - hitbox) return;
+    e.preventDefault();
+    activePointerId = e.pointerId;
+    startY = e.clientY;
+    startHeight = sidebar.getBoundingClientRect().height;
+    document.body.style.userSelect = "none";
+    document.body.style.cursor = "ns-resize";
+  });
+
+  window.addEventListener("pointermove", e => {
+    if (activePointerId !== e.pointerId) return;
+    applyHeight(startHeight + (e.clientY - startY));
+  });
+
+  function stopResize() {
+    if (activePointerId == null) return;
+    activePointerId = null;
+    document.body.style.userSelect = "";
+    document.body.style.cursor = "";
+  }
+
+  window.addEventListener("pointerup", stopResize);
+  sidebar.addEventListener("pointercancel", stopResize);
+  window.addEventListener("resize", () => {
+    applyHeight(sidebar.getBoundingClientRect().height);
   });
 }
 
@@ -2771,7 +2985,7 @@ function renderKoelteDetailContent(feature, container) {
 
   if (p.active === false) {
     const notice = document.createElement("div"); notice.className = "inactive-notice";
-    notice.textContent = state.lang === "nl" ? "⚠ Tijdelijk gesloten" : "⚠ Temporarily unavailable";
+    notice.textContent = state.lang === "nl" ? "Tijdelijk gesloten" : "Temporarily unavailable";
     info.appendChild(notice);
   }
 
@@ -3749,6 +3963,7 @@ document.addEventListener("DOMContentLoaded", () => {
   // Shade is off by default and the dataset is large — load it lazily on first
   // toggle (see _renderShadeLayer) rather than downloading it for every visitor.
   setupBanner();
+  setupHeatPlanToggle();
   setupLang();
   setupModeToggle();
   setupToggles();
@@ -3761,6 +3976,7 @@ document.addEventListener("DOMContentLoaded", () => {
   setupSearch();
   setupSidebarToggle();
   setupSidebarCollapseDesktop();
+  setupSidebarResizeHandle();
   setupMobileFilterCollapse();
   setupKeyboard();
   setupViewToggle();

@@ -1,112 +1,127 @@
-# Koeltekaart Amsterdam
+# Koeltekaart Amsterdam — Heat Vulnerability Dashboard
 
-Interactive map for Amsterdam residents to find cooling spots during heat waves. Shows cooling shelters (koelteplekken), drinking water taps, and parks. Built for GGD Amsterdam.
+An interactive web tool that maps heat in Amsterdam at the neighbourhood (*buurt*) level. It
+serves two audiences from one map:
 
-**Features:**
-- Cooling shelter locations with opening hours, amenities, and photos
-- 550+ public drinking water taps
-- Green space / parks overlay
-- Real-time weather (Open-Meteo, no API key required)
-- "Near me" geolocation with 1 km radius
-- Heat plan banner — activatable via API
-- Bilingual: Dutch / English
-- Mobile-friendly
+- **Bewonerskaart (Community view)** — residents find nearby cooling spots (*koelteplekken*),
+  drinking-water taps, parks, swimming spots and shade, with opening hours, facilities and photos.
+- **Beleidskaart (Policy view)** — a heat-vulnerability dashboard for policymakers, built around a
+  transparent **Heat Vulnerability Index (HVI)** per neighbourhood.
 
----
+The whole product is **static** (HTML/CSS/JS). The analysis that produces the policy data lives in a
+separate, reproducible Python notebook.
 
-## Quick start
+## Live version
 
-**Requirements:** Python 3.10+
-
-```bash
-cd backend
-pip install -r requirements.txt
-flask --app wsgi:app run
-```
-
-Open http://localhost:5000
+A live deployment is available at **http://koeltekaart-amsterdam-uva.onrender.com/**. The tool is
+intended to move to its permanent municipal home at **amsterdam.nl/koeltekaart**, which may already be
+live at the time of reading. (This repository remains the complete, self-contained static product; the
+live links are provided for reference only.)
 
 ---
 
-## Docker (recommended for deployment)
+## The four research questions (Policy view)
 
-```bash
-docker-compose up --build
-```
+The Policy view is organised as four top-level views, one per research question, selectable from the
+tab strip above the map:
 
-Open http://localhost:8000
-
-To set the heat plan secret:
-```bash
-HEAT_PLAN_SECRET=your-secret docker-compose up
-```
+1. **Heat exposure** — *Which physical characteristics drive a neighbourhood's heat?*
+   Surface temperature; greenery, water and street trees as the cooling levers.
+2. **Social vulnerability** — *Are socially vulnerable neighbourhoods also those with the worst access
+   to cooling?* The "double disadvantage".
+3. **Heat Vulnerability Index** — *Can heat, social vulnerability and cooling access be combined into
+   one robust, tiered index?* The composite.
+4. **Priority for action** — *Where do cooling measures deliver the most?* Intervention ranking,
+   spatial clusters and "green deserts".
 
 ---
 
-## Configuration
+## Methodology — the HVI
 
-| Environment variable | Default | Description |
+The HVI follows the IPCC **hazard × sensitivity × adaptive-capacity** framing as three **independent**
+0–1 pillars (no indicator is counted twice):
+
+```
+HVI = 0.40 · heat exposure  +  0.40 · social vulnerability  +  0.20 · (1 − cooling access)
+```
+
+| Pillar | What it is | Source |
 |---|---|---|
-| `PORT` | `8000` | Port the server listens on |
-| `HEAT_PLAN_SECRET` | *(none)* | Secret key to protect the heat plan toggle. If not set, anyone can toggle. |
-| `COOLMAP_DATA_ROOT` | project root | Override path to the `data/` directory |
+| **Heat exposure** | Pure hazard | Landsat surface temperature (2023 summer median) blended with the Klimaatrisicokaart exposure + perceived-temperature (PET) sub-scores |
+| **Social vulnerability** | Who is sensitive | Klimaatrisicokaart official sensitivity score (65+, low-education, chronically ill, limited mobility, low income) + CBS single-person households & migration background |
+| **Cooling access** | Adaptive capacity | CBS distance to 8 cool/AC public refuges (pool, library, supermarket, department store, cinema, museum, theatre, ice rink) + private garden access |
+
+Neighbourhoods are split into five tiers by Fisher–Jenks natural breaks. The index is validated against
+the city's official heat-risk score, stays stable under ±10% reweighting, and its clustering is
+confirmed with Moran's I / LISA. Full derivation, statistics and figures are in the notebook.
+
+> **Design note:** an earlier version used the Klimaatrisicokaart's *total* heat-risk score as the heat
+> pillar, which silently double-counted social vulnerability and adaptive capacity. The pillars were
+> re-derived to be independent — see `Data_analysis/pipeline.ipynb` §5, §8–9.
 
 ---
 
-## Data files
+## Data sources
 
-All map data lives in `data/`. Partners only need to edit one file:
+| Dataset | Provider | Use |
+|---|---|---|
+| Klimaatrisicokaart / Klimaateffectatlas (heat module) | Klimaateffectatlas | Heat exposure + social sensitivity |
+| Kerncijfers wijken en buurten 2022 | CBS (via PDOK) | Demographics, income, amenity distances |
+| Surface temperature & NDVI | Landsat 8 C2 L2 (Google Earth Engine) | Heat exposure, greenery |
+| Street-tree register (~322k trees) | Gemeente Amsterdam open data | Tree density / canopy |
+| Koelteplekken | GGD Amsterdam (`data/koeltekaart_data.csv`) | Cooling-spot locations |
+| Basemap tiles, address search | PDOK | Map background, geocoding |
+| Live weather | Open-Meteo | Landing weather widget |
 
-| File | Description |
-|---|---|
-| `data/koelteplekken.csv` | **Main file** — cooling shelter locations. Edit this to add/update locations. |
-| `data/raw/parks.json` | Amsterdam parks (GeoJSON, from municipality open data) |
-| `data/raw/water_taps.geojson` | Drinking water taps (GeoJSON, from Waternet) |
-
----
-
-## API endpoints
-
-| Endpoint | Description |
-|---|---|
-| `GET /api/health` | Health check |
-| `GET /api/weather` | Current weather for Amsterdam |
-| `GET /api/heat-plan` | Get heat plan status |
-| `POST /api/heat-plan` | Toggle heat plan `{ "active": true, "secret": "..." }` |
-| `GET /api/v1/geojson/koelteplekken` | Cooling shelters GeoJSON |
-| `GET /api/v1/geojson/parks` | Parks GeoJSON |
-| `GET /api/v1/geojson/water-taps` | Water taps GeoJSON |
-| `GET /api/v1/nearest?lat=&lon=` | Nearest resources to a coordinate |
-| `GET /api/v1/meta/layers` | Layer metadata and feature counts |
+Map tiles, address search and weather are **live external services**; everything else is bundled
+locally as the replication sample (`frontend/data/`). The product is fully usable as static files; only
+the basemap, search and weather widget require an internet connection.
 
 ---
 
-## Project structure
+## Run it
+
+**Website** — any static server from the `frontend/` folder:
+
+```bash
+cd frontend
+python3 -m http.server 8000
+# open http://localhost:8000
+```
+
+Deep-link a view with `?view=policy` or `?view=community`.
+
+**Analysis pipeline** — regenerates `hvi_dashboard.geojson` and all figures:
+
+```bash
+cd Data_analysis
+pip install -r requirements.txt
+jupyter lab pipeline.ipynb     # run all cells
+```
+
+The notebook writes to `Data_analysis/outputs/`; copy `hvi_dashboard.geojson` into `frontend/data/` to
+update the dashboard.
+
+---
+
+## Repository layout
 
 ```
-koeltekaart-amsterdam/
-├── backend/               # Flask application
-│   ├── wsgi.py            # Entry point
-│   ├── requirements.txt
-│   └── coolmap/
-│       ├── __init__.py    # App factory
-│       ├── config.py      # Paths and environment config
-│       ├── geo.py         # Geospatial utilities
-│       └── blueprints/
-│           └── api.py     # All API routes
-├── frontend/              # Static web application
-│   ├── index.html
-│   ├── css/app.css
-│   ├── js/app.js
-│   ├── fonts/             # Amsterdam Sans typeface
-│   └── images/            # Logo and location photos
-├── data/
-│   ├── koelteplekken.csv  # ← Edit this to update cooling spots
-│   └── raw/
-│       ├── parks.json
-│       └── water_taps.geojson
-├── Dockerfile
-├── docker-compose.yml
-├── Procfile               # For Heroku / Railway deployment
-└── GUIDE.md               # Non-technical partner guide
+frontend/              Static site (HTML/CSS/JS) — the deliverable product
+  index.html
+  css/app.css
+  js/app.js
+  data/                Bundled datasets: koelteplekken CSV, GeoJSON layers, photos
+Data_analysis/         Reproducible analysis
+  pipeline.ipynb       Full HVI derivation (RQ1–RQ4)
+  requirements.txt
+  inputs/  outputs/    Source tables and generated scores/figures
 ```
+
+## Submission packaging
+
+- **Canvas (code ZIP):** `frontend/` + `Data_analysis/` **excluding** `inputs/trees_raw.json` (273 MB).
+  The derived tree columns are already in `ams_features.csv`, so the notebook runs without it for every
+  step except the from-scratch tree spatial join.
+- **SURF File Sender:** `trees_raw.json` (appendix dataset for full reproduction) and the video
+  walkthrough. Reference both in the Canvas submission comment.

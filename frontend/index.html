@@ -343,8 +343,15 @@
     <div class="banner-inner">
       <span class="banner-pulse" aria-hidden="true"></span>
       <span id="banner-text" class="banner-text"></span>
+      <button id="heatplan-toggle" class="heatplan-toggle" type="button" aria-pressed="false">
+        <span class="heatplan-toggle-dot" aria-hidden="true"></span>
+        <span class="heatplan-toggle-label"></span>
+      </button>
     </div>
   </div>
+
+  <!-- Policy four-view navigation strip — populated by buildPolicyViewNav() (Policy View only) -->
+  <div id="policy-view-nav" class="hidden-view" hidden aria-label="Analyseweergave"></div>
 
   <!-- ── Map section (flex:1 inside wrapper) ────────────────────────────── -->
   <div id="map-section">

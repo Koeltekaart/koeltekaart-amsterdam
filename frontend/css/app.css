@@ -204,6 +204,25 @@ body {
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
 
+/* Manual heat-plan toggle (demo control inside the status strip) */
+.heatplan-toggle {
+  margin-left: auto; flex-shrink: 0;
+  display: inline-flex; align-items: center; gap: 7px;
+  height: 28px; padding: 0 12px;
+  background: rgba(255,255,255,0.16);
+  border: 1px solid rgba(255,255,255,0.55); border-radius: 999px;
+  color: #fff; font: inherit; font-size: 12.5px; font-weight: 700;
+  cursor: pointer; white-space: nowrap;
+  transition: background 0.15s, border-color 0.15s, color 0.15s;
+}
+.heatplan-toggle:hover { background: rgba(255,255,255,0.28); border-color: #fff; }
+.heatplan-toggle-dot {
+  width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0;
+  background: rgba(255,255,255,0.55); transition: background 0.15s;
+}
+.heatplan-toggle[aria-pressed="true"] { background: #fff; border-color: #fff; color: #ec0000; }
+.heatplan-toggle[aria-pressed="true"] .heatplan-toggle-dot { background: #ec0000; }
+
 /* Main nav row: logo · title · search · actions */
 .topbar-main {
   height: var(--top);
@@ -264,30 +283,52 @@ body {
 .sr-sub  { font-size: 11px; color: var(--muted); margin-top: 1px; }
 
 /* ── Topbar controls ─────────────────────────────────────────────────────── */
-.ctrl-btn {
-  display: flex; align-items: center; gap: 6px;
-  height: 36px; padding: 0 14px;
-  background: transparent; border: var(--ams-border-width-s) solid rgba(255,255,255,0.18); border-radius: 8px;
-  color: rgba(255,255,255,0.75); font-family: var(--font); font-size: 13.5px; font-weight: 500;
-  cursor: pointer; transition: background 0.12s, border-color 0.12s, color 0.12s;
-  white-space: nowrap;
-}
-.ctrl-btn:hover { background: rgba(255,255,255,0.1); border-color: rgba(255,255,255,0.32); color: #fff; }
-.ctrl-btn.active { background: #fff; border-color: #fff; color: var(--navy); }
-.ctrl-btn.icon-only { padding: 0 10px; }
-.lang-btn { min-width: 46px; justify-content: center; font-weight: 600; letter-spacing: 0.04em; font-size: 12px; }
+/* Pill buttons: blue background + white text when waiting; white background +
+   blue text when active/selected. Ported from main (commit 050028f). */
+.ctrl-btn,
 #btn-lang {
-  background: rgba(255,255,255,0.12);
-  border-color: rgba(255,255,255,0.30);
-  color: #fff;
-  font-weight: 700;
+  display: flex; align-items: center; justify-content: center; gap: 6px;
+  height: 40px; padding: 0 18px;
+  background: var(--navy);
+  border: 1.5px solid rgba(255,255,255,0.78); border-radius: 100px;
+  color: var(--white);
+  box-shadow: 0 0 0 1px rgba(255,255,255,0.10) inset;
+  font-family: var(--font); font-size: 13.5px; font-weight: 700;
+  line-height: 1; letter-spacing: 0;
+  cursor: pointer; white-space: nowrap;
+  transition: background 0.12s, border-color 0.12s, color 0.12s;
 }
-#btn-lang:hover { background: rgba(255,255,255,0.2); border-color: rgba(255,255,255,0.45); }
+.ctrl-btn:hover,
 #btn-lang:hover {
-  background: rgba(255,255,255,0.9);
-  border-color: rgba(255,255,255,0.9);
-  color: var(--navy);
+  background: var(--navy); border-color: rgba(255,255,255,0.92); color: var(--white);
 }
+.ctrl-btn.active,
+#btn-lang.active,
+.ctrl-btn[aria-pressed="true"],
+#btn-lang[aria-pressed="true"],
+.ctrl-btn[aria-current="page"],
+#btn-lang[aria-current="page"] {
+  background: var(--white); border-color: rgba(255,255,255,0.98); color: var(--navy);
+}
+.ctrl-btn.active:hover,
+#btn-lang.active:hover,
+.ctrl-btn[aria-pressed="true"]:hover,
+#btn-lang[aria-pressed="true"]:hover,
+.ctrl-btn[aria-current="page"]:hover,
+#btn-lang[aria-current="page"]:hover {
+  background: var(--white); border-color: rgba(255,255,255,0.98); color: var(--navy);
+}
+.ctrl-btn.icon-only { padding: 0 12px; border-radius: 100px; }
+.lang-btn {
+  min-width: 54px; padding: 0 16px; justify-content: center;
+  font-family: var(--font); font-size: 12px; font-weight: 700; letter-spacing: 0.04em;
+}
+.ctrl-btn svg,
+#btn-lang svg { color: inherit; stroke: currentColor; }
+.ctrl-btn svg [stroke],
+#btn-lang svg [stroke] { stroke: currentColor; }
+.ctrl-btn svg [fill]:not([fill="none"]),
+#btn-lang svg [fill]:not([fill="none"]) { fill: currentColor; }
 
 /* ── Page wrapper ────────────────────────────────────────────────────────── */
 #page { margin-top: var(--offset); }
@@ -344,12 +385,18 @@ body {
   z-index: 440; background: var(--surface);
   border-right: 1px solid var(--border);
   display: flex; flex-direction: column;
-  overflow-y: auto; overflow-x: hidden;
+  overflow-y: scroll; overflow-x: hidden;   /* scroll (not auto) = gutter always shown */
   transition: width 0.24s cubic-bezier(0.4,0,0.2,1),
               border-color 0.24s ease;
 }
-#sidebar::-webkit-scrollbar { width: 3px; }
-#sidebar::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.08); border-radius: 2px; }
+/* Sidebar scrollbar: thicker, branded, and always visible (ported from main). */
+#sidebar { scrollbar-width: auto; scrollbar-color: var(--navy) rgba(0,0,0,0.06); }
+#sidebar::-webkit-scrollbar { width: 10px; }
+#sidebar::-webkit-scrollbar-track { background: rgba(0,0,0,0.06); }
+#sidebar::-webkit-scrollbar-thumb {
+  background: var(--navy); border-radius: 6px; border: 2px solid rgba(0,0,0,0.04);
+}
+#sidebar::-webkit-scrollbar-thumb:hover { background: var(--ams-color-interactive-hover); }
 
 /* Desktop-only legend header (collapsible). Hidden on mobile, where the
    sidebar is a full overlay with its own .sidebar-mobile-header. */
@@ -407,6 +454,18 @@ body {
   #map-section.sidebar-collapsed .legend-body { display: none; }
   #map-section.sidebar-collapsed .legend-header { border-bottom: none; }
   #map-section.sidebar-collapsed #sidebar-collapse-btn svg { transform: rotate(0deg); }
+
+  /* Drag handle to resize the legend/sidebar height (ported from main). */
+  #sidebar { --sidebar-resize-hitbox: 14px; }
+  #sidebar::after {
+    content: "";
+    position: absolute;
+    left: 0; right: 0; bottom: 0;
+    height: var(--sidebar-resize-hitbox);
+    cursor: ns-resize;
+    background: transparent;
+    z-index: 4;
+  }
 
   /* ── Right detail/list panel collapse tab (vertical tab, unchanged) ───── */
   #right-panel-toggle {
@@ -526,6 +585,8 @@ body {
      the whole topbar context above it; reverts when closed so the sidebar overlay
      still paints above the topbar. */
   #topbar:has(#search-results:not([hidden])) { z-index: 700; }
+  /* Same fix for the open view-mode dropdown, whose menu drops into the map area. */
+  #topbar:has(#view-mode-dropdown[open]) { z-index: 700; }
 
   /* Map section: column flex */
   #map-section { flex-direction: column; }
@@ -1106,10 +1167,10 @@ body.mode-user #sidebar-policy { display: none; }
     transform: translateX(-50%);
     z-index: 420;
     background: var(--navy);
-    border: 1px solid rgba(255,255,255,0.16);
+    border: 1px solid var(--navy);
     border-radius: 100px;
     padding: 4px;
-    box-shadow: 0 4px 18px rgba(0,70,153,0.40);
+    box-shadow: none;
     gap: 0;
     pointer-events: auto;
   }
@@ -1117,16 +1178,30 @@ body.mode-user #sidebar-policy { display: none; }
   #list-view-inner { padding-bottom: 72px; }
 }
 
+/* Map/list pill buttons: blue+white when waiting, white+blue when selected
+   (ported from main, commits bb3a327 + 050028f). */
 .view-btn {
-  display: flex; align-items: center; gap: 6px;
-  padding: 8px 20px; border: none; border-radius: 100px;
-  background: transparent; color: rgba(255,255,255,0.58);
-  font-family: var(--font); font-size: 13px; font-weight: 600;
-  cursor: pointer; transition: background 0.15s, color 0.15s;
-  white-space: nowrap; letter-spacing: -0.01em;
+  display: flex; align-items: center; justify-content: center; gap: 6px;
+  padding: 8px 20px; border: var(--ams-border-width-s) solid var(--navy); border-radius: 100px;
+  background: var(--navy); color: var(--white);
+  font-family: var(--font); font-size: 13px; font-weight: 700; line-height: 1;
+  cursor: pointer; transition: background 0.15s, border-color 0.15s, color 0.15s;
+  white-space: nowrap; letter-spacing: 0;
 }
-.view-btn.active { background: rgba(255,255,255,0.22); color: #fff; font-weight: 700; }
-.view-btn:hover:not(.active) { color: rgba(255,255,255,0.75); }
+.view-btn:hover:not(.active) { background: var(--navy); border-color: var(--navy); color: var(--white); }
+.view-btn.active,
+.view-btn[aria-pressed="true"],
+.view-btn[aria-current="page"] {
+  background: var(--white); border-color: var(--white); color: var(--navy); font-weight: 700;
+}
+.view-btn.active:hover,
+.view-btn[aria-pressed="true"]:hover,
+.view-btn[aria-current="page"]:hover {
+  background: var(--white); border-color: var(--white); color: var(--navy);
+}
+.view-btn svg { color: inherit; stroke: currentColor; }
+.view-btn svg [stroke] { stroke: currentColor; }
+.view-btn svg [fill]:not([fill="none"]) { fill: currentColor; }
 
 /* ── Right panel (list + detail) ─────────────────────────────────────────── */
 #list-view {
@@ -1150,18 +1225,29 @@ body.mode-user #sidebar-policy { display: none; }
 
 #list-view-inner {
   flex: 1;
-  overflow-y: auto;
+  overflow-y: scroll;   /* scroll (not auto) = gutter always shown */
   overflow-x: hidden;
   padding: 0 0 48px;
+  scrollbar-width: auto;
+  scrollbar-color: var(--navy) rgba(0,0,0,0.06);
 }
 
 #list-view-inner::-webkit-scrollbar {
-  width: 3px;
+  width: 10px;
+}
+
+#list-view-inner::-webkit-scrollbar-track {
+  background: rgba(0,0,0,0.06);
 }
 
 #list-view-inner::-webkit-scrollbar-thumb {
-  background: rgba(0,0,0,0.09);
-  border-radius: 2px;
+  background: var(--navy);
+  border-radius: 6px;
+  border: 2px solid rgba(0,0,0,0.04);
+}
+
+#list-view-inner::-webkit-scrollbar-thumb:hover {
+  background: var(--ams-color-interactive-hover);
 }
 
 @media (min-width: 901px) and (hover: hover) and (pointer: fine) {
@@ -2090,6 +2176,11 @@ html[lang="en"] img.lang-en { display: block; }
 
 .hvi-dash { padding: var(--ams-space-m, 16px); display: flex; flex-direction: column; gap: 0; }
 .hvi-dash-hdr { margin-bottom: 10px; }
+/* Lens detail (per-view buurt card) needs the same horizontal inset as the full
+   profile, so content never jams against the panel edge / scrollbar. The nested
+   full-profile .hvi-dash then drops its own padding to avoid doubling up. */
+.bd-lens { padding-left: var(--ams-space-m, 16px); padding-right: var(--ams-space-m, 16px); }
+.bd-lens .hvi-dash { padding: 0; }
 .hvi-no-data { font-size: 13px; color: var(--muted, #767676); margin-top: 8px; }
 
 .hvi-tier-badge {
@@ -2119,7 +2210,7 @@ html[lang="en"] img.lang-en { display: block; }
 
 .hvi-finding { display: flex; align-items: flex-start; gap: 6px; padding: 5px 0; border-bottom: 1px solid var(--border, #e5e7eb); font-size: 12px; color: var(--text, #202020); }
 .hvi-finding:last-of-type { border-bottom: none; }
-.hvi-finding-icon { font-size: 13px; flex-shrink: 0; line-height: 1.4; }
+.hvi-finding-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; margin-top: 6px; }
 
 .hvi-quadrant { display: inline-block; margin-top: 6px; padding: 2px 8px; border-radius: 12px; background: rgba(0,70,153,0.08); font-size: 11px; font-weight: 600; color: #004699; }
 
@@ -2341,6 +2432,78 @@ body.view-policy #heat-banner { display: none; }
    display:none in Policy View; without an explicit row the map would auto-place
    into the first `auto` track and collapse to ~0 height. Pinning keeps it in the
    1fr track in both views. */
-#heat-banner    { grid-row: 1; }
-#map-section    { grid-row: 2; }
-#contact-footer { grid-row: 3; }
+#heat-banner      { grid-row: 1; }
+#policy-view-nav  { grid-row: 1; }   /* shares row 1 — only one of the two shows per view */
+#map-section      { grid-row: 2; }
+#contact-footer   { grid-row: 3; }
+
+/* ── Policy four-view navigation strip (above the map) ───────────────────── */
+/* Community View never shows it; Policy View hides the (now redundant) left
+   legend sidebar — the four tabs + floating colour legend replace it. */
+body.view-community #policy-view-nav { display: none; }
+/* Policy view replaces the left legend with the four-view nav strip. Hide the
+   legend sidebar in both layouts (the mobile overlay forces display:flex
+   !important, so override it) and hide the mobile "Legenda" FAB + filter bar
+   that would otherwise open an empty legend. */
+body.view-policy    #sidebar           { display: none !important; }
+body.view-policy    #btn-filter-fab    { display: none !important; }
+body.view-policy    #mobile-filter-bar { display: none !important; }
+
+#policy-view-nav {
+  background: #fff; border-bottom: 1px solid rgba(0,0,0,0.10);
+  flex-shrink: 0; z-index: 6;
+}
+.pv-bar {
+  display: flex; align-items: center; gap: 14px; flex-wrap: wrap;
+  padding: 9px 16px 0;
+}
+.pv-tabs {
+  display: flex; gap: 4px; flex-wrap: wrap; flex: 1; min-width: 0;
+  background: var(--surface, #f4f4f4); border-radius: 999px; padding: 4px;
+}
+.pv-tab {
+  flex: 1; white-space: nowrap; border: none; cursor: pointer;
+  background: transparent; color: var(--muted, #767676);
+  font: inherit; font-size: 13px; font-weight: 700; letter-spacing: -0.01em;
+  padding: 8px 14px; border-radius: 999px;
+  transition: background 0.15s, color 0.15s;
+}
+.pv-tab:hover:not(.on) { color: var(--text, #202020); }
+.pv-tab.on { background: var(--navy, #004699); color: #fff; }
+
+/* Cooling-spots switch — the one true overlay toggle, visually distinct */
+.pv-spots { display: inline-flex; align-items: center; gap: 8px; cursor: pointer; flex-shrink: 0; }
+.pv-spots input { position: absolute; opacity: 0; width: 0; height: 0; }
+.pv-spots-track {
+  position: relative; width: 38px; height: 22px; border-radius: 999px;
+  background: rgba(0,0,0,0.22); transition: background 0.18s; flex-shrink: 0;
+}
+.pv-spots-thumb {
+  position: absolute; top: 2px; left: 2px; width: 18px; height: 18px;
+  background: #fff; border-radius: 50%; transition: transform 0.18s;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.3);
+}
+.pv-spots input:checked + .pv-spots-track { background: var(--feedback-success, #00893c); }
+.pv-spots input:checked + .pv-spots-track .pv-spots-thumb { transform: translateX(16px); }
+.pv-spots input:focus-visible + .pv-spots-track { outline: 2px solid var(--navy, #004699); outline-offset: 2px; }
+.pv-spots-label { font-size: 12.5px; font-weight: 700; color: var(--text, #202020); white-space: nowrap; }
+
+.pv-explain {
+  padding: 9px 16px 11px; max-width: 96ch;
+  display: grid; gap: 3px;
+}
+.pv-what { margin: 0; font-size: 14px; font-weight: 700; line-height: 1.4; color: var(--text, #202020); }
+.pv-meta { margin: 0; font-size: 12.5px; line-height: 1.45; color: var(--muted, #767676); }
+.pv-meta-h {
+  display: inline-block; min-width: 64px; margin-right: 6px;
+  font-weight: 800; text-transform: uppercase; letter-spacing: 0.04em;
+  font-size: 10.5px; color: var(--navy, #004699);
+}
+@media (max-width: 720px) {
+  .pv-bar { padding: 8px 12px 0; }
+  .pv-tabs { order: 2; flex-basis: 100%; }
+  .pv-spots { order: 1; margin-left: auto; }
+  .pv-tab { font-size: 12px; padding: 7px 10px; }
+  .pv-explain { padding: 8px 12px 10px; }
+  .pv-what { font-size: 13px; }
+}
