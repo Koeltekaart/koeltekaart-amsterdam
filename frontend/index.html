@@ -14,21 +14,13 @@
 <div data-app-start="">
 
 
-<a class="skip-link" href="#list-view-inner" data-i18n="skip_to_list">
+<a class="ams-skip-link skip-link" href="#list-view-inner" data-i18n="skip_to_list">
   Sla de kaart over en ga naar de lijst met koelteplekken
 </a>
-<div id="a11y-status" class="sr-only" aria-live="polite" aria-atomic="true"></div>
+<div id="a11y-status" class="ams-visually-hidden" aria-live="polite" aria-atomic="true"></div>
 
 <!-- ── Topbar ──────────────────────────────────────────────────────────────── -->
 <header id="topbar">
-
-  <!-- Heat plan status strip — always visible, topmost -->
-  <div id="heat-banner" class="heat-banner heat-banner--inactive" role="status" aria-live="polite">
-    <div class="banner-inner">
-      <span class="banner-pulse" aria-hidden="true"></span>
-      <span id="banner-text" class="banner-text"></span>
-    </div>
-  </div>
 
   <!-- Main nav row -->
   <div class="topbar-main">
@@ -43,9 +35,8 @@
     </span>
 
     <div id="search-wrap" role="search">
-      <svg class="search-icon" width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
-        <circle cx="5.5" cy="5.5" r="4" stroke="currentColor" stroke-width="1.5"/>
-        <line x1="8.5" y1="8.5" x2="13" y2="13" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+      <svg class="search-icon" width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+        <path d="M16.1585 14.7266C17.1537 13.4471 17.7325 11.8528 17.7325 10.1162C17.7325 5.91208 14.3204 2.5 10.1162 2.5C5.91208 2.5 2.5 5.91208 2.5 10.1162C2.5 14.3204 5.91208 17.7325 10.1162 17.7325C11.8528 17.7325 13.4471 17.1537 14.7266 16.1585L20.058 21.5L21.5 20.058L16.1585 14.7266ZM10.1162 15.7015C7.03928 15.7015 4.531 13.1932 4.531 10.1162C4.531 7.03928 7.03928 4.531 10.1162 4.531C13.1932 4.531 15.7015 7.03928 15.7015 10.1162C15.7015 11.2942 15.3359 12.3808 14.7165 13.2745C14.3306 13.8431 13.8431 14.3306 13.2745 14.7165C12.3808 15.3359 11.2942 15.7015 10.1162 15.7015Z"/>
       </svg>
       <input id="search-input" type="search" autocomplete="off" spellcheck="false"
              data-i18n-placeholder="search_placeholder" aria-label="Search" />
@@ -53,14 +44,31 @@
     </div>
 
     <div class="topbar-actions">
+      <!-- View mode dropdown -->
+      <details id="view-mode-dropdown" class="view-mode-dropdown">
+        <summary class="ctrl-btn view-mode-summary" aria-haspopup="listbox">
+          <span id="view-mode-label">Bewonerskaart</span>
+          <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+            <path fill-rule="evenodd" clip-rule="evenodd" d="M2.5 7.91148L12 17.5L21.5 7.91148L20.1016 6.5L12 14.677L3.89845 6.5L2.5 7.91148Z"/>
+          </svg>
+        </summary>
+        <div class="view-mode-menu" role="listbox" aria-label="View mode">
+          <button class="view-mode-item active" data-view-mode="community" role="option" aria-selected="true">
+            <span class="lang-nl">Bewonerskaart</span><span class="lang-en">Community View</span>
+            <span class="view-mode-desc lang-nl">Koelteplekken, parken, water</span>
+            <span class="view-mode-desc lang-en">Cooling spots, parks, water</span>
+          </button>
+          <button class="view-mode-item" data-view-mode="policy" role="option" aria-selected="false">
+            <span class="lang-nl">Beleidskaart</span><span class="lang-en">Policy View</span>
+            <span class="view-mode-desc lang-nl">Kwetsbaarheidskaartenanalyse</span>
+            <span class="view-mode-desc lang-en">Vulnerability &amp; heat analysis</span>
+          </button>
+        </div>
+      </details>
       <button id="btn-near" class="ctrl-btn">
-        <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
-          <circle cx="7" cy="7" r="6" stroke="currentColor" stroke-width="1.5"/>
-          <circle cx="7" cy="7" r="2" fill="currentColor"/>
-          <line x1="7" y1="0"    x2="7"  y2="2.5"  stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
-          <line x1="7" y1="11.5" x2="7"  y2="14"   stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
-          <line x1="0" y1="7"    x2="2.5" y2="7"   stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
-          <line x1="11.5" y1="7" x2="14" y2="7"    stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+          <path d="M12 16C14.2091 16 16 14.2091 16 12C16 9.79086 14.2091 8 12 8C9.79086 8 8 9.79086 8 12C8 14.2091 9.79086 16 12 16Z"/>
+          <path fill-rule="evenodd" clip-rule="evenodd" d="M10.8422 23V20.9262C6.79754 20.4068 3.59325 17.2025 3.07379 13.1578H1V11.1578H3.03888C3.42796 6.96519 6.69287 3.60669 10.8422 3.07379V1H12.8422V3.03888C17.1406 3.43777 20.5622 6.85942 20.9611 11.1578H23V13.1578H20.9262C20.3933 17.3071 17.0348 20.572 12.8422 20.9611V23H10.8422ZM12 19C15.866 19 19 15.866 19 12C19 8.13401 15.866 5 12 5C8.13401 5 5 8.13401 5 12C5 15.866 8.13401 19 12 19Z"/>
         </svg>
         <span data-i18n="near_me">In mijn buurt</span>
       </button>
@@ -85,8 +93,10 @@
         <div class="li-hero-content">
           <h1 class="li-headline">
             <span class="li-hl-line" data-i18n="lp_hl1">Te warm?</span>
-            <span class="li-hl-line li-hl-accent" data-i18n="lp_hl2">Vind verkoeling.</span>
+            <span class="li-hl-line li-hl-accent" data-i18n="lp_hl2">Zoek verkoeling.</span>
           </h1>
+
+          <p class="li-tagline-sub" data-i18n="lp_tagline_sub">Klik op een symbool op de kaart om te zien wat je op deze locatie kunt verwachten.</p>
 
           <button class="li-cta btn-li-enter" data-i18n="lp_enter">Open de kaart</button>
         </div>
@@ -145,7 +155,7 @@
               <summary class="info-block-title">
                 <span class="lang-nl">Wat zijn koelteplekken?</span>
                 <span class="lang-en">What are cooling spots?</span>
-                <svg class="info-block-chevron" width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M4 6l4 4 4-4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                <svg class="info-block-chevron" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" clip-rule="evenodd" d="M2.5 7.91148L12 17.5L21.5 7.91148L20.1016 6.5L12 14.677L3.89845 6.5L2.5 7.91148Z"/></svg>
               </summary>
               <div class="info-block-body">
                 <p class="lang-nl">Tijdens warme dagen kan het in huis erg heet worden. Langere tijd verblijven in een hete woning (boven de 27 graden) kan slecht zijn voor uw gezondheid. Als het Amsterdams Hitteplan actief is, openen in verschillende buurten koelteplekken. Deze plekken bieden een koele en fijne omgeving waar u tijdelijk aan de hitte kunt ontsnappen. Sommige locaties zijn langer open en bieden extra voorzieningen aan.</p>
@@ -160,7 +170,7 @@
               <summary class="info-block-title">
                 <span class="lang-nl">Goed om te weten</span>
                 <span class="lang-en">Good to know</span>
-                <svg class="info-block-chevron" width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M4 6l4 4 4-4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                <svg class="info-block-chevron" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" clip-rule="evenodd" d="M2.5 7.91148L12 17.5L21.5 7.91148L20.1016 6.5L12 14.677L3.89845 6.5L2.5 7.91148Z"/></svg>
               </summary>
               <div class="info-block-body">
                 <ul class="lang-nl">
@@ -175,8 +185,8 @@
                   <li>there are seats and activities, such as reading or playing a game</li>
                   <li>most locations are accessible for people with a disability</li>
                 </ul>
-                <p class="info-disclaimer lang-nl">Let op: de locaties zijn niet bedoeld voor mensen die medische hulp nodig hebben.</p>
-                <p class="info-disclaimer lang-en">Please note: the locations are not intended for people who need medical assistance.</p>
+                <p class="info-disclaimer lang-nl">Let op: deze locaties bieden geen medische hulp als onderdeel van deze dienst.</p>
+                <p class="info-disclaimer lang-en">Please note: these locations do not offer medical assistance as part of this service.</p>
               </div>
             </details>
           </div>
@@ -187,7 +197,7 @@
               <summary class="info-block-title">
                 <span class="lang-nl">Kaart met koelteplekken</span>
                 <span class="lang-en">Map of cooling spots</span>
-                <svg class="info-block-chevron" width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M4 6l4 4 4-4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                <svg class="info-block-chevron" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" clip-rule="evenodd" d="M2.5 7.91148L12 17.5L21.5 7.91148L20.1016 6.5L12 14.677L3.89845 6.5L2.5 7.91148Z"/></svg>
               </summary>
               <div class="info-block-body">
                 <p class="lang-nl">Hieronder vindt u een kaart met alle koelteplekken in Amsterdam. Per locatie kunt u zien:</p>
@@ -213,20 +223,72 @@
       </section>
     </div>
 
-  <!-- Blue accent bar — marks the bottom of the landing section -->
-  <div class="landing-end-bar" aria-hidden="true"></div>
-
   </section><!-- /#landing-intro -->
 
   <!-- ── Map + contact wrapper: sticky flex column, fills viewport below topbar -->
   <div id="map-contact-wrap">
 
+  <!-- Heat plan status strip — sits directly above the map, always visible while the map is -->
+  <div id="heat-banner" class="heat-banner heat-banner--inactive" role="status" aria-live="polite">
+    <div class="banner-inner">
+      <span class="banner-pulse" aria-hidden="true"></span>
+      <span id="banner-text" class="banner-text"></span>
+    </div>
+  </div>
+
+  <!-- Policy view: methodology explainer above the map -->
+  <div id="policy-methodology" class="hidden-view" hidden>
+    <div class="pm-bar">
+      <div class="pm-bar-title">
+        <span class="lang-nl">Hittekwetsbaarheid in Amsterdam — methodologie</span>
+        <span class="lang-en">Heat vulnerability in Amsterdam — methodology</span>
+      </div>
+      <button id="pm-toggle" class="pm-toggle" aria-expanded="true">
+        <span class="lang-nl">Verbergen</span><span class="lang-en">Hide</span>
+      </button>
+    </div>
+    <div class="pm-body" id="pm-body">
+      <p class="pm-lead">
+        <span class="lang-nl">Deze kaart combineert hitteblootstelling, sociale kwetsbaarheid en toegang tot
+          verkoeling tot één <strong>Hittekwetsbaarheidsindex (HVI)</strong> per buurt, zodat beleidsmakers kunnen
+          zien wáár de meest kwetsbare bewoners de minste verkoeling hebben — en welke maatregelen het meeste opleveren.</span>
+        <span class="lang-en">This map combines heat exposure, social vulnerability and access to cooling into a single
+          <strong>Heat Vulnerability Index (HVI)</strong> per neighbourhood, so policymakers can see <em>where</em> the most
+          vulnerable residents have the least relief — and which measures deliver the most benefit.</span>
+      </p>
+      <div class="pm-grid">
+        <div class="pm-card">
+          <div class="pm-card-h"><span class="lang-nl">De index</span><span class="lang-en">The index</span></div>
+          <div class="pm-formula">HVI = 0.40·<span class="pm-h">heat</span> + 0.40·<span class="pm-s">social</span> + 0.20·<span class="pm-a">low&nbsp;access</span></div>
+          <p class="pm-card-p">
+            <span class="lang-nl">Gelijk gewogen hitte en sociale kwetsbaarheid, met koeltoegang als secundaire, beïnvloedbare factor. De ranglijst blijft stabiel bij ±10% andere gewichten.</span>
+            <span class="lang-en">Heat and social vulnerability weighted equally, with cooling access as a secondary, modifiable factor. The ranking is stable under ±10% reweighting.</span>
+          </p>
+        </div>
+        <div class="pm-card">
+          <div class="pm-card-h"><span class="lang-nl">Gegevens</span><span class="lang-en">Data</span></div>
+          <p class="pm-card-p">
+            <span class="lang-nl">Landsat-oppervlaktetemperatuur, het officiële Klimaatrisicokaarten-hitterisico, CBS-buurtcijfers 2022 (vergrijzing, eenpersoonshuishoudens, migratieachtergrond, laag inkomen) en ±322.000 stadsbomen.</span>
+            <span class="lang-en">Landsat surface temperature, the city's official Klimaatrisicokaarten heat-risk score, CBS 2022 neighbourhood statistics (ageing, single-person households, migration background, low income) and ≈322,000 street trees.</span>
+          </p>
+        </div>
+        <div class="pm-card">
+          <div class="pm-card-h"><span class="lang-nl">Tiers &amp; lagen</span><span class="lang-en">Tiers &amp; layers</span></div>
+          <p class="pm-card-p">
+            <span class="lang-nl">Buurten zijn in vijf tiers verdeeld via <em>natural breaks</em> (geen gelijke groepen, maar echte breekpunten). Zet links één analyselaag tegelijk aan; koelteplekken kunnen er overheen.</span>
+            <span class="lang-en">Neighbourhoods are split into five tiers by <em>natural breaks</em> (real gaps, not equal-sized groups). Toggle one analysis layer at a time on the left; cooling spots can overlay on top.</span>
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- ── Map section (flex:1 inside wrapper) ────────────────────────────── -->
   <div id="map-section">
     
     <button id="right-panel-toggle" aria-label="Locatiepaneel inklappen" aria-expanded="true">
-  <svg width="8" height="13" viewBox="0 0 8 13" fill="none" aria-hidden="true">
-    <path d="M1.5 1.5L6.5 6.5L1.5 11.5" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+  <svg width="8" height="13" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+    <path fill-rule="evenodd" clip-rule="evenodd" d="M7.91148 2.5L17.5 12L7.91148 21.5L6.5 20.1016L14.677 12L6.5 3.89845L7.91148 2.5Z"/>
   </svg>
 </button>
     
@@ -236,10 +298,8 @@
     <!-- Mobile filter bar — compact single row -->
     <div id="mobile-filter-bar" role="group" aria-label="Filters">
       <button id="btn-filter-sheet" class="mfb-filters-btn" aria-expanded="false">
-        <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true">
-          <line x1="2" y1="4"  x2="14" y2="4"  stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
-          <line x1="4" y1="8"  x2="12" y2="8"  stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
-          <line x1="6" y1="12" x2="10" y2="12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+          <path fill-rule="evenodd" clip-rule="evenodd" d="M14.8294 12.8384L21.4795 4.5V2.5H2.47949V4.5L9.12939 12.8382V21.5H10.9258L14.8294 19.4314V12.8384ZM12.9294 18.288V12.8384L13.344 11.6538L19.129 4.4H4.82999L10.6148 11.6535L11.0294 12.8382V19.2948L12.9294 18.288Z"/>
         </svg>
         <span>Filters</span>
         <span class="mfb-count" id="mfb-active-count" hidden></span>
@@ -248,65 +308,64 @@
     </div>
 
     <!-- Filter FAB — floating pill over map/list on mobile -->
-    <button id="btn-filter-fab" aria-label="Filters openen" aria-expanded="false">
+    <button id="btn-filter-fab" aria-label="Legenda openen" aria-expanded="false">
       <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true">
         <line x1="2" y1="4"  x2="14" y2="4"  stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
         <line x1="4" y1="8"  x2="12" y2="8"  stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
         <line x1="6" y1="12" x2="10" y2="12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
       </svg>
-      <span>Filters</span>
+      <span class="lang-nl">Legenda</span><span class="lang-en">Legend</span>
       <span class="fab-count" id="fab-active-count" hidden></span>
     </button>
 
     <!-- View toggle (mobile floating pill) -->
     <div class="view-toggle-bar" role="group" aria-label="View mode">
       <button class="view-btn active" data-view="map" aria-pressed="true">
-        <svg width="13" height="13" viewBox="0 0 13 13" fill="none" aria-hidden="true">
-          <rect x="1" y="1" width="4.5" height="4.5" rx="1" stroke="currentColor" stroke-width="1.3"/>
-          <rect x="7.5" y="1" width="4.5" height="4.5" rx="1" stroke="currentColor" stroke-width="1.3"/>
-          <rect x="1" y="7.5" width="4.5" height="4.5" rx="1" stroke="currentColor" stroke-width="1.3"/>
-          <rect x="7.5" y="7.5" width="4.5" height="4.5" rx="1" stroke="currentColor" stroke-width="1.3"/>
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+          <path fill-rule="evenodd" clip-rule="evenodd" d="M8.5 15.7679L4.5 18.0536V8.0919L8.5 5.52047V15.7679ZM10.5 15.7388L13.5 18.1388V7.74131L10.5 5.64131V15.7388ZM14.5 6L21.5 2.5V17L14.5 21.5L9.5 17.5L2.5 21.5V7L9.5 2.5L14.5 6ZM15.5 18.4795L19.5 15.9081V5.73607L15.5 7.73607V18.4795Z"/>
         </svg>
         <span data-i18n="view_map">Kaart</span>
       </button>
       <button class="view-btn" data-view="list" aria-pressed="false">
-        <svg width="13" height="13" viewBox="0 0 13 13" fill="none" aria-hidden="true">
-          <line x1="1" y1="3"   x2="12" y2="3"   stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/>
-          <line x1="1" y1="6.5" x2="12" y2="6.5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/>
-          <line x1="1" y1="10"  x2="12" y2="10"  stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/>
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+          <path d="M2 7C2.55228 7 3 6.55228 3 6C3 5.44772 2.55228 5 2 5C1.44772 5 1 5.44772 1 6C1 6.55228 1.44772 7 2 7Z"/><path d="M5 7H23V5H5V7Z"/><path d="M23 13H5V11H23V13Z"/><path d="M2 13C2.55228 13 3 12.5523 3 12C3 11.4477 2.55228 11 2 11C1.44772 11 1 11.4477 1 12C1 12.5523 1.44772 13 2 13Z"/><path d="M23 19H5V17H23V19Z"/><path d="M2 19C2.55228 19 3 18.5523 3 18C3 17.4477 2.55228 17 2 17C1.44772 17 1 17.4477 1 18C1 18.5523 1.44772 19 2 19Z"/>
         </svg>
         <span data-i18n="view_list">Lijst</span>
       </button>
     </div>
 
-    <!-- Desktop sidebar collapse tab -->
-    <button id="sidebar-collapse-btn" aria-label="Filter zijbalk inklappen" aria-expanded="true">
-  <svg width="8" height="13" viewBox="0 0 8 13" fill="none" aria-hidden="true">
-    <path d="M6.5 1.5L1.5 6.5L6.5 11.5" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
-  </svg>
-</button>
-
-
-    <!-- Sidebar -->
+    <!-- Sidebar / desktop floating legend -->
     <aside id="sidebar" aria-label="Map controls and filters">
+      <!-- Desktop legend header (collapsible) -->
+      <div class="legend-header">
+        <span class="legend-title"><span class="lang-nl">Legenda</span><span class="lang-en">Legend</span></span>
+        <button id="sidebar-collapse-btn" class="legend-collapse" aria-label="Legenda inklappen" aria-expanded="true">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+            <path fill-rule="evenodd" clip-rule="evenodd" d="M2.5 7.91148L12 17.5L21.5 7.91148L20.1016 6.5L12 14.677L3.89845 6.5L2.5 7.91148Z"/>
+          </svg>
+        </button>
+      </div>
       <div class="sidebar-mobile-header">
-        <span class="sidebar-mobile-title" data-i18n="filter_panel_title">Soorten locaties</span>
+        <span class="sidebar-mobile-title legend-title"><span class="lang-nl">Legenda</span><span class="lang-en">Legend</span></span>
+        <button id="btn-clear-filters" class="sidebar-clear-btn" hidden>
+          <span class="lang-nl">Wis filters</span>
+          <span class="lang-en">Clear filters</span>
+        </button>
         <button class="sidebar-mobile-close" aria-label="Sluit filters">
-          <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true">
-            <line x1="3" y1="3"  x2="13" y2="13" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
-            <line x1="13" y1="3" x2="3"  y2="13" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+            <path d="M21 4.58663L19.5704 3L12.0052 10.4954L4.42957 3L3 4.58663L10.4817 12.0055L3 19.4134L4.42957 21L12.0052 13.5046L19.5704 21L21 19.4134L13.5183 12.0055L21 4.58663Z"/>
           </svg>
           <span class="lang-nl">Sluiten</span>
           <span class="lang-en">Close</span>
         </button>
       </div>
 
-      <div class="filter-group filter-group--static">
+      <div class="legend-body">
+      <!-- Community view layers -->
+      <div class="filter-group filter-group--static sidebar-community-section">
         <div class="filter-group-body">
           <div class="layer-row on" data-cat="koelteplekken" role="switch" aria-checked="true" tabindex="0">
-            <span class="l-dot" style="display:flex;align-items:center;justify-content:center;background:#004699;">
-              <svg width="9" height="9" viewBox="0 0 14 14" fill="none" aria-hidden="true"><line x1="7" y1="1" x2="7" y2="13" stroke="white" stroke-width="2" stroke-linecap="round"/><line x1="1" y1="7" x2="13" y2="7" stroke="white" stroke-width="2" stroke-linecap="round"/><line x1="2.9" y1="2.9" x2="11.1" y2="11.1" stroke="white" stroke-width="2" stroke-linecap="round"/><line x1="11.1" y1="2.9" x2="2.9" y2="11.1" stroke="white" stroke-width="2" stroke-linecap="round"/></svg>
-            </span>
+            <span class="l-dot" style="background:conic-gradient(#004699 0deg 60deg,#a00078 60deg 120deg,#00893c 120deg 180deg,#ff9100 180deg 240deg,#bed200 240deg 300deg,#e50082 300deg 360deg);"></span>
             <span class="l-name" data-i18n="koelteplekken_label">Koelteplekken</span>
             <span class="l-count" id="cnt-koelteplekken"></span>
             <span class="l-sw" aria-hidden="true"></span>
@@ -316,7 +375,7 @@
             <summary class="filter-section-summary">
               <span class="lang-nl">Soorten locaties</span>
               <span class="lang-en">Location categories</span>
-              <svg class="filter-section-chevron" width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true"><path d="M2 4.5l4 3 4-3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              <svg class="filter-section-chevron" width="12" height="12" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" clip-rule="evenodd" d="M2.5 7.91148L12 17.5L21.5 7.91148L20.1016 6.5L12 14.677L3.89845 6.5L2.5 7.91148Z"/></svg>
             </summary>
             <div id="category-chips" class="category-chips" role="group" aria-label="Filter by category"></div>
           </details>
@@ -325,20 +384,18 @@
             <summary class="filter-section-summary">
               <span class="lang-nl">Voorzieningen</span>
               <span class="lang-en">Amenities</span>
-              <svg class="filter-section-chevron" width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true"><path d="M2 4.5l4 3 4-3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              <svg class="filter-section-chevron" width="12" height="12" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" clip-rule="evenodd" d="M2.5 7.91148L12 17.5L21.5 7.91148L20.1016 6.5L12 14.677L3.89845 6.5L2.5 7.91148Z"/></svg>
             </summary>
             <div id="filter-chips" class="filter-chips" role="group" aria-label="Filter amenities"></div>
           </details>
-          <div class="layer-row on" data-cat="water_taps" role="switch" aria-checked="true" tabindex="0">
+          <div class="layer-row" data-cat="water_taps" role="switch" aria-checked="false" tabindex="0">
             <span class="l-dot" style="background:#009de6;"></span>
             <span class="l-name" data-i18n="water_label">Drinkwaterkranen</span>
             <span class="l-count" id="cnt-water_taps"></span>
             <span class="l-sw" aria-hidden="true"></span>
           </div>
-          <div class="layer-row on" data-cat="swimming_pools" role="switch" aria-checked="true" tabindex="0">
-            <span class="l-dot" style="display:flex;align-items:center;justify-content:center;background:#00b4c8;">
-              <svg width="10" height="8" viewBox="0 0 20 14" fill="none" aria-hidden="true"><path d="M1 4c2.4-2.8 5-2.8 7.5 0s5 2.8 7.5 0" stroke="white" stroke-width="2.2" stroke-linecap="round"/><path d="M1 10c2.4-2.8 5-2.8 7.5 0s5 2.8 7.5 0" stroke="white" stroke-width="2.2" stroke-linecap="round"/></svg>
-            </span>
+          <div class="layer-row" data-cat="swimming_pools" role="switch" aria-checked="false" tabindex="0">
+            <span class="l-dot" style="background:#009de6;"></span>
             <span class="l-name" data-i18n="swimming_pools_label">Zwemplekken</span>
             <span class="l-count" id="cnt-swimming_pools"></span>
             <span class="l-sw" aria-hidden="true"></span>
@@ -348,7 +405,7 @@
             <summary class="filter-section-summary">
               <span class="lang-nl">Soorten zwemplekken</span>
               <span class="lang-en">Swimming spot types</span>
-              <svg class="filter-section-chevron" width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true"><path d="M2 4.5l4 3 4-3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              <svg class="filter-section-chevron" width="12" height="12" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" clip-rule="evenodd" d="M2.5 7.91148L12 17.5L21.5 7.91148L20.1016 6.5L12 14.677L3.89845 6.5L2.5 7.91148Z"/></svg>
             </summary>
             <div id="swimming-filter-chips" class="filter-chips swimming-filter-chips" role="group" aria-label="Filter swimming spot types"></div>
           </details>
@@ -359,12 +416,13 @@
             <span class="l-sw" aria-hidden="true"></span>
           </div>
           <div class="layer-row" data-cat="shade" role="switch" aria-checked="false" tabindex="0">
-            <span class="l-dot" style="background:#1a2744;"></span>
+            <span class="l-dot" style="background:#004699;"></span>
             <span class="l-name" data-i18n="shade_label">Loopschaduw</span>
             <span class="l-count" id="cnt-shade"></span>
             <span class="l-sw" aria-hidden="true"></span>
           </div>
           <div class="shade-legend" id="shade-legend" hidden>
+            <div class="shade-time" id="shade-time"></div>
             <div class="shade-legend-row">
               <span class="shade-swatch shade-swatch--dark"></span>
               <span class="lang-nl">In schaduw</span><span class="lang-en">In shade</span>
@@ -377,82 +435,80 @@
         </div>
       </div>
 
-      <div class="filter-group filter-group--static">
+      <div class="filter-clear-row" id="filter-clear-row" hidden>
+        <button id="btn-clear-filters-desktop" class="filter-clear-btn">
+          <span class="lang-nl">Alle filters wissen</span>
+          <span class="lang-en">Clear all filters</span>
+        </button>
+      </div>
+
+      <!-- Policy view layers -->
+      <div class="filter-group filter-group--static sidebar-policy-section hidden-view">
         <div class="filter-group-label">
-          <span class="lang-nl">Analyse</span>
-          <span class="lang-en">Analysis</span>
+          <span class="lang-nl">Analyselagen</span>
+          <span class="lang-en">Analysis layers</span>
         </div>
-
         <div class="filter-group-body">
-
-          <!-- HVI -->
           <div class="layer-row" data-cat="hvi" role="switch" aria-checked="false" tabindex="0">
-            <span class="l-dot" style="background:#CA0020;"></span>
-            <span class="l-name">
-              <span class="lang-nl">Kwetsbaarheidskaart</span>
-              <span class="lang-en">Vulnerability map</span>
-            </span>
+            <span class="l-dot" style="background:linear-gradient(135deg,#2166AC,#CA0020);"></span>
+            <span class="l-name"><span class="lang-nl">Kwetsbaarheidskaart</span><span class="lang-en">Vulnerability Index</span></span>
             <span class="l-sw" aria-hidden="true"></span>
           </div>
-
-          <!-- TEMPERATURE-->
+          <div class="layer-row" data-cat="priority" role="switch" aria-checked="false" tabindex="0">
+            <span class="l-dot" style="background:linear-gradient(135deg,#ffffb2,#bd0026);"></span>
+            <span class="l-name"><span class="lang-nl">Interventieprioriteit</span><span class="lang-en">Intervention priority</span></span>
+            <span class="l-sw" aria-hidden="true"></span>
+          </div>
+          <div class="layer-row" data-cat="double_disadvantage" role="switch" aria-checked="false" tabindex="0">
+            <span class="l-dot" style="background:#ec0000;"></span>
+            <span class="l-name"><span class="lang-nl">Dubbele benadeling</span><span class="lang-en">Double disadvantage</span></span>
+            <span class="l-sw" aria-hidden="true"></span>
+          </div>
+          <div class="layer-row" data-cat="hotspots" role="switch" aria-checked="false" tabindex="0">
+            <span class="l-dot" style="background:linear-gradient(135deg,#2166ac,#ca0020);"></span>
+            <span class="l-name"><span class="lang-nl">Hotspot-clusters</span><span class="lang-en">Hotspot clusters</span></span>
+            <span class="l-sw" aria-hidden="true"></span>
+          </div>
           <div class="layer-row" data-cat="temperature" role="switch" aria-checked="false" tabindex="0">
-            <span class="l-dot" style="background:#E31A1C;"></span>
-            <span class="l-name">
-              <span class="lang-nl">Oppervlaktetemperatuur</span>
-              <span class="lang-en">Surface Temperature</span>
-            </span>
+            <span class="l-dot" style="background:linear-gradient(135deg,#009de6,#CA0020);"></span>
+            <span class="l-name"><span class="lang-nl">Oppervlaktetemperatuur</span><span class="lang-en">Surface Temperature</span></span>
             <span class="l-sw" aria-hidden="true"></span>
           </div>
-          <!-- stakeholder layers-->
           <div class="layer-row" data-cat="ndvi" role="switch" aria-checked="false" tabindex="0">
             <span class="l-dot" style="background:#00893c;"></span>
-            <span class="l-name">
-              <span class="lang-nl">Vegetatie-index</span>
-              <span class="lang-en">Vegetation Index</span>
-            </span>
+            <span class="l-name"><span class="lang-nl">Vegetatie-index (NDVI)</span><span class="lang-en">Vegetation Index (NDVI)</span></span>
             <span class="l-sw" aria-hidden="true"></span>
           </div>
-
           <div class="layer-row" data-cat="cooling_assets" role="switch" aria-checked="false" tabindex="0">
-           <span class="l-dot" style="background:#004699;"></span>
-            <span class="l-name">
-              <span class="lang-nl">Afstand tot koeltevoorzieningen</span>
-              <span class="lang-en">Cooling Asset Distance</span>
-            </span>
+            <span class="l-dot" style="background:#004699;"></span>
+            <span class="l-name"><span class="lang-nl">Afstand koelplaatsen</span><span class="lang-en">Cooling Asset Distance</span></span>
             <span class="l-sw" aria-hidden="true"></span>
           </div>
-
           <div class="layer-row" data-cat="healthcare_distance" role="switch" aria-checked="false" tabindex="0">
             <span class="l-dot" style="background:#a00078;"></span>
-            <span class="l-name">
-              <span class="lang-nl">Afstand tot zorg</span>
-              <span class="lang-en">Healthcare Distance</span>
-            </span>
+            <span class="l-name"><span class="lang-nl">Afstand gezondheidszorg</span><span class="lang-en">Healthcare Distance</span></span>
             <span class="l-sw" aria-hidden="true"></span>
-          </div>
-          <!-- HVI Legend -->
-          <div class="hvi-legend" id="hvi-legend" hidden>
-            <div class="hvi-legend-scale">
-              <span class="hvi-legend-swatch" style="background:#2166AC"></span>
-              <span class="hvi-legend-swatch" style="background:#92C5DE"></span>
-              <span class="hvi-legend-swatch" style="background:#FFFFBF"></span>
-              <span class="hvi-legend-swatch" style="background:#F4A582"></span>
-              <span class="hvi-legend-swatch" style="background:#CA0020"></span>
-            </div>
-
-            <div class="hvi-legend-labels">
-              <span class="lang-nl">Laag</span>
-              <span class="lang-en">Low</span>
-
-              <span class="hvi-legend-spacer"></span>
-
-              <span class="lang-nl">Hoog</span>
-              <span class="lang-en">High</span>
-            </div>
           </div>
         </div>
       </div>
+
+      <!-- Policy view: context layers (can overlay on top of an analysis layer) -->
+      <div class="filter-group filter-group--static sidebar-policy-section hidden-view">
+        <div class="filter-group-label">
+          <span class="lang-nl">Context</span>
+          <span class="lang-en">Context</span>
+        </div>
+        <div class="filter-group-body">
+          <div class="layer-row" data-cat="koelteplekken" role="switch" aria-checked="false" tabindex="0">
+            <span class="l-dot" style="background:#004699;"></span>
+            <span class="l-name"><span class="lang-nl">Koelteplekken</span><span class="lang-en">Cooling spots</span></span>
+            <span class="l-sw" aria-hidden="true"></span>
+          </div>
+        </div>
+      </div>
+
+      </div><!-- /.legend-body -->
+
     </aside>
 
     <!-- Map -->
@@ -469,8 +525,8 @@
           <div id="panel-hdr-count"></div>
         </div>
         <button class="panel-hdr-back" id="panel-hdr-back" aria-label="Terug" hidden>
-          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
-            <path d="M10 3L5 8l5 5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+            <path fill-rule="evenodd" clip-rule="evenodd" d="M16.0885 2.5L6.5 12L16.0885 21.5L17.5 20.1016L9.32296 12L17.5 3.89845L16.0885 2.5Z"/>
           </svg>
         </button>
       </div>
@@ -483,10 +539,10 @@
   <footer class="contact-strip" id="contact-footer">
     <!-- Mobile: collapsed summary row -->
     <div class="cs-collapsed-summary" id="cs-toggle" role="button" aria-expanded="false" aria-controls="cs-expanded-body">
-      <span class="cs-collapsed-text lang-nl">Contact &amp; Aanmelden</span>
-      <span class="cs-collapsed-text lang-en">Contact &amp; Register</span>
-      <svg class="cs-collapsed-chevron" width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
-        <path d="M4 6l4 4 4-4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+      <span class="cs-collapsed-text lang-nl">Contact &amp; Koelteplek aanmelden</span>
+      <span class="cs-collapsed-text lang-en">Contact &amp; Register a cooling spot</span>
+      <svg class="cs-collapsed-chevron" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+        <path fill-rule="evenodd" clip-rule="evenodd" d="M2.5 7.91148L12 17.5L21.5 7.91148L20.1016 6.5L12 14.677L3.89845 6.5L2.5 7.91148Z"/>
       </svg>
     </div>
     <!-- Mobile: expanded body -->
@@ -556,8 +612,8 @@
 <div id="contact-page" role="dialog" aria-modal="true" aria-labelledby="contact-page-title">
   <div class="tips-page-header">
     <button id="contact-back" class="tips-back-btn" aria-label="Back to map">
-      <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
-        <path d="M10 3L5 8l5 5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+        <path d="M10.6581 6.67326L9.23752 5.25L2.5 12L9.23752 18.75L10.6581 17.3267L6.34583 13.0064L21.5 13.0064V10.9937L6.34574 10.9937L10.6581 6.67326Z"/>
       </svg>
       <span data-i18n="back">Terug</span>
     </button>
