@@ -91,7 +91,7 @@ python3 -m http.server 8000
 for windows user:
 ```bash
 cd frontend
-python3 -m http.server 8000
+python -m http.server 8000
 # open http://localhost:8000
 ```
 Deep-link a view with `?view=policy` or `?view=community`.
