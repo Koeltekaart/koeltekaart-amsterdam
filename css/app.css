@@ -502,7 +502,7 @@ html:has(body.sidebar-open) { overflow: hidden; }
     top: 14px; left: 14px;
     width: min(380px, calc(50% - 28px));
     height: auto;
-    max-height: calc(65% - 22px);   /* expanded legend may use up to 65% of the map height so all layer options stay visible */
+    max-height: calc(78% - 22px);   /* expanded legend may use up to 78% of the map height so all layer options stay visible */
     border: 1px solid var(--border);
     border-radius: 16px;
     background: rgba(255,255,255,0.97);
@@ -524,6 +524,26 @@ html:has(body.sidebar-open) { overflow: hidden; }
   }
   .legend-title { font-size: 14.5px; font-weight: 800; letter-spacing: -0.01em; color: var(--text); }
   .sidebar-mobile-header { display: none; }
+
+  /* Right-side header controls: "Clear filters" pill + collapse button */
+  .legend-header-actions { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+  .legend-clear-btn {
+    display: none; /* only visible when filters are active */
+    align-items: center; justify-content: center;
+    height: 32px; padding: 0 12px;
+    border-radius: 9px;
+    border: 1.5px solid var(--navy);
+    background: transparent;
+    color: var(--navy);
+    font-family: var(--font);
+    font-size: 12.5px; font-weight: 600;
+    cursor: pointer; white-space: nowrap;
+    transition: background 0.12s;
+  }
+  .legend-clear-btn:not([hidden]) { display: flex; }
+  .legend-clear-btn:hover { background: rgba(0,70,153,0.06); }
+  .legend-clear-btn:active { background: rgba(0,70,153,0.10); }
+  .legend-clear-btn[hidden] { display: none; }
 
   #sidebar-collapse-btn {
     display: flex; align-items: center; justify-content: center;
@@ -606,22 +626,6 @@ html:has(body.sidebar-open) { overflow: hidden; }
 .sidebar-mobile-title {
   font-size: 14px; font-weight: 700; color: var(--text); letter-spacing: -0.01em;
 }
-/* Desktop: text-link at bottom of sidebar */
-.filter-clear-row {
-  border-top: var(--ams-border-width-s) solid var(--border);
-  padding: var(--ams-space-s) var(--ams-space-m);
-  display: flex; justify-content: center;
-}
-.filter-clear-row[hidden] { display: none !important; }
-.filter-clear-btn {
-  background: none; border: none; padding: 0;
-  font-family: var(--font); font-size: var(--ams-body-small-font-size);
-  font-weight: 600; color: var(--ams-color-text-secondary);
-  cursor: pointer; text-decoration: underline;
-  text-underline-offset: 3px;
-  transition: color 0.12s;
-}
-.filter-clear-btn:hover { color: var(--ams-color-text-default); }
 
 /* Mobile header: "Clear filters" pill — matches the close button exactly */
 .sidebar-clear-btn {
@@ -717,10 +721,6 @@ html:has(body.sidebar-open) { overflow: hidden; }
   /* On a location's detail screen, the Kaart/Lijst view toggle is irrelevant —
      hide it so it doesn't float over the detail. */
   body.mobile-detail-open .view-toggle-bar { display: none !important; }
-
-  /* The mobile legend header already has a "Clear filters" pill, so the desktop
-     bottom-of-sidebar clear link is a duplicate on mobile — hide it. */
-  .filter-clear-row { display: none !important; }
 
   /* FAB sits at top-left — push title/count to right edge, both right-aligned */
   .panel-hdr { padding-left: 72px; }

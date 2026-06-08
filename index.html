@@ -301,11 +301,17 @@
       <!-- Desktop legend header (collapsible) -->
       <div class="legend-header">
         <span class="legend-title"><span class="lang-nl">Legenda</span><span class="lang-en">Legend</span></span>
-        <button id="sidebar-collapse-btn" class="legend-collapse" aria-label="Legenda inklappen" aria-expanded="true">
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-            <path fill-rule="evenodd" clip-rule="evenodd" d="M2.5 7.91148L12 17.5L21.5 7.91148L20.1016 6.5L12 14.677L3.89845 6.5L2.5 7.91148Z"/>
-          </svg>
-        </button>
+        <div class="legend-header-actions">
+          <button id="btn-clear-filters-desktop" class="legend-clear-btn" hidden>
+            <span class="lang-nl">Wis filters</span>
+            <span class="lang-en">Clear filters</span>
+          </button>
+          <button id="sidebar-collapse-btn" class="legend-collapse" aria-label="Legenda inklappen" aria-expanded="true">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+              <path fill-rule="evenodd" clip-rule="evenodd" d="M2.5 7.91148L12 17.5L21.5 7.91148L20.1016 6.5L12 14.677L3.89845 6.5L2.5 7.91148Z"/>
+            </svg>
+          </button>
+        </div>
       </div>
       <div class="sidebar-mobile-header">
         <span class="sidebar-mobile-title legend-title"><span class="lang-nl">Legenda</span><span class="lang-en">Legend</span></span>
@@ -393,12 +399,6 @@
         </div>
       </div>
 
-      <div class="filter-clear-row" id="filter-clear-row" hidden>
-        <button id="btn-clear-filters-desktop" class="filter-clear-btn">
-          <span class="lang-nl">Alle filters wissen</span>
-          <span class="lang-en">Clear all filters</span>
-        </button>
-      </div>
       </div><!-- /.legend-body -->
 
     </aside>
@@ -455,7 +455,6 @@
           <span class="cs-label lang-en">Submit a location</span>
         </div>
         <div class="cs-group-values">
-          <a href="tel:0611738325" class="cs-value">06 117 38 325</a>
           <a href="mailto:pratischa.koirala@amsterdam.nl" class="cs-value">pratischa.koirala@amsterdam.nl</a>
         </div>
       </div>
@@ -479,7 +478,6 @@
           <span class="cs-label lang-en">Submit a location</span>
         </div>
         <div class="cs-group-values">
-          <a href="tel:0611738325" class="cs-value">06 117 38 325</a>
           <a href="mailto:pratischa.koirala@amsterdam.nl" class="cs-value">pratischa.koirala@amsterdam.nl</a>
         </div>
       </div>

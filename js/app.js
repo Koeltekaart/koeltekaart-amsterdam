@@ -395,8 +395,6 @@ const TR = {
     contact_ggd_web_label: "",
     contact_submit_title: "Koelteplek aanmelden",
     contact_submit_body: "Kent u een locatie die als koelteplek kan dienen? Neem dan contact op.",
-    contact_submit_phone_label: "Telefoon",
-    contact_submit_phone: "06 117 38 325",
     contact_submit_email_label: "E-mail",
     contact_submit_email: "pratischa.koirala@amsterdam.nl",
     district: "Stadsdeel",
@@ -519,8 +517,6 @@ const TR = {
     contact_ggd_web_label: "",
     contact_submit_title: "Register a cooling spot",
     contact_submit_body: "Do you know a location that could serve as a cooling spot? Get in touch with the details below.",
-    contact_submit_phone_label: "Phone",
-    contact_submit_phone: "06 117 38 325",
     contact_submit_email_label: "Email",
     contact_submit_email: "pratischa.koirala@amsterdam.nl",
     district: "District",
@@ -1746,8 +1742,8 @@ function updateClearFiltersBtn() {
     Object.values(state.swimTypes || {}).some(Boolean);
   const headerBtn = document.getElementById("btn-clear-filters");
   if (headerBtn) headerBtn.hidden = !hasActiveFilters;
-  const row = document.getElementById("filter-clear-row");
-  if (row) row.hidden = !hasActiveFilters;
+  const desktopBtn = document.getElementById("btn-clear-filters-desktop");
+  if (desktopBtn) desktopBtn.hidden = !hasActiveFilters;
 }
 
 function clearAllFilters() {
@@ -2678,9 +2674,6 @@ function renderContactPage() {
   const submitTitle=document.createElement("span"); submitTitle.className="cp-card-title"; submitTitle.textContent=t("contact_submit_title");
   submitHeading.append(submitTitle); submitCard.appendChild(submitHeading);
   const submitBody=document.createElement("p"); submitBody.className="cp-card-body"; submitBody.textContent=t("contact_submit_body"); submitCard.appendChild(submitBody);
-  const sPhoneRow=_cpRow(t("contact_submit_phone_label"));
-  const sPhoneLink=document.createElement("a"); sPhoneLink.href="tel:+31611738325"; sPhoneLink.className="cp-link"; sPhoneLink.textContent=t("contact_submit_phone");
-  sPhoneRow.valueEl.appendChild(sPhoneLink); submitCard.appendChild(sPhoneRow.el);
   const sEmailRow=_cpRow(t("contact_submit_email_label"));
   const sEmailLink=document.createElement("a"); sEmailLink.href="mailto:pratischa.koirala@amsterdam.nl"; sEmailLink.className="cp-link"; sEmailLink.textContent=t("contact_submit_email");
   sEmailRow.valueEl.appendChild(sEmailLink); submitCard.appendChild(sEmailRow.el);
