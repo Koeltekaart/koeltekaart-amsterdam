@@ -926,7 +926,7 @@ function initMap() {
   if (zoomOut) zoomOut.innerHTML = adsIcon("Minus", { size: 20, fill: "currentColor" });
   state.map.on("click", () => { closeSidebarMobile(); });
   state.map.on("mousemove", e => HC.move(e.originalEvent.clientX, e.originalEvent.clientY));
-  // shade tiles are prefetched at load — no viewport tracking needed
+  // shade is a vector-tile layer — Leaflet fetches only the tiles in view
 
   // Resize whenever the map container changes size (orientation change, sidebar toggle, etc.)
   if (typeof ResizeObserver !== "undefined") {
@@ -1302,7 +1302,7 @@ function buildStaticLayer(def, data) {
   if (state.on[def.cat]) state.layers[def.cat].addTo(state.map);
 }
 
-// ── Shade overlay — one merged file per time slot, prefetched at load ────────
+// ── Shade overlay — pre-baked vector tiles (data/shade.pmtiles) ──────────────
 const SHADE_SLOTS = [
   { key: "1000", hour: 10.00 },
   { key: "1300", hour: 13.00 },
@@ -1353,46 +1353,46 @@ function setShadeSlot(key) {
   _shadeSlotKey = key;
   _updateShadeTime();
   _renderShadeSlots();
-  // Geometry is identical across slots — just recolour, no refetch needed.
-  if (state.layers.shade) state.layers.shade.setStyle(_shadeStyle);
+  // Geometry is identical across slots — just recolour the cached tiles.
+  if (state.layers.shade) state.layers.shade.rerenderTiles();
 }
 
-function _shadeStyle(feature) {
-  const pct = feature.properties?.["s" + _shadeSlotKey] ?? 0;
-  const t = Math.min(1, Math.max(0, pct / 100));
-  if (t >= 0.5) {
-    // In shade — dark navy overlay, opacity proportional to shade
-    return { fillColor: "#004699", fillOpacity: (t - 0.5) * 2 * 0.65, color: "transparent", weight: 0 };
-  } else {
-    // In full sun — warm yellow overlay, opacity proportional to sunlight
-    return { fillColor: "#ffe600", fillOpacity: (0.5 - t) * 2 * 0.30, color: "transparent", weight: 0 };
-  }
+// Per-feature paint helpers for the vector-tile shade layer. protomaps-leaflet
+// detects per-feature styling when the attribute is a 2-argument function
+// (zoom, feature); the shade percentage lives in feature.props.s1000…s1800.
+function _shadeT(f) {
+  const pct = f?.props?.["s" + _shadeSlotKey] ?? 0;
+  return Math.min(1, Math.max(0, pct / 100));
+}
+// Dark navy where shaded, warm yellow where sunlit (transparent fill at 50/50).
+function _shadeFill(_z, f) { return _shadeT(f) >= 0.5 ? "#004699" : "#ffe600"; }
+function _shadeOpacity(_z, f) {
+  const t = _shadeT(f);
+  return t >= 0.5 ? (t - 0.5) * 2 * 0.65 : (0.5 - t) * 2 * 0.30;
 }
 
-// Single combined file holds every slot's shade as properties s1000…s1800,
-// so the geometry is downloaded only once. Prefetch resolves it (or null).
-let _shadePromise = null;
-
-function _prefetchShade() {
-  if (_shadePromise) return;
-  _shadePromise = fetch("data/shade.geojson").then(r => r.json()).catch(() => null);
-}
-
-async function _renderShadeLayer() {
+// Shade is served as a single pre-baked vector-tile pyramid (data/shade.pmtiles,
+// layer "shade", zooms 13–18). The browser fetches only the tiles in view via
+// HTTP range requests and the GPU composites them on zoom — no per-frame redraw
+// of 68k polygons. Geometry detail is zoom-appropriate (full at z18).
+function _renderShadeLayer() {
   if (state.layers.shade) { state.map.removeLayer(state.layers.shade); state.layers.shade = null; }
   if (!state.on.shade) return;
 
   _shadeSlotKey = _nearestShadeSlot();
   _updateShadeTime();
   _renderShadeSlots();
-  _prefetchShade(); // no-op if already started
-  const gj = await _shadePromise;
-  if (!gj || !state.on.shade) return;
 
-  state.layers.shade = L.geoJSON(gj, {
-    pane:     "shadePane",
-    renderer: L.canvas({ padding: 0.5, pane: "shadePane" }),
-    style:    _shadeStyle,
+  state.layers.shade = protomapsL.leafletLayer({
+    url:         "data/shade.pmtiles",
+    pane:        "shadePane",
+    maxDataZoom: 18,        // tiles top out at z18; overzoom above that
+    minZoom:     13,        // shade is illegible below street zoom
+    attribution: "",
+    paintRules: [{
+      dataLayer:  "shade",
+      symbolizer: new protomapsL.PolygonSymbolizer({ fill: _shadeFill, opacity: _shadeOpacity }),
+    }],
   }).addTo(state.map);
 }
 

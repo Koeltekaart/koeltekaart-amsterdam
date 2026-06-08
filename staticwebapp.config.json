@@ -1,0 +1,50 @@
+{
+  "$schema": "https://json.schemastore.org/staticwebapp.config.json",
+  "trailingSlash": "auto",
+  "mimeTypes": {
+    ".geojson": "application/geo+json",
+    ".json": "application/json",
+    ".csv": "text/csv",
+    ".pmtiles": "application/octet-stream",
+    ".woff2": "font/woff2",
+    ".woff": "font/woff"
+  },
+  "navigationFallback": {
+    "rewrite": "/index.html",
+    "exclude": ["/data/*", "/css/*", "/js/*", "/libs/*", "/fonts/*", "/images/*", "/*.{png,jpg,svg,ico,webmanifest}"]
+  },
+  "globalHeaders": {
+    "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+    "X-Content-Type-Options": "nosniff",
+    "X-Frame-Options": "DENY",
+    "Referrer-Policy": "strict-origin-when-cross-origin",
+    "Permissions-Policy": "geolocation=(self), camera=(), microphone=(), payment=(), usb=()",
+    "Content-Security-Policy": "default-src 'self'; base-uri 'self'; object-src 'none'; form-action 'self'; frame-ancestors 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data: blob: https://service.pdok.nl https://lh3.googleusercontent.com https://drive.google.com; connect-src 'self' https://api.open-meteo.com https://service.pdok.nl https://api.pdok.nl https://docs.google.com https://drive.google.com; worker-src 'self' blob:; upgrade-insecure-requests"
+  },
+  "routes": [
+    {
+      "route": "/data/*",
+      "headers": { "Cache-Control": "public, max-age=300, must-revalidate" }
+    },
+    {
+      "route": "/fonts/*",
+      "headers": { "Cache-Control": "public, max-age=31536000, immutable" }
+    },
+    {
+      "route": "/libs/*",
+      "headers": { "Cache-Control": "public, max-age=31536000, immutable" }
+    },
+    {
+      "route": "/images/*",
+      "headers": { "Cache-Control": "public, max-age=86400" }
+    },
+    {
+      "route": "/js/*",
+      "headers": { "Cache-Control": "public, max-age=3600, must-revalidate" }
+    },
+    {
+      "route": "/css/*",
+      "headers": { "Cache-Control": "public, max-age=3600, must-revalidate" }
+    }
+  ]
+}
