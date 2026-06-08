@@ -608,6 +608,9 @@ function applyLanguage() {
   updatePanelTitle();
 
   rerenderCurrentDetailPanel();
+
+  // Footer width depends on the language (NL/EN labels differ) — re-evaluate.
+  if (footerRemeasure) footerRemeasure();
 }
 
 function setupLang() {
@@ -854,7 +857,30 @@ function _withoutHeatPulse(fn) {
 
 // ── Map init ───────────────────────────────────────────────────────────────
 function initMap() {
-  state.map = L.map("map", { zoomControl: false }).setView([52.368, 4.827], 13);
+  // scrollWheelZoom disabled: a plain wheel / two-finger scroll over the map
+  // scrolls the page (there is nothing to scroll *within* the map). Zoom stays
+  // on the +/- control, double-click, touch-pinch, and trackpad pinch (handled
+  // below). zoomSnap:0 lets that pinch zoom smoothly; buttons still step by 1.
+  state.map = L.map("map", {
+    zoomControl: false,
+    scrollWheelZoom: false,
+    zoomSnap: 0,
+    zoomDelta: 1,
+  }).setView([52.368, 4.827], 13);
+
+  // Trackpad pinch is delivered as a ctrl+wheel event. Zoom the map for those
+  // (around the cursor) while letting every plain wheel event scroll the page.
+  {
+    const el = state.map.getContainer();
+    el.addEventListener("wheel", (e) => {
+      if (!e.ctrlKey) return;            // plain scroll → page scrolls
+      e.preventDefault();
+      const rect = el.getBoundingClientRect();
+      const point = L.point(e.clientX - rect.left, e.clientY - rect.top);
+      const dz = -e.deltaY * 0.01;       // sensitivity for smooth pinch
+      state.map.setZoomAround(point, state.map.getZoom() + dz, { animate: false });
+    }, { passive: false });
+  }
 
   // Custom panes: parks < points
   state.map.createPane("parksPane");
@@ -2865,6 +2891,61 @@ function isListViewActive() {
 }
 function refreshListIfActive() { if (isListViewActive()) renderListView(); }
 
+// ── Responsive footer ───────────────────────────────────────────────────────
+// Three stages, chosen from measured intrinsic widths (not fixed breakpoints):
+//   1. inline   — label + phone + email all on one line
+//   2. stacked  — phone above email (body.footer-stacked), once inline won't fit
+//   3. compact  — collapsible footer (body.footer-compact), before the text
+//                 would reach the divider bars
+// On phones stage 3 is effectively always on.
+let footerRemeasure = null;
+function setupFooterResponsive() {
+  const footer = document.getElementById("contact-footer");
+  if (!footer) return;
+  const inner = footer.querySelector(".cs-desktop-inner");
+  if (!inner) return;
+  let inlineW = 0, stackedW = 0;   // cached intrinsic widths (container-independent)
+
+  function sumInner() {
+    // Groups never shrink (flex:0 0 auto) so each child reports its content
+    // width; summing gives the intrinsic strip width for the current stack mode.
+    const kids = [...inner.children];
+    let w = 0;
+    for (const k of kids) w += k.getBoundingClientRect().width;
+    const cs = getComputedStyle(inner);
+    const colGap = parseFloat(cs.columnGap || cs.gap) || 0;
+    w += colGap * Math.max(0, kids.length - 1);
+    w += (parseFloat(cs.paddingLeft) || 0) + (parseFloat(cs.paddingRight) || 0);
+    return w;
+  }
+  function measure() {
+    const b = document.body;
+    const wasCompact = b.classList.contains("footer-compact");
+    const wasStacked = b.classList.contains("footer-stacked");
+    b.classList.remove("footer-compact");
+    b.classList.remove("footer-stacked");
+    inlineW = sumInner();                 // values side by side
+    b.classList.add("footer-stacked");
+    stackedW = sumInner();                // phone above email → narrower
+    b.classList.toggle("footer-stacked", wasStacked);
+    b.classList.toggle("footer-compact", wasCompact);
+  }
+  function check() {
+    if (!inlineW) measure();
+    const avail = footer.clientWidth;
+    const compact = avail < stackedW + 40;   // breathing room before the dividers
+    const stacked = !compact && avail < inlineW + 16;
+    document.body.classList.toggle("footer-compact", compact);
+    document.body.classList.toggle("footer-stacked", stacked);
+  }
+  function remeasure() { measure(); check(); }
+  if (typeof ResizeObserver !== "undefined") new ResizeObserver(check).observe(footer);
+  window.addEventListener("resize", check);
+  setTimeout(remeasure, 250);   // re-evaluate once webfonts have settled
+  footerRemeasure = remeasure;
+  remeasure();
+}
+
 // ── View toggle (mobile only) ──────────────────────────────────────────────
 function setupViewToggle() {
   document.querySelectorAll(".view-btn").forEach(btn => {
@@ -3026,6 +3107,7 @@ document.addEventListener("DOMContentLoaded", () => {
   setupMobileFilterCollapse();
   setupKeyboard();
   setupViewToggle();
+  setupFooterResponsive();
   setupSkipLink();
   applyLanguage();
   applyHeatPlanToMap();

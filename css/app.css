@@ -307,11 +307,22 @@ body {
   transition: background 0.12s, border-color 0.12s, color 0.12s;
 }
 
-.ctrl-btn:hover,
-#btn-lang:hover {
+/* Language toggle always reads as the active/primary action — solid navy. */
+#btn-lang {
+  background: var(--navy);
+  color: var(--white);
+}
+
+.ctrl-btn:hover {
   background: rgba(0,70,153,0.08);
   border-color: var(--navy);
   color: var(--navy);
+}
+#btn-lang:hover {
+  background: var(--navy);
+  border-color: var(--navy);
+  color: var(--white);
+  filter: brightness(1.12);
 }
 
 .ctrl-btn.active,
@@ -371,6 +382,26 @@ body {
 
 /* ── Page wrapper ────────────────────────────────────────────────────────── */
 #page { margin-top: var(--offset); }
+
+/* ── Scroll-snap: lock onto either the landing OR the fully-docked map app ───
+   The map+contact section is a full-height sticky block, so without snapping it
+   can rest half-revealed with the contact bar below the fold. Two proximity
+   snap points (landing top · docked map) let a scroll settle cleanly on one or
+   the other. scroll-padding-top keeps snapped sections clear of the fixed
+   topbar. Proximity (not mandatory) so reading the tall landing copy is
+   unaffected. A wheel/two-finger gesture scrolls the page freely because
+   Leaflet scrollWheelZoom is off (see initMap), so these points are reachable.
+   Lives on <html>, the document scroll container (body only has min-height). */
+html { scroll-snap-type: y proximity; scroll-padding-top: var(--offset); }
+/* Lock the page behind the full-screen mobile legend/filter overlay so the
+   background doesn't scroll through underneath it on touch devices (which can
+   look like the overlay "doesn't cover" the page). */
+html:has(body.sidebar-open) { overflow: hidden; }
+#landing-intro,
+#snap-app-anchor { scroll-snap-align: start; }
+/* Zero-height marker sitting at the seam between landing and the map app; its
+   snap-start position equals the fully-docked scroll position. */
+#snap-app-anchor { height: 0; pointer-events: none; }
 
 /* ── Map + contact wrapper — Stacks the elements separately ────────────── */
 #map-contact-wrap {
@@ -683,6 +714,14 @@ body {
   body.sidebar-open #btn-filter-fab { display: none !important; }
   body.mobile-detail-open #btn-filter-fab { display: none !important; }
 
+  /* On a location's detail screen, the Kaart/Lijst view toggle is irrelevant —
+     hide it so it doesn't float over the detail. */
+  body.mobile-detail-open .view-toggle-bar { display: none !important; }
+
+  /* The mobile legend header already has a "Clear filters" pill, so the desktop
+     bottom-of-sidebar clear link is a duplicate on mobile — hide it. */
+  .filter-clear-row { display: none !important; }
+
   /* FAB sits at top-left — push title/count to right edge, both right-aligned */
   .panel-hdr { padding-left: 72px; }
   #panel-hdr-list { margin-left: auto; align-items: flex-end; }
@@ -703,6 +742,8 @@ body {
     overflow-y: auto; overflow-x: hidden;
   }
   body.sidebar-open #sidebar { transform: translateX(0); }
+  /* Cover the home-indicator / notch safe areas so nothing peeks past the edges. */
+  #sidebar { padding-bottom: env(safe-area-inset-bottom); }
 
   #sidebar-backdrop { display: none !important; }
 
@@ -1394,6 +1435,12 @@ body.mode-user #sidebar-policy { display: none; }
     display: flex !important;
   }
 
+  /* Right gutter so neither the OS page scrollbar (overlaying the viewport edge
+     on macOS) nor the custom list scrollbar covers content. The custom thumb
+     (right:3px of this padded content box) sits in the gutter, just left of the
+     page scrollbar at the very edge. */
+  #list-view-inner { padding-right: 14px; }
+
   #list-view {
     transition:
       transform 0.24s cubic-bezier(0.4,0,0.2,1),
@@ -1478,8 +1525,9 @@ body.mode-user #sidebar-policy { display: none; }
   align-items: center;
 }
 .lv-other-hdr-list { display: flex; flex-direction: column; gap: 1px; }
-.lv-other-hdr-title { font-size: 13px; font-weight: 700; color: var(--text); letter-spacing: -0.01em; }
-.lv-other-hdr-count { font-size: 11.5px; color: var(--subtle); }
+/* Match the "near me" panel header (#panel-hdr-title / -count) exactly. */
+.lv-other-hdr-title { font-size: 16px; font-weight: 800; color: var(--text); letter-spacing: -0.01em; }
+.lv-other-hdr-count { font-size: 12px; color: var(--muted); }
 
 .panel-hdr-back {
   display: flex; align-items: center; justify-content: center;
@@ -2207,11 +2255,12 @@ html[lang="en"] .info-alert.lang-en { display: flex; }
   gap: 6px 22px;
 }
 .cs-group {
-  flex: 0 1 auto;
+  flex: 0 0 auto;            /* never shrink — JS picks the stage (inline /
+                               stacked / compact) from measured intrinsic widths */
   min-width: 0;
   display: flex;
   flex-direction: row;       /* label inline with values */
-  align-items: center;
+  align-items: baseline;     /* label sits on the same baseline as the values */
   gap: 2px 10px;
 }
 /* Brand flows after the contacts and stays on the same line; the phone/email
@@ -2222,20 +2271,32 @@ html[lang="en"] .info-alert.lang-en { display: flex; }
 }
 .cs-group-values {
   display: flex;
-  flex-direction: row;       /* phone and email side by side when there is room */
-  flex-wrap: wrap;           /* …and stack vertically first when space runs out */
+  flex-direction: row;       /* stage 1: phone + email side by side, one line */
+  flex-wrap: nowrap;
+  flex-shrink: 0;
   gap: 1px 14px;
   min-width: 0;
   width: auto;
 }
+/* Stage 2: once the all-inline row no longer fits, stack phone above email
+   (label stays to the left). JS adds body.footer-stacked. Stage 3 (compact
+   collapsible footer) kicks in before the text would reach the divider bars. */
+body.footer-stacked .cs-group-values {
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px 0;
+}
+body.footer-stacked .cs-group { align-items: center; }
 
 .cs-label {
   font-size: 9px; font-weight: 700;
+  line-height: 1;            /* flat box so label aligns with the values row */
   letter-spacing: 0.06em; text-transform: uppercase;
   color: rgba(255,255,255,0.50);
 }
 .cs-value {
   font-size: 12.5px; font-weight: 500;
+  line-height: 1;            /* keep phone/email on the same line as the label */
   color: rgba(255,255,255,0.90);
   text-decoration: none; font-family: var(--font);
   transition: color 0.15s;
@@ -2250,87 +2311,85 @@ html[lang="en"] .info-alert.lang-en { display: flex; }
   height: 18px;
   margin: 0;
 }
-@media (max-width: 720px) {
-  /* Below this width the one-line desktop footer can't fit even with phone/email
-     stacked, so switch to the collapsible mobile footer to avoid overlap. */
-  /* Mobile contact — collapsible: allow the wrapper to grow */
-  #map-contact-wrap {
-    display: flex;
-    flex-direction: column;
-  }
-  #map-section { flex: 1; min-height: 0; }
+/* ── Compact (collapsible) footer ───────────────────────────────────────────
+   Driven by body.footer-compact, which JS (setupFooterResponsive) toggles the
+   moment the one-line desktop footer would no longer fit comfortably — so the
+   text never crowds the divider bars. On phones it is effectively always on. */
+body.footer-compact { --contact-h: 48px; }
 
-  #map-contact-wrap > footer,
-  .contact-strip {
-    height: auto !important;
-    overflow: visible !important;
-    flex-shrink: 0;
-  }
-
-  /* Show mobile-only elements */
-  .cs-collapsed-summary { display: flex; }
-  .contact-strip-inner {
-    padding: 0;
-    flex-direction: column;
-    align-items: stretch;
-    gap: 0;
-    height: auto;
-  }
-  /* Collapsed summary row */
-  .cs-collapsed-summary {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 0 clamp(14px, 5vw, 20px);
-    height: 48px;
-    cursor: pointer;
-    -webkit-tap-highlight-color: transparent;
-    flex-shrink: 0;
-    border-top: 1px solid rgba(255,255,255,0.12);
-    transition: background 0.15s;
-  }
-  .cs-collapsed-summary:hover,
-  .cs-collapsed-summary:active { background: rgba(255,255,255,0.08); }
-  .cs-collapsed-text {
-    font-size: 12px; font-weight: 600;
-    color: rgba(255,255,255,0.90);
-    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-    flex: 1; min-width: 0;
-    letter-spacing: -0.01em;
-  }
-  .cs-collapsed-chevron {
-    width: 18px; height: 18px; flex-shrink: 0; margin-left: 10px;
-    color: rgba(255,255,255,0.65);
-    transition: transform 0.22s cubic-bezier(0.4,0,0.2,1);
-    background: rgba(255,255,255,0.10);
-    border-radius: 50%;
-    padding: 2px;
-  }
-  .contact-strip.cs-expanded .cs-collapsed-chevron { transform: rotate(180deg); }
-  /* Expanded body — grid aligns phone numbers across both groups */
-  .cs-expanded-body {
-    display: none;
-    padding: 12px clamp(14px, 5vw, 20px) 16px;
-    border-top: 1px solid rgba(255,255,255,0.08);
-  }
-  .contact-strip.cs-expanded .cs-expanded-body { display: grid; grid-template-columns: auto 1fr; gap: 12px 14px; }
-  /* Groups become transparent to the grid so label + values align across rows */
-  .cs-expanded-body .cs-group { display: contents; }
-  .cs-expanded-body .cs-group-label {
-    display: flex; flex-direction: column; gap: 0;
-    align-self: center;
-  }
-  .cs-expanded-body .cs-group-values {
-    flex-direction: column; gap: 2px; align-items: flex-start;
-    align-self: center;
-  }
-  .cs-expanded-body .cs-div { display: none; }
-  .cs-expanded-body .cs-group--brand { display: none; }
-  .cs-expanded-body .cs-label { font-size: 9.5px; }
-  .cs-expanded-body .cs-value  { font-size: 12px; }
-  /* Hide normal inner on mobile — only show collapsed summary + expanded body */
-  .cs-desktop-inner { display: none !important; }
-  /* mobile --contact-h is now irrelevant since height:auto, but update for calc() references */
-  :root { --contact-h: 48px; }
+/* Mobile contact — collapsible: allow the wrapper to grow */
+body.footer-compact #map-contact-wrap {
+  display: flex;
+  flex-direction: column;
 }
+body.footer-compact #map-section { flex: 1; min-height: 0; }
+
+body.footer-compact #map-contact-wrap > footer,
+body.footer-compact .contact-strip {
+  height: auto !important;
+  overflow: visible !important;
+  flex-shrink: 0;
+}
+
+body.footer-compact .contact-strip-inner {
+  padding: 0;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0;
+  height: auto;
+}
+/* Collapsed summary row */
+body.footer-compact .cs-collapsed-summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 clamp(14px, 5vw, 20px);
+  height: 48px;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  flex-shrink: 0;
+  border-top: 1px solid rgba(255,255,255,0.12);
+  transition: background 0.15s;
+}
+body.footer-compact .cs-collapsed-summary:hover,
+body.footer-compact .cs-collapsed-summary:active { background: rgba(255,255,255,0.08); }
+body.footer-compact .cs-collapsed-text {
+  font-size: 12px; font-weight: 600;
+  color: rgba(255,255,255,0.90);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  flex: 1; min-width: 0;
+  letter-spacing: -0.01em;
+}
+body.footer-compact .cs-collapsed-chevron {
+  width: 18px; height: 18px; flex-shrink: 0; margin-left: 10px;
+  color: rgba(255,255,255,0.65);
+  transition: transform 0.22s cubic-bezier(0.4,0,0.2,1);
+  background: rgba(255,255,255,0.10);
+  border-radius: 50%;
+  padding: 2px;
+}
+body.footer-compact .contact-strip.cs-expanded .cs-collapsed-chevron { transform: rotate(180deg); }
+/* Expanded body — grid aligns phone numbers across both groups */
+body.footer-compact .cs-expanded-body {
+  display: none;
+  padding: 12px clamp(14px, 5vw, 20px) 16px;
+  border-top: 1px solid rgba(255,255,255,0.08);
+}
+body.footer-compact .contact-strip.cs-expanded .cs-expanded-body { display: grid; grid-template-columns: auto 1fr; gap: 12px 14px; }
+/* Groups become transparent to the grid so label + values align across rows */
+body.footer-compact .cs-expanded-body .cs-group { display: contents; }
+body.footer-compact .cs-expanded-body .cs-group-label {
+  display: flex; flex-direction: column; gap: 0;
+  align-self: center;
+}
+body.footer-compact .cs-expanded-body .cs-group-values {
+  flex-direction: column; gap: 2px; align-items: flex-start;
+  align-self: center;
+}
+body.footer-compact .cs-expanded-body .cs-div { display: none; }
+body.footer-compact .cs-expanded-body .cs-group--brand { display: none; }
+body.footer-compact .cs-expanded-body .cs-label { font-size: 9.5px; }
+body.footer-compact .cs-expanded-body .cs-value  { font-size: 12px; }
+/* Hide the one-line inner — only show collapsed summary + expanded body */
+body.footer-compact .cs-desktop-inner { display: none !important; }
 
