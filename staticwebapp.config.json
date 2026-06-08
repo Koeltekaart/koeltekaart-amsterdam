@@ -5,6 +5,7 @@
     ".geojson": "application/geo+json",
     ".json": "application/json",
     ".csv": "text/csv",
+    ".pmtiles": "application/octet-stream",
     ".woff2": "font/woff2",
     ".woff": "font/woff"
   },
