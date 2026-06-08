@@ -500,7 +500,7 @@ html:has(body.sidebar-open) { overflow: hidden; }
   #sidebar {
     position: absolute;
     top: 14px; left: 14px;
-    width: min(320px, calc(50% - 28px));
+    width: min(380px, calc(50% - 28px));
     height: auto;
     max-height: calc(65% - 22px);   /* expanded legend may use up to 65% of the map height so all layer options stay visible */
     border: 1px solid var(--border);
