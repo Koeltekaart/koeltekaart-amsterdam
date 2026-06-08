@@ -19,7 +19,7 @@
     "X-Frame-Options": "DENY",
     "Referrer-Policy": "strict-origin-when-cross-origin",
     "Permissions-Policy": "geolocation=(self), camera=(), microphone=(), payment=(), usb=()",
-    "Content-Security-Policy": "default-src 'self'; base-uri 'self'; object-src 'none'; form-action 'self'; frame-ancestors 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data: blob: https://service.pdok.nl https://lh3.googleusercontent.com https://drive.google.com; connect-src 'self' https://api.open-meteo.com https://service.pdok.nl https://api.pdok.nl https://docs.google.com https://drive.google.com; worker-src 'self' blob:; upgrade-insecure-requests"
+    "Content-Security-Policy": "default-src 'self'; base-uri 'self'; object-src 'none'; form-action 'self'; frame-ancestors 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data: blob: https://service.pdok.nl https://*.googleusercontent.com https://drive.google.com; connect-src 'self' https://api.open-meteo.com https://service.pdok.nl https://api.pdok.nl https://docs.google.com https://*.googleusercontent.com https://drive.google.com; worker-src 'self' blob:; upgrade-insecure-requests"
   },
   "routes": [
     {
