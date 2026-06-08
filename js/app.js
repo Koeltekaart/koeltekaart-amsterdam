@@ -883,9 +883,14 @@ function initMap() {
     }, { passive: false });
   }
 
-  // Custom panes: parks < points
+  // Custom panes: parks < shade < points
   state.map.createPane("parksPane");
   state.map.getPane("parksPane").style.zIndex = 350;
+  // Shade is a purely visual overlay — its own pane sits just above parks but
+  // never captures pointer events, so park polygons underneath stay tappable.
+  state.map.createPane("shadePane");
+  state.map.getPane("shadePane").style.zIndex = 360;
+  state.map.getPane("shadePane").style.pointerEvents = "none";
   state.map.createPane("pointsPane");
   state.map.getPane("pointsPane").style.zIndex = 650;
 
@@ -1367,8 +1372,8 @@ async function _renderShadeLayer() {
   if (!gj || !state.on.shade) return;
 
   state.layers.shade = L.geoJSON(gj, {
-    pane:     "parksPane",
-    renderer: L.canvas({ padding: 0.5 }),
+    pane:     "shadePane",
+    renderer: L.canvas({ padding: 0.5, pane: "shadePane" }),
     style:    _shadeStyle,
   }).addTo(state.map);
 }

@@ -691,7 +691,7 @@ html:has(body.sidebar-open) { overflow: hidden; }
     align-items: center;
     gap: 7px;
     position: absolute;     /* anchored to #map-section (position:relative) */
-    top: 40px;              /* below the 28px scroll handle + 12px gap */
+    top: 8px;               /* aligns with the list header title; scroll handle removed */
     left: 12px;
     z-index: 420;
     height: 40px;
@@ -731,13 +731,15 @@ html:has(body.sidebar-open) { overflow: hidden; }
   #sidebar {
     display: flex !important;
     position: fixed !important;     /* cover the whole viewport */
-    inset: 0;
-    top: 0; left: 0; right: 0; bottom: 0;
+    top: 0; left: 0; right: 0;
+    bottom: auto;                   /* height (below) governs — avoid over-constraint */
     width: auto !important;
-    /* Let top/bottom:0 govern the height. An explicit 100vh/100dvh would
-       override `bottom:0` and, when Safari's dynamic toolbar shrinks the
-       reported viewport, leave a gap at the bottom where the map peeks out. */
-    max-height: none; height: auto;
+    /* Use the LARGE viewport height so the overlay is never shorter than the
+       visible screen in any toolbar state. With `100dvh` (small viewport) the
+       overlay falls short when Safari's URL bar is collapsed, leaving a gap at
+       the bottom where the map peeks through. `100lvh` is explicit; on older
+       iOS `100vh` already equals the large viewport. */
+    max-height: none; height: 100vh; height: 100lvh;
     border-radius: 0; border-right: none !important; box-shadow: none;
     z-index: 900;                   /* above topbar (500/700) and contact wrap (600) */
     transform: translateX(-100%);   /* off-screen to the left */
@@ -1340,9 +1342,15 @@ body.mode-user #sidebar-policy { display: none; }
     gap: 0;
     pointer-events: auto;
   }
-  /* Extra breathing room at bottom of list so the floating view toggle
-     doesn't cover the last item, even with the home-indicator safe area. */
-  #list-view-inner { padding-bottom: calc(96px + env(safe-area-inset-bottom, 0px)); }
+  /* Extra breathing room at bottom of list so the floating view toggle doesn't
+     cover the last item. iOS Safari drops `padding-bottom` on a scroll
+     container, so add a real spacer block at the end of the scrollable content. */
+  #list-view-inner::after {
+    content: '';
+    display: block;
+    height: calc(96px + env(safe-area-inset-bottom, 0px));
+    flex-shrink: 0;
+  }
 }
 
 .view-btn {
