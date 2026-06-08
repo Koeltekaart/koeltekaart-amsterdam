@@ -160,20 +160,38 @@ const NON_AMENITY = new Set([
 // Populated dynamically from data
 let AMENITY_DEFS = [];
 
+function _amenityDefFor(key) {
+  return {
+    key,
+    label_en: AMENITY_LABELS[key]?.en || key.replace(/_/g, " "),
+    label_nl: AMENITY_LABELS[key]?.nl || key.replace(/_/g, " "),
+    filterable: true,
+  };
+}
+
+/** Seed the amenity filters from the known label map so the chips (and their
+ *  accordion toggle) render immediately, before the location data has loaded
+ *  over the network. Without this the toggle is hidden by the CSS that hides
+ *  empty filter sections, which on a slow/flaky data fetch looks like it's
+ *  "missing" or only appears after a delay. */
+function seedAmenities() {
+  AMENITY_DEFS = Object.keys(AMENITY_LABELS).map(_amenityDefFor);
+  state.filters = Object.fromEntries(AMENITY_DEFS.map(d => [d.key, false]));
+}
+
 function initAmenities(features) {
-  const keys = new Set();
+  // Always include the known amenities, then union in any new boolean fields
+  // discovered in the data. Predefined ones keep a stable order/position.
+  const keys = new Set(Object.keys(AMENITY_LABELS));
   features.forEach(f => {
     Object.entries(f.properties || {}).forEach(([k, v]) => {
       if (typeof v === "boolean" && !NON_AMENITY.has(k)) keys.add(k);
     });
   });
-  AMENITY_DEFS = [...keys].map(key => ({
-    key,
-    label_en: AMENITY_LABELS[key]?.en || key.replace(/_/g, " "),
-    label_nl: AMENITY_LABELS[key]?.nl || key.replace(/_/g, " "),
-    filterable: true,
-  }));
-  state.filters = Object.fromEntries(AMENITY_DEFS.map(d => [d.key, false]));
+  AMENITY_DEFS = [...keys].map(_amenityDefFor);
+  // Preserve any filter the user already toggled before the data arrived.
+  const prev = state.filters || {};
+  state.filters = Object.fromEntries(AMENITY_DEFS.map(d => [d.key, !!prev[d.key]]));
   rebuildFilterChips();
 }
 
@@ -1630,6 +1648,9 @@ function rebuildFilterChips() {
 }
 
 function setupFilters() {
+  // Seed from the known amenity list so the toggle/chips appear immediately,
+  // independent of the asynchronous (and sometimes slow) location data fetch.
+  if (!AMENITY_DEFS.length) seedAmenities();
   rebuildFilterChips();
 }
 

@@ -731,15 +731,16 @@ html:has(body.sidebar-open) { overflow: hidden; }
   #sidebar {
     display: flex !important;
     position: fixed !important;     /* cover the whole viewport */
-    top: 0; left: 0; right: 0;
-    bottom: auto;                   /* height (below) governs — avoid over-constraint */
+    /* Pin all four edges. With `bottom: 0` the overlay is anchored exactly to
+       the screen bottom (no sub-pixel gap), and `min-height` below guarantees
+       it's never shorter than the large viewport even in odd toolbar states. */
+    inset: 0 !important;
+    top: 0; left: 0; right: 0; bottom: 0;
     width: auto !important;
-    /* Use the LARGE viewport height so the overlay is never shorter than the
-       visible screen in any toolbar state. With `100dvh` (small viewport) the
-       overlay falls short when Safari's URL bar is collapsed, leaving a gap at
-       the bottom where the map peeks through. `100lvh` is explicit; on older
-       iOS `100vh` already equals the large viewport. */
-    max-height: none; height: 100vh; height: 100lvh;
+    height: auto;
+    max-height: none;
+    min-height: 100vh;              /* fallback */
+    min-height: 100lvh;            /* large viewport — toolbars hidden */
     border-radius: 0; border-right: none !important; box-shadow: none;
     z-index: 900;                   /* above topbar (500/700) and contact wrap (600) */
     transform: translateX(-100%);   /* off-screen to the left */
