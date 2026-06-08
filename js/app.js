@@ -42,6 +42,7 @@ const ADS_ICON_PATHS = {
   WaterDrop:       'M12 2.5C9 7 4.5 12 4.5 16.5a7.5 7.5 0 0 0 15 0C19.5 12 15 7 12 2.5Z',
   HouseFill:       'M21.5 8.57913L18.5 6.65914V2.49988H16.5V5.37914L12 2.49915L2.5 8.57913V21.5009H21.5V8.57913ZM10.5 19.9999V13.9999H13.5V19.9999H15V13.5773C15 13.0311 14.5523 12.5883 14 12.5883H10C9.44772 12.5883 9 13.0311 9 13.5773V19.9999H10.5Z',
   Minus:           'M21.5 13H2.5V11H21.5V13Z',
+  InfoFill:        'M21.5 21.5H2.5V2.5H21.5V21.5ZM11 10.1768V17.0986H13V10.1768H11ZM12 6.90234C11.3101 6.90237 10.8107 7.38172 10.8105 8.06152C10.8105 8.7415 11.31 9.22165 12 9.22168C12.69 9.22168 13.1904 8.74152 13.1904 8.06152C13.1903 7.3817 12.6899 6.90234 12 6.90234Z',
 };
 
 /**
@@ -301,7 +302,7 @@ const TR = {
     shade_around: "Schaduw rond",
     mode_user: "Bewoners",
     mode_policy: "Beleid",
-    lp_headline: "Vind verkoeling in Amsterdam",
+    lp_headline: "Zoek verkoeling in Amsterdam",
     lp_hl1: "Te warm?",
     lp_hl2: "Zoek verkoeling.",
     lp_tagline_sub: "Klik op een symbool op de kaart om te zien wat je op deze locatie kunt verwachten.",
@@ -579,7 +580,7 @@ function applyLanguage() {
   const hlAccent = document.querySelector(".li-hl-accent");
   if (hlAccent) {
     if (state.lang === "nl") {
-      hlAccent.innerHTML = '<span class="li-hl-u">Vind verkoelin</span>g.';
+      hlAccent.innerHTML = '<span class="li-hl-u">Zoek verkoelin</span>g.';
     } else {
       hlAccent.innerHTML = '<span class="li-hl-u">Find relief</span>.';
     }
@@ -1219,9 +1220,12 @@ function buildStaticLayer(def, data) {
       },
     });
   } else {
+    const isWaterTaps = def.cat === "water_taps";
     state.layers[def.cat] = L.geoJSON(fc, {
       pane: "pointsPane",
-      pointToLayer: (_f,ll) => L.circleMarker(ll,{radius:def.radius,fillColor:def.color,color:"#fff",weight:2,opacity:1,fillOpacity:0.88}),
+      pointToLayer: (_f,ll) => isWaterTaps
+        ? L.marker(ll, { icon: makeWaterDropIcon(def.color), keyboard: false })
+        : L.circleMarker(ll,{radius:def.radius,fillColor:def.color,color:"#fff",weight:2,opacity:1,fillOpacity:0.88}),
       onEachFeature: (f,l) => {
         const name = tapDisplayName(f.properties || {});
 
@@ -1269,6 +1273,32 @@ function _updateShadeTime() {
   el.textContent = `${t("shade_around")} ${k.slice(0, 2)}:${k.slice(2)}`;
 }
 
+/** Render the time-slot buttons so users can switch shade snapshots. */
+function _renderShadeSlots() {
+  const wrap = document.getElementById("shade-slots");
+  if (!wrap) return;
+  wrap.innerHTML = "";
+  SHADE_SLOTS.forEach(s => {
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "shade-slot-btn" + (s.key === _shadeSlotKey ? " active" : "");
+    btn.textContent = `${s.key.slice(0, 2)}:${s.key.slice(2)}`;
+    btn.setAttribute("aria-pressed", String(s.key === _shadeSlotKey));
+    btn.addEventListener("click", e => { e.stopPropagation(); setShadeSlot(s.key); });
+    wrap.appendChild(btn);
+  });
+}
+
+/** Switch the displayed shade snapshot to a different time slot. */
+function setShadeSlot(key) {
+  if (key === _shadeSlotKey) return;
+  _shadeSlotKey = key;
+  _updateShadeTime();
+  _renderShadeSlots();
+  // Geometry is identical across slots — just recolour, no refetch needed.
+  if (state.layers.shade) state.layers.shade.setStyle(_shadeStyle);
+}
+
 function _shadeStyle(feature) {
   const pct = feature.properties?.["s" + _shadeSlotKey] ?? 0;
   const t = Math.min(1, Math.max(0, pct / 100));
@@ -1296,6 +1326,7 @@ async function _renderShadeLayer() {
 
   _shadeSlotKey = _nearestShadeSlot();
   _updateShadeTime();
+  _renderShadeSlots();
   _prefetchShade(); // no-op if already started
   const gj = await _shadePromise;
   if (!gj || !state.on.shade) return;
@@ -1348,13 +1379,23 @@ function _renderSwimmingPoolsLayerInner(def, features) {
   if (countEl) countEl.textContent = filtered.length.toLocaleString();
 }
 
-function makeSwimmingSquareIcon(color = "#009de6") {
+function makeWaterDropIcon(color = "#009de6") {
   return L.divIcon({
-    className: "swim-icon-marker",
-    html: `<div style="width:22px;height:22px;background:${color};border:2.5px solid rgba(255,255,255,0.92);border-radius:50%;display:flex;align-items:center;justify-content:center;box-shadow:0 1px 5px rgba(0,0,0,0.28);box-sizing:border-box;">${adsIcon("PersonSwimming", { size: 12, fill: "white" })}</div>`,
+    className: "water-icon-marker",
+    html: `<div style="width:22px;height:22px;background:${color};border:2.5px solid rgba(255,255,255,0.92);border-radius:50% 50% 50% 0;transform:rotate(-45deg);display:flex;align-items:center;justify-content:center;box-shadow:0 1px 5px rgba(0,0,0,0.28);box-sizing:border-box;"><span style="transform:rotate(45deg);display:flex;">${adsIcon("WaterDrop", { size: 12, fill: "white" })}</span></div>`,
     iconSize:    [22, 22],
     iconAnchor:  [11, 11],
     popupAnchor: [0, -11],
+  });
+}
+
+function makeSwimmingSquareIcon(color = "#009de6") {
+  return L.divIcon({
+    className: "swim-icon-marker",
+    html: `<div style="width:27px;height:27px;background:${color};border:2.5px solid rgba(255,255,255,0.92);border-radius:50%;display:flex;align-items:center;justify-content:center;box-shadow:0 1px 5px rgba(0,0,0,0.28);box-sizing:border-box;">${adsIcon("PersonSwimming", { size: 15, fill: "white" })}</div>`,
+    iconSize:    [27, 27],
+    iconAnchor:  [13, 13],
+    popupAnchor: [0, -13],
   });
 }
 
@@ -1739,6 +1780,79 @@ function setupSidebarResizeHandle() {
   });
 }
 
+// ── Custom always-visible scrollbar ─────────────────────────────────────────
+/**
+ * Overlay a permanently-visible blue scrollbar on a scroll container, replacing
+ * the OS scrollbar (which auto-hides on macOS). The thumb lives in a sticky,
+ * zero-height first child so it tracks the viewport without scrolling away, and
+ * is re-inserted automatically if the container's contents are re-rendered.
+ */
+function attachCustomScrollbar(sc) {
+  if (!sc || sc.dataset.cscroll === "1") return;
+  sc.dataset.cscroll = "1";
+
+  const bar = document.createElement("div");
+  bar.className = "cscrollbar";
+  bar.setAttribute("aria-hidden", "true");
+  const thumb = document.createElement("div");
+  thumb.className = "cscrollbar-thumb";
+  bar.appendChild(thumb);
+
+  const ensureMounted = () => { if (sc.firstChild !== bar) sc.insertBefore(bar, sc.firstChild); };
+
+  const INSET = 8; // keep the thumb clear of the card's rounded corners
+  let scheduled = false;
+  function update() {
+    scheduled = false;
+    ensureMounted();
+    const sh = sc.scrollHeight, ch = sc.clientHeight, st = sc.scrollTop;
+    const scrollable = sh - ch > 2;
+    bar.classList.toggle("is-scrollable", scrollable);
+    if (!scrollable) return;
+    const trackH = Math.max(0, ch - INSET * 2);
+    const thumbH = Math.max(28, (ch / sh) * trackH);
+    const maxTop = trackH - thumbH;
+    const denom = sh - ch;
+    const top = INSET + (denom > 0 ? (st / denom) * maxTop : 0);
+    thumb.style.height = `${thumbH}px`;
+    thumb.style.transform = `translateY(${top}px)`;
+  }
+  const schedule = () => { if (!scheduled) { scheduled = true; requestAnimationFrame(update); } };
+
+  ensureMounted();
+  sc.addEventListener("scroll", schedule, { passive: true });
+  window.addEventListener("resize", schedule);
+  if (window.ResizeObserver) new ResizeObserver(schedule).observe(sc);
+  if (window.MutationObserver) new MutationObserver(schedule).observe(sc, { childList: true, subtree: true });
+
+  // Drag the thumb to scroll
+  let dragging = false, startY = 0, startScroll = 0;
+  thumb.addEventListener("pointerdown", e => {
+    dragging = true; startY = e.clientY; startScroll = sc.scrollTop;
+    thumb.setPointerCapture(e.pointerId);
+    e.preventDefault(); e.stopPropagation();
+  });
+  thumb.addEventListener("pointermove", e => {
+    if (!dragging) return;
+    const sh = sc.scrollHeight, ch = sc.clientHeight;
+    const maxTop = (ch - INSET * 2) - thumb.offsetHeight;
+    const ratio = maxTop > 0 ? (sh - ch) / maxTop : 0;
+    sc.scrollTop = startScroll + (e.clientY - startY) * ratio;
+  });
+  const endDrag = () => { dragging = false; };
+  thumb.addEventListener("pointerup", endDrag);
+  thumb.addEventListener("pointercancel", endDrag);
+
+  update();
+  requestAnimationFrame(update);
+  setTimeout(update, 300);
+}
+
+function setupCustomScrollbars() {
+  attachCustomScrollbar(document.getElementById("sidebar"));
+  attachCustomScrollbar(document.getElementById("list-view-inner"));
+}
+
 // ── Mobile sidebar ─────────────────────────────────────────────────────────
 function openSidebarMobile() {
   document.body.classList.add("sidebar-open");
@@ -1992,79 +2106,77 @@ function renderKoelteDetailContent(feature, container) {
 
   const nameEl = document.createElement("div"); nameEl.className = "detail-panel-name";
   nameEl.textContent = p.name || "Koelteplek";
+  info.append(catLbl, nameEl);
 
   // Decide which hours to show (heatplan hours override normal hours when plan is active)
   const useHeat = state.heatPlanActive && p.hours_heat;
   const hoursToShow = useHeat ? p.hours_heat : p.hours;
 
-  // Inline open/closed status tag
+  // ── Open/closed status — sits beside the "Openingstijden" section title ──
   const openStatus = getOpenStatus(hoursToShow);
-  const statusTag = document.createElement("span");
-  if (openStatus.status === "open") {
-    statusTag.className = "tag tag--open"; statusTag.style.marginTop = "5px";
-    statusTag.textContent = t("open_now") + (openStatus.closesAt ? ` – ${t("closes_at")} ${openStatus.closesAt}` : "");
-  } else if (openStatus.status === "closed") {
-    statusTag.className = "tag tag--closed"; statusTag.style.marginTop = "5px";
-    let txt = t("closed_now");
-    if (openStatus.opensAt) txt += ` – ${t("opens_at")} ${openStatus.opensAt}`;
-    statusTag.textContent = txt;
+  let statusTag = null;
+  if (openStatus.status === "open" || openStatus.status === "closed") {
+    statusTag = document.createElement("span");
+    if (openStatus.status === "open") {
+      statusTag.className = "tag tag--open dp-status";
+      statusTag.textContent = t("open_now") + (openStatus.closesAt ? ` – ${t("closes_at")} ${openStatus.closesAt}` : "");
+    } else {
+      statusTag.className = "tag tag--closed dp-status";
+      let txt = t("closed_now");
+      if (openStatus.opensAt) txt += ` – ${t("opens_at")} ${openStatus.opensAt}`;
+      statusTag.textContent = txt;
+    }
   }
 
-  info.append(catLbl, nameEl);
-
-  // ── Amenity chips — ALL amenities; present=green, absent=gray with "No" prefix ──
-  if (AMENITY_DEFS.length) {
-    const chipsWrap = document.createElement("div"); chipsWrap.className = "filter-chips detail-chips";
-    AMENITY_DEFS.filter(d => d.filterable).forEach(def => {
-      const label = state.lang === "nl" ? def.label_nl : def.label_en;
-      const hasIt = p[def.key] === true;
-      const notHaveIt = p[def.key] === false;
-      if (!hasIt && !notHaveIt) return; // skip nulls (data not specified)
-      const chip = document.createElement(hasIt ? "button" : "span");
-      if (hasIt) {
-        chip.className = "filter-chip on" + (state.filters[def.key] ? " active" : "");
-        chip.textContent = label;
-        chip.setAttribute("aria-pressed", String(!!state.filters[def.key]));
-        chip.addEventListener("click", () => toggleFilter(def.key, chip));
-      } else {
-        chip.className = "filter-chip off";
-        chip.textContent = (state.lang === "nl" ? "Geen " : "No ") + label.toLowerCase();
-      }
-      chipsWrap.appendChild(chip);
-    });
-    if (chipsWrap.children.length) info.appendChild(chipsWrap);
-  }
-
-  if (statusTag.className) info.appendChild(statusTag);
-
-  // ── Heat plan hours note (when heatplan hours are being shown) ──
+  // ── Section: Opening hours (status pill rides on the title row) ──
+  const hoursSec = dpSection("Openingstijden", "Opening hours");
+  if (statusTag) hoursSec.querySelector(".dp-section-title").appendChild(statusTag);
   if (useHeat) {
     const heatNote = document.createElement("div"); heatNote.className = "detail-heat-hours-note";
     heatNote.innerHTML = `<svg width="12" height="12" viewBox="0 0 14 14" fill="none" aria-hidden="true"><circle cx="7" cy="7" r="6" stroke="currentColor" stroke-width="1.5"/><line x1="7" y1="4" x2="7" y2="7.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><circle cx="7" cy="10" r="0.7" fill="currentColor"/></svg>${state.lang === "nl" ? "Hitteplan-openingstijden worden getoond" : "Heat plan opening hours shown"}`;
-    info.appendChild(heatNote);
+    hoursSec.appendChild(heatNote);
   }
-
-  // ── Hours block ──
   const hoursBlock = renderHoursBlock(hoursToShow);
-  // Hide the status row — shown inline above
   const statusRow = hoursBlock.querySelector(".hours-status");
-  if (statusRow) statusRow.style.display = "none";
-  info.appendChild(hoursBlock);
+  if (statusRow) statusRow.style.display = "none"; // status shown inline above
+  hoursSec.appendChild(hoursBlock);
+  if (p.hours_note) hoursSec.appendChild(adsInfoNote(p.hours_note));
+  info.appendChild(hoursSec);
 
-  if (p.hours_note) {
-    const noteEl = document.createElement("div"); noteEl.className = "hours-note";
-    noteEl.textContent = p.hours_note;
-    info.appendChild(noteEl);
+  // ── Section: Facilities (scannable present/absent grid) ──
+  if (AMENITY_DEFS.length) {
+    const items = AMENITY_DEFS.filter(d => d.filterable && (p[d.key] === true || p[d.key] === false));
+    if (items.length) {
+      const amSec = dpSection("Voorzieningen", "Facilities");
+      const grid = document.createElement("div"); grid.className = "dp-amenity-grid";
+      items
+        .sort((a, b) => (p[b.key] === true) - (p[a.key] === true)) // present first
+        .forEach(def => {
+          const has = p[def.key] === true;
+          const item = document.createElement("div"); item.className = "dp-amenity " + (has ? "has" : "no");
+          const ic = document.createElement("span"); ic.className = "dp-amenity-ic";
+          ic.innerHTML = adsIcon(has ? "CheckMark" : "Close", { size: 11 });
+          const lbl = document.createElement("span"); lbl.className = "dp-amenity-lbl";
+          lbl.textContent = state.lang === "nl" ? def.label_nl : def.label_en;
+          item.append(ic, lbl);
+          grid.appendChild(item);
+        });
+      amSec.appendChild(grid);
+      info.appendChild(amSec);
+    }
   }
 
+  // ── Section: About this place (free-text notes) ──
   if (p.notes) {
+    const notesSec = dpSection("Over deze plek", "About this place");
     const notesBox = document.createElement("div"); notesBox.className = "detail-notes";
     notesBox.textContent = p.notes;
-    info.appendChild(notesBox);
+    notesSec.appendChild(notesBox);
+    info.appendChild(notesSec);
   }
 
-  // ── Action buttons ──
-  const actions = document.createElement("div"); actions.className = "detail-actions";
+  // ── Sticky action bar (sits at panel foot, always reachable) ──
+  const actions = document.createElement("div"); actions.className = "detail-actions detail-actions--sticky";
   if (p.website_url) {
     const a = document.createElement("a");
     a.className = "btn-website"; a.href = p.website_url; a.target = "_blank"; a.rel = "noopener noreferrer";
@@ -2073,8 +2185,30 @@ function renderKoelteDetailContent(feature, container) {
   }
   const [lon, lat] = feature.geometry.coordinates;
   actions.appendChild(makeDirectionsBtn(lat, lon));
-  info.appendChild(actions);
+  body.appendChild(actions); // outside the padded info → full-width sticky footer
+
   container.appendChild(body);
+}
+
+/** Small labelled section wrapper used in the detail panel. */
+function dpSection(titleNl, titleEn) {
+  const sec = document.createElement("div"); sec.className = "dp-section";
+  const h = document.createElement("div"); h.className = "dp-section-title";
+  const label = document.createElement("span"); label.className = "dp-section-title-text";
+  label.textContent = state.lang === "nl" ? titleNl : titleEn;
+  h.appendChild(label);
+  sec.appendChild(h);
+  return sec;
+}
+
+/** Amsterdam Design System styled info note (InfoFill icon + feedback-info accent). */
+function adsInfoNote(text) {
+  const el = document.createElement("div"); el.className = "ads-info-note";
+  const ic = document.createElement("span"); ic.className = "ads-info-note-ic";
+  ic.innerHTML = adsIcon("InfoFill", { size: 16 });
+  const tx = document.createElement("span"); tx.textContent = text;
+  el.append(ic, tx);
+  return el;
 }
 
 function cell(label, value, full=false) {
@@ -2579,7 +2713,7 @@ function buildListItem(feature) {
 
   const content = document.createElement("div"); content.className = "lv-content";
 
-  // Name + status badge
+  // Name (status badge now lives in the right-hand column)
   const topRow = document.createElement("div"); topRow.className = "lv-top-row";
   const nameEl = document.createElement("span"); nameEl.className = "lv-name";
   nameEl.textContent = p.name || "Koelteplek";
@@ -2598,7 +2732,7 @@ function buildListItem(feature) {
   } else {
     badge.textContent = t("lv_unknown"); badge.classList.add("lv-status-badge--unknown");
   }
-  topRow.append(nameEl, badge);
+  topRow.append(nameEl);
 
   // Meta: type + neighbourhood
   const meta = document.createElement("div"); meta.className = "lv-meta";
@@ -2626,7 +2760,16 @@ function buildListItem(feature) {
   }
 
   content.append(topRow, meta, footer);
-  li.append(photoEl, content);
+
+  // Right column — status badge on top, click chevron below it
+  const rightCol = document.createElement("div"); rightCol.className = "lv-right";
+  const chevron = document.createElement("span");
+  chevron.className = "lv-chevron";
+  chevron.setAttribute("aria-hidden", "true");
+  chevron.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path fill-rule="evenodd" clip-rule="evenodd" d="M7.91148 2.5L17.5 12L7.91148 21.5L6.5 20.1016L14.677 12L6.5 3.89845L7.91148 2.5Z"/></svg>';
+  rightCol.append(badge, chevron);
+
+  li.append(photoEl, content, rightCol);
   li.addEventListener("click", () => showKoelteplaatsDetail(feature));
   li.addEventListener("keydown", e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); li.click(); } });
   return li;
@@ -2879,6 +3022,7 @@ document.addEventListener("DOMContentLoaded", () => {
   setupSidebarToggle();
   setupSidebarCollapseDesktop();
   setupSidebarResizeHandle();
+  setupCustomScrollbars();
   setupMobileFilterCollapse();
   setupKeyboard();
   setupViewToggle();
