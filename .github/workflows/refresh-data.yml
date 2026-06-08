@@ -12,6 +12,7 @@ on:
 
 permissions:
   contents: write
+  id-token: write   # required: the SWA deploy authenticates via an OIDC token
 
 concurrency:
   group: refresh-data
@@ -65,6 +66,23 @@ jobs:
           git commit -m "data: refresh from Google Sheet [skip ci]"
           git push
 
+      # The SWA was created with GitHub OIDC auth, so the deploy needs an OIDC
+      # token (the API token alone is rejected). Mirror the portal-generated
+      # deploy workflow.
+      - name: Install OIDC client
+        if: steps.diff.outputs.changed == 'true'
+        run: npm install @actions/core@1.6.0 @actions/http-client
+
+      - name: Get OIDC token
+        if: steps.diff.outputs.changed == 'true'
+        uses: actions/github-script@v9
+        id: idtoken
+        with:
+          script: |
+            const core = require('@actions/core')
+            return await core.getIDToken()
+          result-encoding: string
+
       - name: Deploy refreshed data to Azure
         if: steps.diff.outputs.changed == 'true'
         uses: Azure/static-web-apps-deploy@v1
@@ -74,3 +92,4 @@ jobs:
           app_location: "/"
           output_location: ""
           skip_app_build: true
+          github_id_token: ${{ steps.idtoken.outputs.result }}
