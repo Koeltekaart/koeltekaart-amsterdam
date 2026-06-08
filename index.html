@@ -344,7 +344,16 @@
               <span class="lang-en">Location categories</span>
               <span class="filter-section-chevron" aria-hidden="true"><svg class="filter-section-chevron-icon" viewBox="0 0 24 24" fill="currentColor"><path fill-rule="evenodd" clip-rule="evenodd" d="M2.5 7.91148L12 17.5L21.5 7.91148L20.1016 6.5L12 14.677L3.89845 6.5L2.5 7.91148Z"/></svg></span>
             </summary>
-            <div id="category-chips" class="category-chips" role="group" aria-label="Filter by category"></div>
+            <!-- Pre-rendered for instant first paint; JS re-binds these and appends any extra categories found in the data. -->
+            <div id="category-chips" class="category-chips" role="group" aria-label="Filter by category">
+              <button class="cat-chip active" data-cat="null" aria-pressed="true"><span class="lang-nl">Alles</span><span class="lang-en">All</span></button>
+              <button class="cat-chip" data-cat="library" aria-pressed="false" style="--cat-color:#004699"><span class="cat-chip-dot" style="background:#004699"></span><span class="lang-nl">Bibliotheek</span><span class="lang-en">Library</span></button>
+              <button class="cat-chip" data-cat="church" aria-pressed="false" style="--cat-color:#a00078"><span class="cat-chip-dot" style="background:#a00078"></span><span class="lang-nl">Kerk</span><span class="lang-en">Church</span></button>
+              <button class="cat-chip" data-cat="supermarket" aria-pressed="false" style="--cat-color:#00893c"><span class="cat-chip-dot" style="background:#00893c"></span><span class="lang-nl">Supermarkt</span><span class="lang-en">Supermarket</span></button>
+              <button class="cat-chip" data-cat="urban_farm" aria-pressed="false" style="--cat-color:#bed200"><span class="cat-chip-dot" style="background:#bed200"></span><span class="lang-nl">Stadsboerderij</span><span class="lang-en">Urban farm</span></button>
+              <button class="cat-chip" data-cat="community_center" aria-pressed="false" style="--cat-color:#ff9100"><span class="cat-chip-dot" style="background:#ff9100"></span><span class="lang-nl">Buurtcentrum</span><span class="lang-en">Community centre</span></button>
+              <button class="cat-chip" data-cat="theater" aria-pressed="false" style="--cat-color:#e50082"><span class="cat-chip-dot" style="background:#e50082"></span><span class="lang-nl">Theater</span><span class="lang-en">Theater</span></button>
+            </div>
           </details>
           <!-- Collapsible: Amenities -->
           <details class="filter-section-accordion" id="amenity-accordion">
@@ -353,7 +362,20 @@
               <span class="lang-en">Amenities</span>
               <span class="filter-section-chevron" aria-hidden="true"><svg class="filter-section-chevron-icon" viewBox="0 0 24 24" fill="currentColor"><path fill-rule="evenodd" clip-rule="evenodd" d="M2.5 7.91148L12 17.5L21.5 7.91148L20.1016 6.5L12 14.677L3.89845 6.5L2.5 7.91148Z"/></svg></span>
             </summary>
-            <div id="filter-chips" class="filter-chips" role="group" aria-label="Filter amenities"></div>
+            <!-- Pre-rendered for instant first paint; JS re-binds these and unions in any extra amenity flags found in the data. -->
+            <div id="filter-chips" class="filter-chips" role="group" aria-label="Filter amenities">
+              <button class="filter-chip" data-filter="ac" aria-pressed="false"><span class="lang-nl">Airco</span><span class="lang-en">A/C</span></button>
+              <button class="filter-chip" data-filter="free_water" aria-pressed="false"><span class="lang-nl">Gratis water</span><span class="lang-en">Free water</span></button>
+              <button class="filter-chip" data-filter="seating" aria-pressed="false"><span class="lang-nl">Zitplaatsen</span><span class="lang-en">Seating</span></button>
+              <button class="filter-chip" data-filter="toilets" aria-pressed="false"><span class="lang-nl">Toiletten</span><span class="lang-en">Toilets</span></button>
+              <button class="filter-chip" data-filter="wheelchair" aria-pressed="false"><span class="lang-nl">Toegankelijk</span><span class="lang-en">Accessible</span></button>
+              <button class="filter-chip" data-filter="pets_allowed" aria-pressed="false"><span class="lang-nl">Huisdieren OK</span><span class="lang-en">Pets OK</span></button>
+              <button class="filter-chip" data-filter="food_to_buy" aria-pressed="false"><span class="lang-nl">Eten te koop</span><span class="lang-en">Food nearby</span></button>
+              <button class="filter-chip" data-filter="free_fruit" aria-pressed="false"><span class="lang-nl">Gratis fruit</span><span class="lang-en">Free fruit</span></button>
+              <button class="filter-chip" data-filter="own_food_allowed" aria-pressed="false"><span class="lang-nl">Eigen eten OK</span><span class="lang-en">Own food OK</span></button>
+              <button class="filter-chip" data-filter="supervisor" aria-pressed="false"><span class="lang-nl">Begeleiding</span><span class="lang-en">Staff on-site</span></button>
+              <button class="filter-chip" data-filter="games" aria-pressed="false"><span class="lang-nl">Activiteiten</span><span class="lang-en">Activities</span></button>
+            </div>
           </details>
           <div class="layer-row" data-cat="water_taps" role="switch" aria-checked="false" tabindex="0">
             <span class="l-dot" style="background:#009de6;"></span>
@@ -374,7 +396,14 @@
               <span class="lang-en">Swimming spot types</span>
               <span class="filter-section-chevron" aria-hidden="true"><svg class="filter-section-chevron-icon" viewBox="0 0 24 24" fill="currentColor"><path fill-rule="evenodd" clip-rule="evenodd" d="M2.5 7.91148L12 17.5L21.5 7.91148L20.1016 6.5L12 14.677L3.89845 6.5L2.5 7.91148Z"/></svg></span>
             </summary>
-            <div id="swimming-filter-chips" class="filter-chips swimming-filter-chips" role="group" aria-label="Filter swimming spot types"></div>
+            <!-- Pre-rendered for instant first paint; JS re-binds these and appends any extra swim-spot types found in the data. -->
+            <div id="swimming-filter-chips" class="filter-chips swimming-filter-chips" role="group" aria-label="Filter swimming spot types">
+              <button class="filter-chip swim-filter-chip" data-swim-type="Binnenzwembad" aria-pressed="false"><span class="lang-nl">Binnenzwembad</span><span class="lang-en">Indoor pool</span></button>
+              <button class="filter-chip swim-filter-chip" data-swim-type="Buitenzwembad" aria-pressed="false"><span class="lang-nl">Buitenzwembad</span><span class="lang-en">Outdoor pool</span></button>
+              <button class="filter-chip swim-filter-chip" data-swim-type="Zwemplek" aria-pressed="false"><span class="lang-nl">Officiële buitenzwemplek</span><span class="lang-en">Official outdoor swim spot</span></button>
+              <button class="filter-chip swim-filter-chip" data-swim-type="Peuterbadje" aria-pressed="false"><span class="lang-nl">Peuterbadje</span><span class="lang-en">Paddling pool</span></button>
+              <button class="filter-chip swim-filter-chip" data-swim-type="Waterspeeltuin" aria-pressed="false"><span class="lang-nl">Waterspeeltuin</span><span class="lang-en">Water playground</span></button>
+            </div>
           </details>
           <div class="layer-row on" data-cat="parks" role="switch" aria-checked="true" tabindex="0">
             <span class="l-dot" style="background:#00893c;"></span>
