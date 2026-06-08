@@ -735,6 +735,7 @@ const HC = (() => {
     el.style.top  = top  + "px";
   }
   function show(clientX, clientY, name, sub, color) {
+    if (IS_TOUCH_DEVICE) return; // the hover card is a mouse-only affordance
     el.innerHTML = "";
     const bar = document.createElement("div"); bar.className = "hc-accent"; bar.style.background = color;
     const nm  = document.createElement("div"); nm.className  = "hc-name";  nm.textContent = name;
@@ -1239,9 +1240,14 @@ function buildStaticLayer(def, data) {
         const name=f.properties?.Naam||"Park", sub=(f.properties?.Stadsdeel||"")+" · Park";
         if (!parkGroups[name]) parkGroups[name]=[];
         parkGroups[name].push(l);
-        l.on("mouseover",e=>{parkGroups[name].forEach(pl=>pl.setStyle({fillOpacity:0.28,weight:2.5}));HC.show(e.originalEvent.clientX,e.originalEvent.clientY,name,sub,def.color);});
-        l.on("mouseout",()=>{parkGroups[name].forEach(pl=>pl.setStyle({fillOpacity:0.12,weight:1.5}));HC.hide();});
-        l.on("mousemove",e=>HC.move(e.originalEvent.clientX,e.originalEvent.clientY));
+        // Hover handlers only on real mouse devices. On touch they'd make the
+        // first tap register as a hover (needing a second tap to open the park)
+        // and pop up the hover card, which shouldn't exist on mobile.
+        if (!IS_TOUCH_DEVICE) {
+          l.on("mouseover",e=>{parkGroups[name].forEach(pl=>pl.setStyle({fillOpacity:0.28,weight:2.5}));HC.show(e.originalEvent.clientX,e.originalEvent.clientY,name,sub,def.color);});
+          l.on("mouseout",()=>{parkGroups[name].forEach(pl=>pl.setStyle({fillOpacity:0.12,weight:1.5}));HC.hide();});
+          l.on("mousemove",e=>HC.move(e.originalEvent.clientX,e.originalEvent.clientY));
+        }
         l.on("click",e=>{L.DomEvent.stopPropagation(e);showParkDetail(f);});
       },
     });
@@ -1256,9 +1262,12 @@ function buildStaticLayer(def, data) {
         const name = tapDisplayName(f.properties || {});
 
         const sub=state.lang==="nl"?"Drinkwaterkraan":"Drinking water";
-        l.on("mouseover",e=>HC.show(e.originalEvent.clientX,e.originalEvent.clientY,name,sub,def.color));
-        l.on("mouseout",()=>HC.hide());
-        l.on("mousemove",e=>HC.move(e.originalEvent.clientX,e.originalEvent.clientY));
+        // Hover card only on real mouse devices — never on touch (see parks above).
+        if (!IS_TOUCH_DEVICE) {
+          l.on("mouseover",e=>HC.show(e.originalEvent.clientX,e.originalEvent.clientY,name,sub,def.color));
+          l.on("mouseout",()=>HC.hide());
+          l.on("mousemove",e=>HC.move(e.originalEvent.clientX,e.originalEvent.clientY));
+        }
         l.on("click",e=>{
           L.DomEvent.stopPropagation(e);
           if (def.cat === "swimming_pools") showSwimmingPoolDetail(f);

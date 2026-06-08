@@ -734,7 +734,10 @@ html:has(body.sidebar-open) { overflow: hidden; }
     inset: 0;
     top: 0; left: 0; right: 0; bottom: 0;
     width: auto !important;
-    max-height: none; height: 100vh; height: 100dvh;
+    /* Let top/bottom:0 govern the height. An explicit 100vh/100dvh would
+       override `bottom:0` and, when Safari's dynamic toolbar shrinks the
+       reported viewport, leave a gap at the bottom where the map peeks out. */
+    max-height: none; height: auto;
     border-radius: 0; border-right: none !important; box-shadow: none;
     z-index: 900;                   /* above topbar (500/700) and contact wrap (600) */
     transform: translateX(-100%);   /* off-screen to the left */
@@ -1337,8 +1340,9 @@ body.mode-user #sidebar-policy { display: none; }
     gap: 0;
     pointer-events: auto;
   }
-  /* Extra breathing room at bottom of list so toggle doesn't hide last item */
-  #list-view-inner { padding-bottom: 72px; }
+  /* Extra breathing room at bottom of list so the floating view toggle
+     doesn't cover the last item, even with the home-indicator safe area. */
+  #list-view-inner { padding-bottom: calc(96px + env(safe-area-inset-bottom, 0px)); }
 }
 
 .view-btn {
@@ -1929,6 +1933,21 @@ body.mode-user #sidebar-policy { display: none; }
 /* House glyph sits above the pulse rings (which use z-index:-1) */
 .koelte-marker svg { position: relative; z-index: 1; pointer-events: none; }
 
+/* On touch devices the small water-tap / swimming-spot bubbles are hard to hit.
+   Add an invisible, larger tap target around each marker without changing how
+   it looks. The pseudo-element is part of the marker element, so taps on it
+   still trigger the marker's click handler. */
+@media (hover: none) and (pointer: coarse) {
+  .water-icon-marker::before,
+  .swim-icon-marker::before {
+    content: '';
+    position: absolute;
+    inset: -12px;
+    border-radius: 50%;
+    /* transparent — purely an enlarged hit area */
+  }
+}
+
 /* Shade legend — compact: a time-slot selector + a single shade→sun gradient scale */
 .shade-legend { padding: 6px 14px 10px; display: flex; flex-direction: column; gap: 7px; }
 /* Class display:flex above would otherwise override the [hidden] attribute, leaving
@@ -2029,28 +2048,8 @@ body.mode-user #sidebar-policy { display: none; }
   /* Banner text slightly smaller on mobile to prevent wrapping */
   .banner-text { font-size: 12px; }
 
-  /* ── Mobile map scroll handle ───────────────────────────────────────────
-     A tappable drag-pill at the very top of the map section. Because it's
-     a normal DOM element (not inside Leaflet's canvas), touching it lets
-     the browser handle the scroll gesture, allowing users to swipe back
-     up to the landing section. */
-  .map-scroll-handle {
-    display: flex; align-items: center; justify-content: center;
-    height: 28px; width: 100%;
-    background: var(--surface);
-    border-bottom: 1px solid var(--border);
-    flex-shrink: 0;
-    cursor: pointer;
-    -webkit-tap-highlight-color: transparent;
-    z-index: 2;
-  }
-  .map-scroll-handle::after {
-    content: '';
-    width: 36px; height: 4px;
-    background: rgba(0,0,0,0.15);
-    border-radius: 2px;
-  }
-  .map-scroll-handle:active::after { background: rgba(0,0,0,0.28); }
+  /* Mobile map scroll handle removed — kept hidden on all viewports. */
+  .map-scroll-handle { display: none !important; }
 }
 
 /* ── Responsive topbar title ─────────────────────────────────────────────── */
