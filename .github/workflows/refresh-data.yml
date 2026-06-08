@@ -32,6 +32,10 @@ jobs:
           curl -fsSL --retry 4 --retry-delay 5 "$BASE?gid=0&single=true&output=csv"          -o /tmp/locations.csv
           curl -fsSL --retry 4 --retry-delay 5 "$BASE?gid=971775516&single=true&output=csv"  -o /tmp/settings.csv
 
+          # Normalize CRLF -> LF so git change-detection compares apples to apples
+          # (Google serves CRLF; git stores LF — otherwise every run looks "changed").
+          sed -i 's/\r$//' /tmp/locations.csv /tmp/settings.csv
+
           # Guardrails: never overwrite good data with an empty/error response.
           test "$(wc -c < /tmp/locations.csv)" -gt 200
           head -1 /tmp/locations.csv | grep -q "name"
