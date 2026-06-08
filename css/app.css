@@ -751,6 +751,16 @@ html:has(body.sidebar-open) { overflow: hidden; }
   /* Cover the home-indicator / notch safe areas so nothing peeks past the edges. */
   #sidebar { padding-bottom: env(safe-area-inset-bottom); }
 
+  /* iOS Safari/WebKit clips a `position: fixed` element to the nearest ancestor
+     that has `overflow: hidden`. Here that ancestor is #map-section, whose
+     bottom edge sits right at the view toggle — so the overlay stops there and
+     the map shows below it (this is exactly why it works in desktop Chrome but
+     not on iOS). While the overlay is open, relax overflow on those ancestors
+     so the fixed overlay can reach the true viewport edges. The map is fully
+     covered by the overlay during this time, so there's no visual side effect. */
+  body.sidebar-open #map-contact-wrap,
+  body.sidebar-open #map-section { overflow: visible; }
+
   #sidebar-backdrop { display: none !important; }
 
   /* ── Mobile legend header — matches the desktop legend design language ──── */
