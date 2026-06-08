@@ -1,0 +1,72 @@
+name: Refresh data from Google Sheet
+
+# Keeps data/locations.csv and data/settings.csv in sync with the published
+# Google Sheet so the public site loads from same-origin static files (fast,
+# reliable) instead of a live third-party request. Editors keep using the sheet;
+# changes go live within the schedule interval below.
+
+on:
+  schedule:
+    - cron: "*/15 * * * *"   # every 15 minutes (GitHub may delay scheduled runs)
+  workflow_dispatch: {}       # allow manual "Run workflow"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: refresh-data
+  cancel-in-progress: false
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Fetch CSVs from the published sheet
+        env:
+          BASE: "https://docs.google.com/spreadsheets/d/e/2PACX-1vToR12t2LARCufEpqz2xv0An5XQqBHd1VvqBmS9k3OdlsvzUryxgmwXTpaVfIX4zMYE61DH0-ujlnqB/pub"
+        run: |
+          set -euo pipefail
+          # Retry to ride out transient Google hiccups.
+          curl -fsSL --retry 4 --retry-delay 5 "$BASE?gid=0&single=true&output=csv"          -o /tmp/locations.csv
+          curl -fsSL --retry 4 --retry-delay 5 "$BASE?gid=971775516&single=true&output=csv"  -o /tmp/settings.csv
+
+          # Guardrails: never overwrite good data with an empty/error response.
+          test "$(wc -c < /tmp/locations.csv)" -gt 200
+          head -1 /tmp/locations.csv | grep -q "name"
+          test "$(wc -c < /tmp/settings.csv)" -gt 10
+          head -1 /tmp/settings.csv | grep -qi "key"
+
+          mv /tmp/locations.csv data/locations.csv
+          mv /tmp/settings.csv  data/settings.csv
+
+      - name: Detect changes
+        id: diff
+        run: |
+          if git diff --quiet -- data/locations.csv data/settings.csv; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+            echo "No data changes."
+          else
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+            echo "Data changed."
+          fi
+
+      - name: Commit refreshed data
+        if: steps.diff.outputs.changed == 'true'
+        run: |
+          git config user.name  "koeltekaart-bot"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add data/locations.csv data/settings.csv
+          git commit -m "data: refresh from Google Sheet [skip ci]"
+          git push
+
+      - name: Deploy refreshed data to Azure
+        if: steps.diff.outputs.changed == 'true'
+        uses: Azure/static-web-apps-deploy@v1
+        with:
+          azure_static_web_apps_api_token: ${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN_AMBITIOUS_BAY_01E7C5C03 }}
+          action: "upload"
+          app_location: "/"
+          output_location: ""
+          skip_app_build: true

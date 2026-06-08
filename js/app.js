@@ -91,18 +91,23 @@ const LAYER_DEFS = [
 //                         use the same field names as the template columns;
 //                         settings:  a flat JSON object { key: value, … }.
 const DATA_SOURCE = {
-  type: "google-sheet",            // "google-sheet" | "csv" | "geojson"
+  // Load from same-origin static files for fast, reliable page loads. The files
+  // are kept in sync with the Google Sheet by .github/workflows/refresh-data.yml
+  // (scheduled), so editors keep using the sheet while the site never depends on
+  // a live third-party request at load time.
+  type: "csv",                     // "google-sheet" | "csv" | "geojson"
 
-  // Used when type === "google-sheet".
+  // Used when type === "google-sheet" (kept for reference; the refresh workflow
+  // reads from this published sheet).
   googleSheet: {
     publishedId:  "2PACX-1vToR12t2LARCufEpqz2xv0An5XQqBHd1VvqBmS9k3OdlsvzUryxgmwXTpaVfIX4zMYE61DH0-ujlnqB",
     locationsGid: "0",             // #gid of the locations tab (first tab = 0)
     settingsGid:  "971775516",     // #gid of the settings tab
   },
 
-  // Used when type === "csv" or "geojson" — static files published from M365.
-  locationsUrl: "",                // e.g. "data/locations.csv" or "https://…/locations.geojson"
-  settingsUrl:  "",                // e.g. "data/settings.csv"  or "https://…/settings.json"
+  // Used when type === "csv" or "geojson" — static files refreshed from the sheet.
+  locationsUrl: "data/locations.csv",
+  settingsUrl:  "data/settings.csv",
 };
 
 /** Build a published-CSV URL for a Google Sheet tab gid. */
