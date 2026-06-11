@@ -560,6 +560,7 @@ html:has(body.sidebar-open) { overflow: hidden; }
   #map-section.sidebar-collapsed .legend-body { display: none; }
   #map-section.sidebar-collapsed .legend-header { border-bottom: none; }
   #map-section.sidebar-collapsed #sidebar-collapse-btn svg { transform: rotate(0deg); }
+  #map-section.sidebar-collapsed .cscrollbar-thumb { opacity: 0 !important; pointer-events: none; }
   #sidebar {
     --sidebar-resize-hitbox: 8px;
   }
