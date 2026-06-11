@@ -3063,17 +3063,35 @@ function formatDutchNumber(value, decimals=1) {
 async function loadWeatherBar() {
   const strip=document.getElementById("weather-strip");
   if (!strip) return;
+
+  async function attempt() {
+    const controller=new AbortController();
+    const timer=setTimeout(()=>controller.abort(),8000);
+    try {
+      const params = new URLSearchParams({
+        latitude:  "52.3676",
+        longitude: "4.9041",
+        current:   "temperature_2m,relative_humidity_2m,apparent_temperature,weather_code",
+        timezone:  "Europe/Amsterdam",
+      });
+      const response=await fetch(`https://api.open-meteo.com/v1/forecast?${params}`,{signal:controller.signal});
+      clearTimeout(timer);
+      if (!response.ok) throw new Error(`Weather request failed: ${response.status}`);
+      return await response.json();
+    } finally {
+      clearTimeout(timer);
+    }
+  }
+
   try {
-    // Call Open-Meteo directly — free, no API key, CORS-friendly
-    const params = new URLSearchParams({
-      latitude:  "52.3676",
-      longitude: "4.9041",
-      current:   "temperature_2m,relative_humidity_2m,apparent_temperature,weather_code",
-      timezone:  "Europe/Amsterdam",
-    });
-    const response=await fetch(`https://api.open-meteo.com/v1/forecast?${params}`);
-    if (!response.ok) throw new Error(`Weather request failed: ${response.status}`);
-    const payload=await response.json();
+    let payload;
+    try {
+      payload=await attempt();
+    } catch {
+      // retry once after 3 s
+      await new Promise(r=>setTimeout(r,3000));
+      payload=await attempt();
+    }
     const current=payload.current||{};
     const data={
       temperature: current.temperature_2m,
@@ -3089,10 +3107,6 @@ async function loadWeatherBar() {
     if (feelsEl){const value=`${formatDutchNumber(data.feels_like,0)}°`;feelsEl.textContent=value;feelsEl.setAttribute("aria-label",`${t("weather_feels_label")}: ${value}`);}
   } catch(error) {
     console.warn("Could not load weather data:",error);
-    const tempEl=document.getElementById("weather-temp"), humidityEl=document.getElementById("weather-humidity"), feelsEl=document.getElementById("weather-feels");
-    if(tempEl) tempEl.textContent="--°";
-    if(humidityEl) humidityEl.textContent="--%";
-    if(feelsEl) feelsEl.textContent="--°";
   }
 }
 
