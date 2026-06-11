@@ -416,7 +416,7 @@ body {
     top: 14px; left: 14px;
     width: min(320px, calc(50% - 28px));
     height: auto;
-    max-height: calc(50% - 22px);   /* expanded legend stays within the top-left quadrant */
+    max-height: calc(60% - 22px);   /* expanded legend stays within the top-left quadrant */
     border: 1px solid var(--border);
     border-radius: 16px;
     background: rgba(255,255,255,0.97);
