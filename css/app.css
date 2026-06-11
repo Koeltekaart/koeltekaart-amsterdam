@@ -502,14 +502,14 @@ html:has(body.sidebar-open) { overflow: hidden; }
     top: 14px; left: 14px;
     width: min(380px, calc(50% - 28px));
     height: auto;
-    max-height: calc(78% - 22px);   /* expanded legend may use up to 78% of the map height so all layer options stay visible */
+    max-height: 85vh;
     border: 1px solid var(--border);
     border-radius: 16px;
     background: rgba(255,255,255,0.97);
     -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px);
     box-shadow: 0 8px 30px rgba(0,0,0,0.16);
     padding: 0;
-    overflow: hidden scroll;   /* always show the scrollbar track so the legend reads as scrollable */
+    overflow: hidden auto;
     transition: opacity 0.22s ease, transform 0.22s cubic-bezier(0.4,0,0.2,1);
   }
 
