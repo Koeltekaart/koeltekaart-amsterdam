@@ -502,7 +502,7 @@ html:has(body.sidebar-open) { overflow: hidden; }
     top: 14px; left: 14px;
     width: min(380px, calc(50% - 28px));
     height: auto;
-    max-height: calc(100dvh - var(--top) - var(--contact-h) - 28px);
+    max-height: calc(100dvh - var(--top) - var(--banner-h) - var(--contact-h) - 28px);
     border: 1px solid var(--border);
     border-radius: 16px;
     background: rgba(255,255,255,0.97);

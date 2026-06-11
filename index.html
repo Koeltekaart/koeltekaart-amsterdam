@@ -235,7 +235,7 @@
   <!-- Snap seam: marks the fully-docked scroll position (see setupScrollDock) -->
   <div id="snap-app-anchor" aria-hidden="true"></div>
 
-  <!-- ── Map + contact wrapper: sticky flex column, fills viewport below topbar -->
+  <!-- ── Map wrapper: sticky block, fills viewport below topbar ──────────── -->
   <div id="map-contact-wrap">
 
   <!-- Heat plan status strip — sits directly above the map, always visible while the map is -->
@@ -457,7 +457,7 @@
 
   </div><!-- /#map-section -->
 
-  <!-- ── Contact footer — flex child below map, always visible ──────────── -->
+  <!-- ── Contact footer — sits below the map inside the sticky wrapper ───── -->
   <footer class="contact-strip" id="contact-footer">
     <!-- Mobile: collapsed summary row -->
     <div class="cs-collapsed-summary" id="cs-toggle" role="button" aria-expanded="false" aria-controls="cs-expanded-body">
