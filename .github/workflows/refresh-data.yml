@@ -7,8 +7,10 @@ name: Refresh data from Google Sheet
 
 on:
   schedule:
-    - cron: "*/15 * * * *"   # every 15 minutes (GitHub may delay scheduled runs)
+    - cron: "*/15 * * * *"   # fallback poll every 15 minutes
   workflow_dispatch: {}       # allow manual "Run workflow"
+  repository_dispatch:
+    types: [sheet-updated]    # triggered by Google Apps Script on sheet edit
 
 permissions:
   contents: write

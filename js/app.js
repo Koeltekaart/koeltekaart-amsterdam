@@ -1169,7 +1169,7 @@ function _renderKoelteplekkenLayer(def, features) {
 function _renderKoelteplekkenLayerInner(def, features) {
   HC.hide(); // dismiss any lingering hover card before swapping layers
   if (state.layers.koelteplekken) state.map.removeLayer(state.layers.koelteplekken);
-  const filtered = features.filter(f => koelteplekPassesFilters(f.properties||{}));
+  const filtered = features.filter(f => (f.properties||{}).active !== false && koelteplekPassesFilters(f.properties||{}));
   const fc = { type:"FeatureCollection", features: filtered };
   state.layers.koelteplekken = L.geoJSON(fc, {
     pointToLayer: (_f, ll) => {
@@ -2159,7 +2159,11 @@ function renderKoelteDetailContent(feature, container) {
 
   if (p.active === false) {
     const notice = document.createElement("div"); notice.className = "inactive-notice";
-    notice.textContent = state.lang === "nl" ? "⚠ Tijdelijk gesloten" : "⚠ Temporarily unavailable";
+    const noticeIc = document.createElement("span"); noticeIc.className = "inactive-notice-ic";
+    noticeIc.innerHTML = adsIcon("InfoFill", { size: 16 });
+    const noticeTx = document.createElement("span");
+    noticeTx.textContent = state.lang === "nl" ? "Tijdelijk niet beschikbaar" : "Temporarily unavailable";
+    notice.append(noticeIc, noticeTx);
     info.appendChild(notice);
   }
 
@@ -2170,9 +2174,17 @@ function renderKoelteDetailContent(feature, container) {
   nameEl.textContent = p.name || "Koelteplek";
   info.append(catLbl, nameEl);
 
-  // Decide which hours to show (heatplan hours override normal hours when plan is active)
+  // Decide which hours to show. When heat plan is active, override per-day:
+  // only days that have heat hours defined use heat hours; the rest fall back to regular hours.
   const useHeat = state.heatPlanActive && p.hours_heat;
-  const hoursToShow = useHeat ? p.hours_heat : p.hours;
+  let hoursToShow;
+  if (useHeat) {
+    hoursToShow = p.hours
+      ? p.hours_heat.map((heatSlot, i) => heatSlot !== null ? heatSlot : p.hours[i])
+      : p.hours_heat;
+  } else {
+    hoursToShow = p.hours;
+  }
 
   // ── Open/closed status — sits beside the "Openingstijden" section title ──
   const openStatus = getOpenStatus(hoursToShow);
@@ -2194,9 +2206,7 @@ function renderKoelteDetailContent(feature, container) {
   const hoursSec = dpSection("Openingstijden", "Opening hours");
   if (statusTag) hoursSec.querySelector(".dp-section-title").appendChild(statusTag);
   if (useHeat) {
-    const heatNote = document.createElement("div"); heatNote.className = "detail-heat-hours-note";
-    heatNote.innerHTML = `<svg width="12" height="12" viewBox="0 0 14 14" fill="none" aria-hidden="true"><circle cx="7" cy="7" r="6" stroke="currentColor" stroke-width="1.5"/><line x1="7" y1="4" x2="7" y2="7.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><circle cx="7" cy="10" r="0.7" fill="currentColor"/></svg>${state.lang === "nl" ? "Hitteplan-openingstijden worden getoond" : "Heat plan opening hours shown"}`;
-    hoursSec.appendChild(heatNote);
+    hoursSec.appendChild(adsInfoNote(state.lang === "nl" ? "Hitteplan-openingstijden worden getoond" : "Heat plan opening hours shown"));
   }
   const hoursBlock = renderHoursBlock(hoursToShow);
   const statusRow = hoursBlock.querySelector(".hours-status");
@@ -2570,6 +2580,7 @@ async function doSearch(query) {
   const localMatches = (state.features.koelteplekken || [])
     .filter(f => {
       const p = f.properties || {};
+      if (p.active === false) return false;
       return (
         (p.name || "").toLowerCase().includes(qLower) ||
         (p.neighborhood || "").toLowerCase().includes(qLower) ||
