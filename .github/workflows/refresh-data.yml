@@ -31,8 +31,8 @@ jobs:
         with:
           python-version: "3.12"
 
-      - name: Install Google API client
-        run: pip install --quiet google-api-python-client google-auth
+      - name: Install Python deps
+        run: pip install --quiet google-api-python-client google-auth Pillow
 
       - name: Fetch CSVs from the private sheet (service account, live read)
         env:
@@ -67,16 +67,22 @@ jobs:
       - name: Validate data (block bad opening hours from deploying)
         run: python3 scripts/validate_data.py data/locations.csv
 
+      # Mirror Drive photos into the repo (same-origin → instant loads) and
+      # rewrite photo_url to the local path. Unchanged photos are reused.
+      - name: Sync location photos
+        run: python3 scripts/fetch_photos.py
+
       - name: Detect changes
         id: diff
         run: |
-          if git diff --quiet -- data/locations.csv data/settings.csv; then
+          git add -A -- data images/locations
+          if git diff --cached --quiet; then
             echo "changed=false" >> "$GITHUB_OUTPUT"
-            echo "No data changes."
+            echo "No changes."
           else
             echo "changed=true" >> "$GITHUB_OUTPUT"
-            echo "Data changed."
-            git --no-pager diff --stat -- data/locations.csv data/settings.csv >> "$GITHUB_STEP_SUMMARY"
+            echo "Data/photos changed."
+            git --no-pager diff --cached --stat >> "$GITHUB_STEP_SUMMARY"
           fi
 
       # On any branch other than main (i.e. a test run), STOP here: upload what
@@ -91,6 +97,7 @@ jobs:
           path: |
             data/locations.csv
             data/settings.csv
+            images/locations/
 
       - name: Commit refreshed data
         if: steps.diff.outputs.changed == 'true' && github.ref == 'refs/heads/main'
@@ -104,7 +111,7 @@ jobs:
           for attempt in 1 2 3 4 5; do
             git fetch -q origin main
             git reset -q --soft origin/main        # keep our fetched files, re-base on latest
-            git add data/locations.csv data/settings.csv
+            git add -A -- data images/locations
             if git diff --cached --quiet; then
               echo "Already up to date after rebase — nothing to push."; exit 0
             fi
