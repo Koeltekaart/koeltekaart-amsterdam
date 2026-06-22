@@ -116,11 +116,28 @@ jobs:
           done
           echo "::error::Could not push refreshed data after 5 attempts."; exit 1
 
+      # Azure SWA requires an OIDC id-token in addition to the deploy token
+      # (token-only uploads are rejected with "api key was invalid"). Mirror the
+      # main CI workflow's auth so direct data deploys actually publish.
+      - name: Install OIDC client (for SWA deploy auth)
+        if: steps.diff.outputs.changed == 'true' && github.ref == 'refs/heads/main'
+        run: npm install @actions/core@1.6.0 @actions/http-client
+      - name: Get OIDC id token
+        id: idtoken
+        if: steps.diff.outputs.changed == 'true' && github.ref == 'refs/heads/main'
+        uses: actions/github-script@v9
+        with:
+          script: |
+            const core = require('@actions/core')
+            return await core.getIDToken()
+          result-encoding: string
+
       - name: Deploy refreshed data to Azure
         if: steps.diff.outputs.changed == 'true' && github.ref == 'refs/heads/main'
         uses: Azure/static-web-apps-deploy@v1
         with:
           azure_static_web_apps_api_token: ${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN_AMBITIOUS_BAY_01E7C5C03 }}
+          github_id_token: ${{ steps.idtoken.outputs.result }}
           action: "upload"
           app_location: "/"
           output_location: ""
