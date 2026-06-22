@@ -57,11 +57,18 @@ def main(gid, out_path):
         print(f"::error::tab '{title}' (gid {gid}) returned no rows")
         return 1
 
+    # Clean each cell: editors sometimes Alt+Enter inside a cell, leaving
+    # embedded CR/LF. Collapse those to spaces and trim, so the output is
+    # single-line-per-row and byte-stable (otherwise git would see a "change"
+    # on every run and redeploy needlessly).
+    def clean(v):
+        return " ".join(str(v).replace("\r", " ").replace("\n", " ").split())
+
     width = max(len(r) for r in rows)              # pad ragged rows to header width
     buf = io.StringIO()
     w = csv.writer(buf, lineterminator="\n")       # LF, not CRLF
     for r in rows:
-        w.writerow(r + [""] * (width - len(r)))
+        w.writerow([clean(c) for c in r] + [""] * (width - len(r)))
     with open(out_path, "w", encoding="utf-8", newline="") as f:
         f.write(buf.getvalue())
 
