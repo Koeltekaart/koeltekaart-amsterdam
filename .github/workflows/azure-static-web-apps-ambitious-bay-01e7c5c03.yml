@@ -9,6 +9,17 @@ on:
     branches:
       - main
 
+# Rapid sheet edits push several "data: refresh" commits in a row, each
+# triggering a deploy. Without this, an older deploy is still running when the
+# next starts, and Azure cancels it server-side — reporting a *failure* to
+# GitHub (= a failure email) even though the newest deploy succeeds. Grouping
+# by ref with cancel-in-progress makes GitHub supersede the stale run itself,
+# which shows as "cancelled" (no failure notification) and lets only the latest
+# commit deploy. PR previews (different refs) are unaffected.
+concurrency:
+  group: azure-swa-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   build_and_deploy_job:
     if: github.event_name == 'push' || (github.event_name == 'pull_request' && github.event.action != 'closed')
