@@ -67,77 +67,111 @@ const LAYER_DEFS = [
 ];
 
 // ── Data source ────────────────────────────────────────────────────────────
-// The site reads its location data + heat-plan settings from a published,
-// read-only source. It stays fully client-side: the browser fetches a public
-// URL with no credentials. Cooling-spot locations are public information, so
-// anonymous read is appropriate and safe.
+// Fully client-side, two layers (see DATA_SOURCE below):
+//   1. GUARANTEED  — same-origin static files (data/locations.csv, settings.csv).
+//                    Always rendered first; the only path the site needs to work.
+//   2. ENHANCEMENT — a non-blocking live read-through of the Google Sheet that
+//                    refreshes the data in place when it succeeds, and is simply
+//                    skipped when it can't (slow/blocked/throttled). Freshness
+//                    degrades under failure; the site never does.
 //
-// CURRENT: a published Google Sheet (CSV).
-//
-// TO MIGRATE TO MICROSOFT 365 (the planned amsterdam.nl setup):
-//   1. GGD maintains the locations in Excel / a SharePoint List, using the
-//      same columns as today (see docs/location-template.csv).
-//   2. A scheduled Power Automate flow publishes that list to a static file at
-//      a public, read-only URL on Gemeente / Azure hosting:
-//        • simplest:  export as CSV     → set type: "csv"
-//        • or:        export as GeoJSON → set type: "geojson"
-//   3. Set DATA_SOURCE.type and the two URLs below. Nothing else changes —
-//      the field mapping (_rowToFeature) and the entire app are source-agnostic.
+// PORTABILITY (the planned amsterdam.nl move): the static files are self-
+// sufficient, so copying the site to municipal static hosting needs no pipeline
+// and no code change — the map keeps working from the bundled files, and live
+// refresh keeps working too as long as the host's CSP allows the sheet call
+// (set liveSheet.sheetId:"" to turn it off entirely). To swap the editing tool
+// later (Excel/SharePoint via Power Automate, etc.), publish to the same static
+// files; _rowToFeature and the rest of the app are source-agnostic.
 //
 // Source formats:
-//   csv / google-sheet — locations: same columns as the template;
-//                         settings:  two columns "key,value".
-//   geojson            — locations: FeatureCollection whose feature.properties
-//                         use the same field names as the template columns;
-//                         settings:  a flat JSON object { key: value, … }.
+//   csv     — locations: same columns as docs/location-template.csv;
+//             settings:  two columns "key,value".
+//   geojson — locations: FeatureCollection whose feature.properties use the same
+//             field names as the template columns;
+//             settings:  a flat JSON object { key: value, … }.
 const DATA_SOURCE = {
-  // Load from same-origin static files for fast, reliable page loads. The files
-  // are kept in sync with the Google Sheet by .github/workflows/refresh-data.yml
-  // (scheduled), so editors keep using the sheet while the site never depends on
-  // a live third-party request at load time.
-  type: "csv",                     // "google-sheet" | "csv" | "geojson"
-
-  // Used when type === "google-sheet" (kept for reference; the refresh workflow
-  // reads from this published sheet).
-  googleSheet: {
-    publishedId:  "2PACX-1vToR12t2LARCufEpqz2xv0An5XQqBHd1VvqBmS9k3OdlsvzUryxgmwXTpaVfIX4zMYE61DH0-ujlnqB",
-    locationsGid: "0",             // #gid of the locations tab (first tab = 0)
-    settingsGid:  "971775516",     // #gid of the settings tab
-  },
-
-  // Used when type === "csv" or "geojson" — static files refreshed from the sheet.
+  // ── Guaranteed path: same-origin static files ────────────────────────────
+  // Rendered first, on every load. Served from the host's CDN, so it is fast
+  // and rock-solid under heavy traffic, and it is the ONLY path the site needs
+  // to function. The refresh workflow keeps these in sync with the sheet, and
+  // when the site moves to municipal static hosting these files just travel
+  // with it — nothing else is required for the map to work.
+  type: "csv",                     // "csv" | "geojson"
   locationsUrl: "data/locations.csv",
   settingsUrl:  "data/settings.csv",
+
+  // ── Optional enhancement path: live read-through of the sheet ────────────
+  // INTENTIONALLY DISABLED on this deployment (sheetId left ""). Freshness is
+  // instead handled privately, server-side: a GitHub Action reads the sheet
+  // with a service account and regenerates the static files above (see
+  // docs/DATA_PIPELINE.md). That keeps the spreadsheet fully private — turning
+  // this on would put the real sheet id in public JS and require sharing the
+  // sheet to "anyone with the link", which we do NOT want on a city-wide site.
+  //
+  // The code path is kept (non-blocking, static-fallback) for local/preview
+  // testing against a throwaway STAGING sheet via ?sheet=<id>, and as an option
+  // for any future host that explicitly accepts a public per-visit sheet read.
+  // When enabled it uses the gviz endpoint (live read, not the cached /pub
+  // snapshot). Leave sheetId "" for production.
+  liveSheet: {
+    sheetId:      "",              // "" = off (production). Real /d/<ID>/edit id only for staging tests.
+    locationsGid: "0",             // #gid of the locations tab (first tab = 0)
+    settingsGid:  "971775516",     // #gid of the settings tab
+    refreshMs:    5 * 60 * 1000,   // re-check the live sheet at most this often
+  },
 };
 
-/** Build a published-CSV URL for a Google Sheet tab gid. */
-function _googleSheetUrl(gid) {
-  return `https://docs.google.com/spreadsheets/d/e/${DATA_SOURCE.googleSheet.publishedId}/pub?gid=${gid}&single=true&output=csv`;
+// ── Safe-testing overrides (gated to non-production hosts) ───────────────────
+// Let a preview/local build be pointed at a STAGING sheet copy, or have live
+// refresh disabled / forced to fail, straight from the URL — so the live code
+// can be stress-tested without touching production or editing this file:
+//   ?datasrc=static   → disable live refresh (pure static)
+//   ?livefail=1       → force every live fetch to fail (verify graceful fallback)
+//   ?sheet=<id>       → point live refresh at a different (staging) sheet
+// Ignored on the production domain so a crafted link can never repoint visitors.
+const _DEBUG_HOSTS = /^(localhost$|127\.|\[?::1\]?$|.*\.azurestaticapps\.net$)/i;
+const _DEBUG_OVERRIDES_ALLOWED = _DEBUG_HOSTS.test(location.hostname);
+const _qs = new URLSearchParams(location.search);
+const _liveDisabled  = _DEBUG_OVERRIDES_ALLOWED && _qs.get("datasrc") === "static";
+const _liveForceFail = _DEBUG_OVERRIDES_ALLOWED && _qs.get("livefail") === "1";
+if (_DEBUG_OVERRIDES_ALLOWED && _qs.get("sheet")) {
+  DATA_SOURCE.liveSheet.sheetId = _qs.get("sheet");
 }
 
-/** True when the configured data source has the details it needs to load. */
+/** Build a live gviz CSV URL for a Google Sheet tab gid. */
+function _gvizUrl(gid) {
+  return `https://docs.google.com/spreadsheets/d/${DATA_SOURCE.liveSheet.sheetId}` +
+         `/gviz/tq?tqx=out:csv&gid=${gid}`;
+}
+
+/** True when the static data source has what it needs to load (always, here). */
 function _dataReady() {
-  if (DATA_SOURCE.type === "google-sheet") {
-    const id = DATA_SOURCE.googleSheet.publishedId;
-    return !!id && !id.startsWith("PASTE_");
-  }
   return !!DATA_SOURCE.locationsUrl;
 }
 
-/** Resolve the locations request: { url, format: "csv" | "geojson" }. */
+/** True when live read-through is configured and not disabled for this session. */
+function _liveSheetReady() {
+  if (_liveDisabled) return false;
+  const id = DATA_SOURCE.liveSheet?.sheetId;
+  return !!id && !id.startsWith("PASTE_");
+}
+
+/** Resolve the initial (static) locations request: { url, format }. */
 function _locationsRequest() {
-  if (DATA_SOURCE.type === "google-sheet") {
-    return { url: _googleSheetUrl(DATA_SOURCE.googleSheet.locationsGid), format: "csv" };
-  }
   return { url: DATA_SOURCE.locationsUrl, format: DATA_SOURCE.type === "geojson" ? "geojson" : "csv" };
 }
 
-/** Resolve the settings request: { url, format: "csv" | "json" }. */
+/** Resolve the initial (static) settings request: { url, format }. */
 function _settingsRequest() {
-  if (DATA_SOURCE.type === "google-sheet") {
-    return { url: _googleSheetUrl(DATA_SOURCE.googleSheet.settingsGid), format: "csv" };
-  }
   return { url: DATA_SOURCE.settingsUrl, format: DATA_SOURCE.type === "geojson" ? "json" : "csv" };
+}
+
+/** Fetch a live-sheet tab as text, honouring the ?livefail test override. */
+async function _fetchLive(gid) {
+  if (_liveForceFail) throw new Error("livefail override");
+  const r = await fetch(_gvizUrl(gid), { cache: "no-store" });
+  if (!r.ok) throw new Error(`live fetch ${r.status}`);
+  return r.text();
 }
 
 const TYPE_LABEL    = { koelteplekken: "Koelteplek", water_taps: "Water fountain", parks: "Park", swimming_pools: "Swimming spot" };
@@ -667,57 +701,43 @@ function updateBannerText() {
   applyHeatPlanToMap();
 }
 
-// ── Google Sheets settings ─────────────────────────────────────────────────
-// Settings tab columns: key, value
-// Supported keys:
-//   heat_plan_active       TRUE / FALSE
-//   category.<type>.en     English label  e.g. category.museum.en, Museum
-//   category.<type>.nl     Dutch label    e.g. category.museum.nl, Museum
-//   amenity.<key>.en       English label  e.g. amenity.lockers.en, Lockers
-//   amenity.<key>.nl       Dutch label    e.g. amenity.lockers.nl, Kluisjes
-//
-// Colors are assigned automatically from the Amsterdam palette — no color row needed.
+// ── Settings (heat-plan switch) ────────────────────────────────────────────
+// Settings tab columns: key, value. The ONLY key the site reads live is:
+//   heat_plan_active       TRUE / FALSE   (flips the banner + map heat styling)
+// Category and amenity LABELS are intentionally NOT fetched live — they live in
+// TYPE_DISPLAY_* / AMENITY_LABELS in code. Fewer live moving parts = fewer ways
+// for the public site to break; labels change rarely and ship with a release.
 
 let _settingsPromise = null;
 
+/** Apply heat_plan_active from a list of {key,value} setting rows. */
+function _applySettings(rows) {
+  const row = rows.find(r => (r.key || "").trim().toLowerCase() === "heat_plan_active");
+  if (!row) return;
+  const was = state.heatPlanActive;
+  state.heatPlanActive = csvToBool((row.value || "").trim()) === true;
+  if (was !== state.heatPlanActive) updateBannerText();
+}
+
+/** Read the heat-plan flag: live sheet when available, else the static file. */
 async function fetchSettings() {
+  // Prefer the live sheet so the heat plan can be flipped on within minutes.
+  if (_liveSheetReady()) {
+    try {
+      _applySettings(parseCsv(await _fetchLive(DATA_SOURCE.liveSheet.settingsGid)));
+      return;
+    } catch (_) { /* fall through to the static file */ }
+  }
   if (!_dataReady()) return;
   try {
     const { url, format } = _settingsRequest();
     const r = await fetch(url);
     if (!r.ok) return;
-    // Normalise both source formats to a list of { key, value } rows.
     const rows = format === "json"
       ? Object.entries(await r.json()).map(([key, value]) => ({ key, value: String(value) }))
       : parseCsv(await r.text());
-    rows.forEach(row => {
-      const key = (row.key || "").trim().toLowerCase();
-      const val = (row.value || "").trim();
-      if (!key || !val) return;
-
-      if (key === "heat_plan_active") {
-        const was = state.heatPlanActive;
-        state.heatPlanActive = csvToBool(val) === true;
-        if (was !== state.heatPlanActive) updateBannerText();
-        return;
-      }
-
-      const parts = key.split(".");
-      if (parts.length === 3 && parts[0] === "category") {
-        const [, type, lang] = parts;
-        if (lang === "en") TYPE_DISPLAY_EN[type] = val;
-        if (lang === "nl") TYPE_DISPLAY_NL[type] = val;
-        return;
-      }
-
-      if (parts.length === 3 && parts[0] === "amenity") {
-        const [, akey, lang] = parts;
-        if (!AMENITY_LABELS[akey]) AMENITY_LABELS[akey] = {};
-        if (lang === "en") AMENITY_LABELS[akey].en = val;
-        if (lang === "nl") AMENITY_LABELS[akey].nl = val;
-      }
-    });
-  } catch (_) { /* sheets may be unreachable */ }
+    _applySettings(rows);
+  } catch (_) { /* settings unreachable — keep current banner state */ }
 }
 
 function _ensureSettingsLoaded() {
@@ -726,13 +746,13 @@ function _ensureSettingsLoaded() {
 }
 
 /**
- * Initialise the heat-plan status banner and start polling the data source
- * every 5 minutes for live updates to heat_plan_active and label overrides.
+ * Initialise the heat-plan status banner and start polling for live updates to
+ * heat_plan_active every 5 minutes.
  */
 function setupBanner() {
   updateBannerText();
   _ensureSettingsLoaded();
-  setInterval(fetchSettings, 5 * 60 * 1000); // poll every 5 min
+  setInterval(fetchSettings, DATA_SOURCE.liveSheet.refreshMs); // poll for heat-plan changes
 }
 
 // Detect touch-primary devices — hover card is skipped on these
@@ -786,33 +806,10 @@ function polygonCentroid(coordinates) {
 }
 
 // ── Opening hours ──────────────────────────────────────────────────────────
-function parseMinutes(str) { const [h,m] = str.split(":").map(Number); return h*60+m; }
-
-/**
- * Determine whether a location is currently open, closed, or has unknown hours.
- * @param {string[]|null} hours - 7-element array of "HH:MM-HH:MM" slots indexed
- *   Mon=0…Sun=6, or null/undefined if hours are unknown.
- * @returns {{status: "open"|"closed"|"unknown", closesAt?: string, opensAt?: string, nextDay?: number}}
- */
-function getOpenStatus(hours) {
-  if (!hours || !Array.isArray(hours)) return { status: "unknown" };
-  const now = new Date(), dow = (now.getDay()+6)%7;
-  const today = hours[dow], nowM = now.getHours()*60+now.getMinutes();
-  if (!today) {
-    let nextDay = null;
-    for (let i=1;i<=7;i++) { const d=(dow+i)%7; if(hours[d]){nextDay=d;break;} }
-    return { status:"closed", today:null, nextDay };
-  }
-  const [openStr,closeStr] = today.split("-");
-  const openM = parseMinutes(openStr), closeM = parseMinutes(closeStr);
-  if (nowM < openM) return { status:"closed", opensAt:openStr, today };
-  if (nowM >= closeM) {
-    let nextDay = null;
-    for (let i=1;i<=7;i++) { const d=(dow+i)%7; if(hours[d]){nextDay=d;break;} }
-    return { status:"closed", today, nextDay };
-  }
-  return { status:"open", closesAt:closeStr, today };
-}
+// The pure hours logic (parseMinutes, _normaliseSlot, _parseHoursFromRow,
+// getOpenStatus, HOURS_UNKNOWN, _CSV_DAY_COLS …) lives in js/hours.js, loaded
+// before this file, so it can be unit-tested in Node. Only the DOM rendering
+// below stays here.
 
 /**
  * Build a DOM element displaying a weekly opening-hours table plus a
@@ -853,8 +850,15 @@ function renderHoursBlock(hours) {
       const row  = document.createElement("div");
       row.className = "hours-row" + (i===todayIdx ? " hours-row--today" : "");
       const day  = document.createElement("span"); day.className = "hours-day"; day.textContent = dayShort[i];
-      const time = document.createElement("span"); time.className = "hours-time" + (!slot ? " hours-time--closed" : "");
-      time.textContent = slot ? slot.replace("-"," – ") : closed;
+      const time = document.createElement("span");
+      if (slot === HOURS_UNKNOWN) {
+        // Cell had unparseable content — show "unknown", never a false "Closed".
+        time.className = "hours-time hours-time--unknown";
+        time.textContent = state.lang === "nl" ? "onbekend" : "unknown";
+      } else {
+        time.className = "hours-time" + (!slot ? " hours-time--closed" : "");
+        time.textContent = slot ? slot.replace("-"," – ") : closed;
+      }
       row.append(day, time); table.appendChild(row);
     });
     wrap.appendChild(table);
@@ -1001,22 +1005,8 @@ function csvSlugify(value) {
   return value.toLowerCase().trim().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
 }
 
-const _CSV_DAY_COLS      = ["hours_mon","hours_tue","hours_wed","hours_thu","hours_fri","hours_sat","hours_sun"];
-const _CSV_HEAT_DAY_COLS = ["heat_mon","heat_tue","heat_wed","heat_thu","heat_fri","heat_sat","heat_sun"];
-
-function _normaliseSlot(raw) {
-  const text = (raw || "").trim().replace(/\s/g, "").replace("–", "-");
-  const match = text.match(/^(\d{1,2}:\d{2})-(\d{1,2}:\d{2})$/);
-  if (!match) return null;
-  const pad = p => { const [h, m] = p.split(":"); return `${String(parseInt(h)).padStart(2, "0")}:${m}`; };
-  return `${pad(match[1])}-${pad(match[2])}`;
-}
-
-function _parseHoursFromRow(row, cols) {
-  const daycols = cols || _CSV_DAY_COLS;
-  const slots = daycols.map(col => _normaliseSlot(row[col] || ""));
-  return slots.every(s => s === null) ? null : slots;
-}
+// Opening-hours parsing (_CSV_DAY_COLS, _CSV_HEAT_DAY_COLS, _normaliseSlot,
+// _parseHoursFromRow, HOURS_UNKNOWN, _isOpenSlot) lives in js/hours.js.
 
 /**
  * Convert a Google Drive sharing URL to a directly embeddable image URL.
@@ -1026,6 +1016,19 @@ function _parseHoursFromRow(row, cols) {
  *   https://drive.google.com/open?id=FILE_ID  (tab-shortcut link from Drive)
  * Other URLs (direct image links, local paths) pass through unchanged.
  */
+/**
+ * Allow only safe link schemes through to an <a href>/<img src>. A crafted
+ * sheet cell (or a ?sheet= staging override) must never be able to smuggle in
+ * a `javascript:` URL. Returns "" for anything that isn't http(s)/mailto/tel.
+ */
+function _safeHref(url) {
+  const u = (url || "").trim();
+  if (!u) return "";
+  if (/^(https?:|mailto:|tel:)/i.test(u)) return u;
+  if (/^[a-z][a-z0-9+.-]*:/i.test(u)) return "";   // some other scheme → reject
+  return u;                                          // scheme-less (relative) → ok
+}
+
 function _resolvePhotoUrl(url) {
   if (!url) return url;
   const fileMatch = url.match(/drive\.google\.com\/file\/d\/([^/?]+)/);
@@ -1034,7 +1037,7 @@ function _resolvePhotoUrl(url) {
   if (ucMatch) return `https://lh3.googleusercontent.com/d/${ucMatch[1]}`;
   const openMatch = url.match(/drive\.google\.com\/open\?.*[?&]id=([^&]+)/);
   if (openMatch) return `https://lh3.googleusercontent.com/d/${openMatch[1]}`;
-  return url;
+  return _safeHref(url);
 }
 
 /** Convert one CSV row into a GeoJSON Feature (returns null if row is invalid). */
@@ -1065,7 +1068,7 @@ function _rowToFeature(row) {
       district:         (row.district   || row.stadsdeel || "").trim(),
       neighborhood:     (row.neighborhood || row.wijk    || "").trim(),
       address:          (row.address    || "").trim(),
-      website_url:      (row.website_url || "").trim(),
+      website_url:      _safeHref((row.website_url || "").trim()),
       photo_url:        _resolvePhotoUrl((row.photo_url || "").trim()),
       hours:            _parseHoursFromRow(row),
       hours_heat:       _parseHoursFromRow(row, _CSV_HEAT_DAY_COLS),
@@ -1102,7 +1105,21 @@ function _featureFromGeoJson(f) {
   return _rowToFeature(props);
 }
 
-/** Load koelteplekken from the configured data source (CSV or GeoJSON). */
+/**
+ * Validate a locations CSV response before we trust it. Guards against the
+ * empty/HTML/error bodies Google occasionally returns: a failed guard means we
+ * keep whatever is already on the map rather than blanking it.
+ */
+function _looksLikeLocationsCsv(text) {
+  if (!text || text.length < 200) return false;
+  const firstLine = text.slice(0, text.indexOf("\n") + 1 || text.length).toLowerCase();
+  return firstLine.includes("name") && firstLine.includes("latitude");
+}
+
+let _liveLocationsRaw = null;   // last CSV body we built the layer from (skip no-op rebuilds)
+let _liveRefreshTimer = null;
+
+/** Load koelteplekken from the static file (the guaranteed first-paint path). */
 async function _loadKoelteplekken(def) {
   if (!_dataReady()) {
     console.warn("Koeltekaart: configure DATA_SOURCE in app.js");
@@ -1117,6 +1134,39 @@ async function _loadKoelteplekken(def) {
     ? ((await r.json()).features || []).map(_featureFromGeoJson).filter(Boolean)
     : parseCsv(await r.text()).map(_rowToFeature).filter(Boolean);
   buildKoelteplekkenLayer(def, { type: "FeatureCollection", features });
+  startLiveLocationRefresh(def); // layer the live read-through on top
+}
+
+/**
+ * Enhancement path: re-read the live sheet and refresh the markers IN PLACE,
+ * but only when the response is valid AND actually different from what's shown.
+ * Any failure (network, throttle, empty, malformed) is swallowed so the static
+ * data already on the map stays put — freshness degrades, the map never does.
+ */
+async function _refreshKoelteplekkenFromLive(def) {
+  if (!_liveSheetReady()) return;
+  try {
+    const text = await _fetchLive(DATA_SOURCE.liveSheet.locationsGid);
+    if (!_looksLikeLocationsCsv(text)) return;     // bad/short body → keep current
+    if (text === _liveLocationsRaw) return;        // unchanged → no disruptive rebuild
+    const features = parseCsv(text).map(_rowToFeature).filter(Boolean);
+    if (!features.length) return;                  // never blank the map
+    _liveLocationsRaw = text;
+    buildKoelteplekkenLayer(def, { type: "FeatureCollection", features });
+  } catch (_) { /* keep the static/last-good data on screen */ }
+}
+
+/** Kick off the live refresh: once now, then on an interval and on tab refocus. */
+function startLiveLocationRefresh(def) {
+  if (!_liveSheetReady() || _liveRefreshTimer) return;
+  _refreshKoelteplekkenFromLive(def);
+  _liveRefreshTimer = setInterval(() => _refreshKoelteplekkenFromLive(def),
+                                  DATA_SOURCE.liveSheet.refreshMs);
+  // A tab left open across the day should catch up the moment it's looked at
+  // again, without waiting out the interval.
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "visible") _refreshKoelteplekkenFromLive(def);
+  });
 }
 
 // ── Layer loading ──────────────────────────────────────────────────────────

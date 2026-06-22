@@ -26,20 +26,36 @@ jobs:
     steps:
       - uses: actions/checkout@v6
 
-      - name: Fetch CSVs from the published sheet
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install Google API client
+        run: pip install --quiet google-api-python-client google-auth
+
+      - name: Fetch CSVs from the private sheet (service account, live read)
         env:
-          BASE: "https://docs.google.com/spreadsheets/d/e/2PACX-1vToR12t2LARCufEpqz2xv0An5XQqBHd1VvqBmS9k3OdlsvzUryxgmwXTpaVfIX4zMYE61DH0-ujlnqB/pub"
+          # The spreadsheet is shared ONLY to the service account — never to the
+          # public — and we read it through the official Sheets API (not the
+          # cached /pub snapshot that lagged edits by minutes). The sheet id and
+          # the service-account key are both secrets, so nothing about the source
+          # is exposed; the public site only ever serves the static files below.
+          SHEET_ID: ${{ secrets.SHEET_ID }}
+          GOOGLE_SERVICE_ACCOUNT_KEY: ${{ secrets.GOOGLE_SERVICE_ACCOUNT_KEY }}
+          LOCATIONS_GID: "0"
+          SETTINGS_GID: "971775516"
         run: |
           set -euo pipefail
-          # Retry to ride out transient Google hiccups.
-          curl -fsSL --retry 4 --retry-delay 5 "$BASE?gid=0&single=true&output=csv"          -o /tmp/locations.csv
-          curl -fsSL --retry 4 --retry-delay 5 "$BASE?gid=971775516&single=true&output=csv"  -o /tmp/settings.csv
+          if [ -z "${SHEET_ID:-}" ] || [ -z "${GOOGLE_SERVICE_ACCOUNT_KEY:-}" ]; then
+            echo "::error::Secrets SHEET_ID and GOOGLE_SERVICE_ACCOUNT_KEY must be set (Settings → Secrets and variables → Actions → Secrets)."
+            exit 1
+          fi
+          python3 scripts/fetch_sheet.py "$LOCATIONS_GID" /tmp/locations.csv
+          python3 scripts/fetch_sheet.py "$SETTINGS_GID"  /tmp/settings.csv
 
-          # Normalize CRLF -> LF so git change-detection compares apples to apples
-          # (Google serves CRLF; git stores LF — otherwise every run looks "changed").
-          sed -i 's/\r$//' /tmp/locations.csv /tmp/settings.csv
-
-          # Guardrails: never overwrite good data with an empty/error response.
+          # Cheap guardrails: never overwrite good data with an empty/error body.
+          # (Deeper per-cell validation runs in the next step.)
           test "$(wc -c < /tmp/locations.csv)" -gt 200
           head -1 /tmp/locations.csv | grep -q "name"
           test "$(wc -c < /tmp/settings.csv)" -gt 10
@@ -47,6 +63,9 @@ jobs:
 
           mv /tmp/locations.csv data/locations.csv
           mv /tmp/settings.csv  data/settings.csv
+
+      - name: Validate data (block bad opening hours from deploying)
+        run: python3 scripts/validate_data.py data/locations.csv
 
       - name: Detect changes
         id: diff
@@ -57,19 +76,48 @@ jobs:
           else
             echo "changed=true" >> "$GITHUB_OUTPUT"
             echo "Data changed."
+            git --no-pager diff --stat -- data/locations.csv data/settings.csv >> "$GITHUB_STEP_SUMMARY"
           fi
 
+      # On any branch other than main (i.e. a test run), STOP here: upload what
+      # the service account fetched as an artifact for inspection, and never
+      # commit or deploy. This makes "run it on a branch to verify the sheet
+      # read works" completely safe for the live site.
+      - name: Upload fetched data for inspection (non-main test runs)
+        if: github.ref != 'refs/heads/main'
+        uses: actions/upload-artifact@v4
+        with:
+          name: fetched-data
+          path: |
+            data/locations.csv
+            data/settings.csv
+
       - name: Commit refreshed data
-        if: steps.diff.outputs.changed == 'true'
+        if: steps.diff.outputs.changed == 'true' && github.ref == 'refs/heads/main'
         run: |
           git config user.name  "koeltekaart-bot"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add data/locations.csv data/settings.csv
-          git commit -m "data: refresh from Google Sheet [skip ci]"
-          git push
+          # Race-proof push: rapid edit-triggered runs can collide on main
+          # ("! [rejected] (fetch first)"). Rebase our freshly-generated files
+          # onto the latest main and retry. Because we regenerate the whole file
+          # from the sheet (the source of truth), the newest fetch always wins.
+          for attempt in 1 2 3 4 5; do
+            git fetch -q origin main
+            git reset -q --soft origin/main        # keep our fetched files, re-base on latest
+            git add data/locations.csv data/settings.csv
+            if git diff --cached --quiet; then
+              echo "Already up to date after rebase — nothing to push."; exit 0
+            fi
+            git commit -q -m "data: refresh from Google Sheet [skip ci]"
+            if git push -q origin HEAD:main; then
+              echo "Pushed on attempt $attempt."; exit 0
+            fi
+            echo "Push rejected (attempt $attempt), retrying…"; sleep $((RANDOM % 5 + 2))
+          done
+          echo "::error::Could not push refreshed data after 5 attempts."; exit 1
 
       - name: Deploy refreshed data to Azure
-        if: steps.diff.outputs.changed == 'true'
+        if: steps.diff.outputs.changed == 'true' && github.ref == 'refs/heads/main'
         uses: Azure/static-web-apps-deploy@v1
         with:
           azure_static_web_apps_api_token: ${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN_AMBITIOUS_BAY_01E7C5C03 }}
