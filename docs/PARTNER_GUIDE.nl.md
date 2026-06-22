@@ -41,6 +41,8 @@ Stuur uw gegevens naar het projectteam van GGD Amsterdam. U kunt ook de meegelev
 | `photo_url` | Link naar een foto (zie §Foto's) |
 | `description` | Korte beschrijving in het Nederlands |
 | `note` | Praktische opmerking (bijv. "Lift aanwezig") |
+| `description_en` | Engelse vertaling van `description` (optioneel; valt terug op NL) |
+| `note_en` | Engelse vertaling van `note` (optioneel; valt terug op NL) |
 
 ---
 
@@ -64,7 +66,9 @@ Stuur uw gegevens naar het projectteam van GGD Amsterdam. U kunt ook de meegelev
 
 ## Openingstijden
 
-Vul per dag de openingstijden in het formaat `UU:MM-UU:MM`. Laat leeg als de locatie op die dag gesloten is.
+Vul per dag de openingstijden in het formaat `UU:MM-UU:MM`. Laat de cel leeg als de locatie op die dag gesloten is (of typ `gesloten`).
+
+> **Tip:** typ je iets dat de kaart niet kan lezen (bijv. `de hele dag open`), dan toont de kaart "onbekend — check de website" in plaats van een verkeerde open/dicht-status. Een gesloten dag laat je leeg of zet je op `gesloten`.
 
 ### Reguliere openingstijden
 
@@ -82,7 +86,13 @@ Vul per dag de openingstijden in het formaat `UU:MM-UU:MM`. Laat leeg als de loc
 
 ### Openingstijden tijdens het Hitteplan
 
-Wanneer het Amsterdam Hitteplan actief is, kunnen locaties afwijkende tijden hanteren. Vul deze apart in:
+Wanneer het Amsterdam Hitteplan actief is, gebruikt de kaart automatisch de hitteplantijden in plaats van de reguliere tijden. Vul **alleen de dagen in die afwijken** — per dag geldt:
+
+- **Leeg** → geen afwijking: de reguliere tijd van die dag wordt gebruikt.
+- **`gesloten`** → die dag dicht tijdens het hitteplan (ook al is de locatie normaal open).
+- **`UU:MM-UU:MM`** → afwijkende hitteplantijd voor die dag.
+
+> Heeft een locatie géén reguliere tijden (alleen open tijdens een hitteplan)? Vul dan de hitteplantijden volledig in. Buiten het hitteplan toont de kaart de locatie als gesloten.
 
 | Veld | Dag |
 |------|-----|
@@ -94,7 +104,7 @@ Wanneer het Amsterdam Hitteplan actief is, kunnen locaties afwijkende tijden han
 | `heat_sat` | Zaterdag (hitteplan) |
 | `heat_sun` | Zondag (hitteplan) |
 
-Laat leeg als de tijden tijdens het hitteplan gelijk zijn aan de reguliere tijden. De kaart toont automatisch de hitteplantijden wanneer het hitteplan actief is.
+**Voorbeeld:** een bibliotheek die normaal `09:00-17:00` open is maar tijdens het hitteplan langer openblijft, vult `09:00-21:00` in. Een dag die tijdens het hitteplan juist dicht is, krijgt `gesloten`.
 
 ---
 

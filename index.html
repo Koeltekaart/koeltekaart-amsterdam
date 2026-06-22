@@ -48,7 +48,7 @@
         <path d="M16.1585 14.7266C17.1537 13.4471 17.7325 11.8528 17.7325 10.1162C17.7325 5.91208 14.3204 2.5 10.1162 2.5C5.91208 2.5 2.5 5.91208 2.5 10.1162C2.5 14.3204 5.91208 17.7325 10.1162 17.7325C11.8528 17.7325 13.4471 17.1537 14.7266 16.1585L20.058 21.5L21.5 20.058L16.1585 14.7266ZM10.1162 15.7015C7.03928 15.7015 4.531 13.1932 4.531 10.1162C4.531 7.03928 7.03928 4.531 10.1162 4.531C13.1932 4.531 15.7015 7.03928 15.7015 10.1162C15.7015 11.2942 15.3359 12.3808 14.7165 13.2745C14.3306 13.8431 13.8431 14.3306 13.2745 14.7165C12.3808 15.3359 11.2942 15.7015 10.1162 15.7015Z"/>
       </svg>
       <input id="search-input" type="search" autocomplete="off" spellcheck="false"
-             data-i18n-placeholder="search_placeholder" aria-label="Search" />
+             data-i18n-placeholder="search_placeholder" data-aria-i18n="aria_search" aria-label="Search" />
       <div id="search-results" role="listbox" hidden></div>
     </div>
 
@@ -60,7 +60,7 @@
         </svg>
         <span data-i18n="near_me">In mijn buurt</span>
       </button>
-      <button id="btn-lang" class="ctrl-btn lang-btn" aria-label="Switch language">EN</button>
+      <button id="btn-lang" class="ctrl-btn lang-btn" data-aria-i18n="aria_switch_lang" aria-label="Switch language">EN</button>
     </div>
   </div>
 </header>
@@ -259,7 +259,7 @@
     <div class="map-scroll-handle" id="map-scroll-up" aria-hidden="true"></div>
 
     <!-- Mobile filter bar — compact single row -->
-    <div id="mobile-filter-bar" role="group" aria-label="Filters">
+    <div id="mobile-filter-bar" role="group" data-aria-i18n="aria_filters" aria-label="Filters">
       <button id="btn-filter-sheet" class="mfb-filters-btn" aria-expanded="false">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
           <path fill-rule="evenodd" clip-rule="evenodd" d="M14.8294 12.8384L21.4795 4.5V2.5H2.47949V4.5L9.12939 12.8382V21.5H10.9258L14.8294 19.4314V12.8384ZM12.9294 18.288V12.8384L13.344 11.6538L19.129 4.4H4.82999L10.6148 11.6535L11.0294 12.8382V19.2948L12.9294 18.288Z"/>
@@ -267,11 +267,11 @@
         <span>Filters</span>
         <span class="mfb-count" id="mfb-active-count" hidden></span>
       </button>
-      <div class="mfb-active-strip" id="mfb-active-strip" aria-label="Actieve filters"></div>
+      <div class="mfb-active-strip" id="mfb-active-strip" data-aria-i18n="aria_active_filters" aria-label="Actieve filters"></div>
     </div>
 
     <!-- Filter FAB — floating pill over map/list on mobile -->
-    <button id="btn-filter-fab" aria-label="Legenda openen" aria-expanded="false">
+    <button id="btn-filter-fab" data-aria-i18n="aria_open_legend" aria-label="Legenda openen" aria-expanded="false">
       <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true">
         <line x1="2" y1="4"  x2="14" y2="4"  stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
         <line x1="4" y1="8"  x2="12" y2="8"  stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
@@ -282,7 +282,7 @@
     </button>
 
     <!-- View toggle (mobile floating pill) -->
-    <div class="view-toggle-bar" role="group" aria-label="View mode">
+    <div class="view-toggle-bar" role="group" data-aria-i18n="aria_view_mode" aria-label="View mode">
       <button class="view-btn active" data-view="map" aria-pressed="true">
         <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
           <path fill-rule="evenodd" clip-rule="evenodd" d="M8.5 15.7679L4.5 18.0536V8.0919L8.5 5.52047V15.7679ZM10.5 15.7388L13.5 18.1388V7.74131L10.5 5.64131V15.7388ZM14.5 6L21.5 2.5V17L14.5 21.5L9.5 17.5L2.5 21.5V7L9.5 2.5L14.5 6ZM15.5 18.4795L19.5 15.9081V5.73607L15.5 7.73607V18.4795Z"/>
@@ -298,7 +298,7 @@
     </div>
 
     <!-- Sidebar / desktop floating legend -->
-    <aside id="sidebar" aria-label="Map controls and filters">
+    <aside id="sidebar" data-aria-i18n="aria_map_controls" aria-label="Map controls and filters">
       <!-- Desktop legend header (collapsible) -->
       <div class="legend-header">
         <span class="legend-title"><span class="lang-nl">Legenda</span><span class="lang-en">Legend</span></span>

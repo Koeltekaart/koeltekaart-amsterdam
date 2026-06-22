@@ -8,7 +8,7 @@
 
 const assert = require("assert");
 const H = require("../js/hours.js");
-const { _normaliseSlot, _parseHoursFromRow, getOpenStatus, HOURS_UNKNOWN, _CSV_DAY_COLS } = H;
+const { _normaliseSlot, _parseHoursFromRow, effectiveHours, getOpenStatus, HOURS_UNKNOWN, _CSV_DAY_COLS } = H;
 
 let passed = 0;
 function ok(name, fn) {
@@ -36,8 +36,8 @@ ok("dots become colons", () =>
 ok("surrounding whitespace tolerated", () =>
   assert.strictEqual(_normaliseSlot("  9:00 - 17:00  "), "09:00-17:00"));
 
-ok("empty cell → closed (null)", () =>
-  assert.strictEqual(_normaliseSlot(""), null));
+ok("empty cell → unset (undefined), distinct from closed", () =>
+  assert.strictEqual(_normaliseSlot(""), undefined));
 ok("'gesloten' → closed (null)", () =>
   assert.strictEqual(_normaliseSlot("gesloten"), null));
 ok("'Closed' (any case) → closed (null)", () =>
@@ -56,9 +56,9 @@ ok("dangling range → UNKNOWN", () =>
 const rowFrom = vals => Object.fromEntries(_CSV_DAY_COLS.map((c, i) => [c, vals[i] || ""]));
 ok("all-blank week → null (whole-location unknown)", () =>
   assert.strictEqual(_parseHoursFromRow(rowFrom([])), null));
-ok("mixed week parses per-day", () => {
+ok("mixed week parses per-day (blank=unset, gesloten=closed)", () => {
   const h = _parseHoursFromRow(rowFrom(["08:00-22:00","","gesloten","13:00-17","x","9:00-17:00","open 24h"]));
-  assert.deepStrictEqual(h, ["08:00-22:00", null, null, "13:00-17:00", null, "09:00-17:00", HOURS_UNKNOWN]);
+  assert.deepStrictEqual(h, ["08:00-22:00", undefined, null, "13:00-17:00", null, "09:00-17:00", HOURS_UNKNOWN]);
 });
 
 // ── getOpenStatus (time injected) ───────────────────────────────────────────
@@ -84,5 +84,29 @@ ok("unparseable today → unknown, NOT closed (the safety guarantee)", () => {
 });
 ok("no hours array → unknown", () =>
   assert.strictEqual(getOpenStatus(null, at(0, 12, 0)).status, "unknown"));
+
+// ── effectiveHours: heat plan resolution (the koelteplek bug) ───────────────
+const reg  = _parseHoursFromRow(rowFrom(["09:00-17:00","09:00-17:00","","","","",""]));
+const heat = _parseHoursFromRow(rowFrom(["11:00-20:00","","gesloten","","","",""]));
+
+ok("plan OFF → regular week is used verbatim", () =>
+  assert.deepStrictEqual(effectiveHours(reg, heat, false), reg));
+ok("plan ON → heat range overrides that day", () =>
+  assert.strictEqual(effectiveHours(reg, heat, true)[0], "11:00-20:00"));
+ok("plan ON → blank heat day inherits the regular hours", () =>
+  assert.strictEqual(effectiveHours(reg, heat, true)[1], "09:00-17:00"));
+ok("plan ON → 'gesloten' heat day forces closed (does NOT inherit)", () =>
+  assert.strictEqual(effectiveHours(reg, heat, true)[2], null));
+
+// Heat-only venue: no regular hours at all, only heat-plan hours.
+const heatOnly = _parseHoursFromRow(rowFrom(["12:00-18:00","12:00-18:00","12:00-18:00","12:00-18:00","12:00-18:00","",""]));
+ok("heat-only venue, plan ON → uses heat hours (was wrongly 'unknown')", () =>
+  assert.strictEqual(getOpenStatus(effectiveHours(null, heatOnly, true), at(0, 13, 0)).status, "open"));
+ok("heat-only venue, plan OFF → closed, never 'unknown'", () =>
+  assert.strictEqual(getOpenStatus(effectiveHours(null, heatOnly, false), at(0, 13, 0)).status, "closed"));
+ok("heat-only venue, plan ON, blank heat day → closed", () =>
+  assert.strictEqual(getOpenStatus(effectiveHours(null, heatOnly, true), at(5, 13, 0)).status, "closed"));
+ok("no regular and no heat → unknown", () =>
+  assert.strictEqual(effectiveHours(null, null, true), null));
 
 console.log(`\n${passed} hours assertions passed${process.exitCode ? " (with failures above)" : ""}.`);

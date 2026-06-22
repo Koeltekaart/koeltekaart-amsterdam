@@ -12,13 +12,19 @@ const _CSV_HEAT_DAY_COLS = ["heat_mon","heat_tue","heat_wed","heat_thu","heat_fr
 
 // Per-day slot value is one of:
 //   "HH:MM-HH:MM"  → open during that range
-//   null           → explicitly/known closed (empty cell, "gesloten", "closed", …)
+//   null           → explicitly closed ("gesloten", "closed", "-", …)
+//   undefined      → cell left blank — "not specified". For a regular week this
+//                    reads as closed; for a heat-plan override it means "no
+//                    override, inherit the regular hours that day" (see
+//                    effectiveHours). Keeping blank distinct from null is what
+//                    lets a partner write "gesloten" to force a day shut during
+//                    the heat plan.
 //   HOURS_UNKNOWN  → the cell had content we could not parse. We deliberately do
 //                    NOT treat this as "closed": a typo must never make an open
 //                    location look shut (people were showing up to "closed"
 //                    places). It renders as "unknown — check website" instead.
 const HOURS_UNKNOWN = "?";
-const _CLOSED_WORDS = new Set(["", "-", "–", "—", "gesloten", "closed", "dicht", "x", "n/a", "na"]);
+const _CLOSED_WORDS = new Set(["-", "–", "—", "gesloten", "closed", "dicht", "x", "n/a", "na"]);
 
 function parseMinutes(str) { const [h,m] = str.split(":").map(Number); return h*60+m; }
 
@@ -34,7 +40,8 @@ function parseMinutes(str) { const [h,m] = str.split(":").map(Number); return h*
  */
 function _normaliseSlot(raw) {
   const trimmed = (raw || "").trim();
-  if (_CLOSED_WORDS.has(trimmed.toLowerCase())) return null;
+  if (trimmed === "") return undefined;                       // blank — "not specified"
+  if (_CLOSED_WORDS.has(trimmed.toLowerCase())) return null;  // explicitly closed
   // Collapse common variants down to digits, colons and a single dash.
   let text = trimmed.toLowerCase()
     .replace(/[–—]/g, "-")      // en/em dash → hyphen
@@ -56,8 +63,39 @@ function _parseHoursFromRow(row, cols) {
   return daycols.map(col => _normaliseSlot(row[col] || ""));
 }
 
-/** True when a parsed slot represents real open hours (not closed/unknown). */
+/** True when a parsed slot represents real open hours (not closed/unset/unknown). */
 function _isOpenSlot(slot) { return !!slot && slot !== HOURS_UNKNOWN; }
+
+/**
+ * Resolve the week of hours that actually applies right now, given whether the
+ * city's heat plan is active. This is the single source of truth — list and
+ * detail must both go through it so a location can never read one status in the
+ * list and another in its panel.
+ *
+ * `regular` is the location's normal week. `heat` is a per-day OVERRIDE that
+ * only takes effect while the heat plan is active:
+ *   • a time range            → special heat-plan hours that day
+ *   • null ("gesloten"/etc.)  → closed that day during the heat plan
+ *   • undefined (blank cell)   → no override; inherit the regular hours that day
+ * A heat-only venue (no regular hours) has nothing to inherit, so its blank
+ * heat days read as closed, and while the plan is off it is simply not
+ * operating (closed) rather than "unknown".
+ *
+ * @param {Array|null} regular - parsed regular week (or null if none given).
+ * @param {Array|null} heat    - parsed heat-override week (or null if none given).
+ * @param {boolean} heatActive - is the city heat plan currently active?
+ * @returns {Array|null} the week to evaluate, or null when nothing is known.
+ */
+function effectiveHours(regular, heat, heatActive) {
+  if (heatActive && heat) {
+    const base = regular || [];
+    return heat.map((slot, i) => (slot === undefined ? (base[i] ?? null) : slot));
+  }
+  if (regular) return regular;
+  // Plan off (or no heat row): a venue that only has heat hours isn't open now.
+  if (heat) return [null, null, null, null, null, null, null];
+  return null; // no hours information at all → genuinely unknown
+}
 
 /**
  * Determine whether a location is currently open, closed, or has unknown hours.
@@ -88,6 +126,6 @@ function getOpenStatus(hours, now = new Date()) {
 if (typeof module !== "undefined" && module.exports) {
   module.exports = {
     HOURS_UNKNOWN, _CSV_DAY_COLS, _CSV_HEAT_DAY_COLS,
-    parseMinutes, _normaliseSlot, _parseHoursFromRow, _isOpenSlot, getOpenStatus,
+    parseMinutes, _normaliseSlot, _parseHoursFromRow, _isOpenSlot, effectiveHours, getOpenStatus,
   };
 }

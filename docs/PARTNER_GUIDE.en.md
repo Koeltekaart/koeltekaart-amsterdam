@@ -1,72 +1,53 @@
 # Partner Guide — Koeltekaart Amsterdam
 
-Welcome as a partner of the **Koeltekaart Amsterdam** (Amsterdam Cool Map)! This guide explains how to register a cooling spot, what information is required, and how the map is updated.
+This guide explains how to update your location's information and how to manage the heat plan.
 
 ---
 
-## What is the Koeltekaart?
+## Updating location information
 
-The Koeltekaart Amsterdam is a public map of **cooling spots** (koelteplekken) — places where Amsterdammers can cool down during heat waves. These include libraries, churches, supermarkets, urban farms, community centres, and sports facilities.
+All location data is stored in a shared **Google Spreadsheet**. To make changes, open the spreadsheet and find your location's row. You can edit any field directly — changes are live on the map within a few minutes.
 
-All location data is managed via a Google Spreadsheet — no technical knowledge or code changes are needed.
+If you don't have access to the spreadsheet, contact the project team (details at the bottom of this page).
 
----
+### Main fields
 
-## Registering a Location
-
-Send your details to the GGD Amsterdam project team by email. You can also fill in the provided CSV template (`docs/location-template.csv`) and attach it to your email. The team will add your location to the spreadsheet after review.
-
----
-
-## Required fields
-
-| Field | Description | Example |
-|-------|-------------|---------|
+| Field | What it is | Example |
+|-------|------------|---------|
 | `name` | Name of the location | `OBA Slotermeer` |
-| `latitude` | Latitude (decimal) | `52.37936085` |
-| `longitude` | Longitude (decimal) | `4.820190547` |
-| `type` | Category (see list below) | `library` |
+| `address` | Full address | `Plein '40-'45 117, Amsterdam` |
+| `type` | Category | `library` |
 | `stadsdeel` | City district | `Nieuw-West` |
 | `wijk` | Neighbourhood | `Slotermeer` |
-| `address` | Full street address | `Plein '40-'45 117, Amsterdam` |
+| `latitude` / `longitude` | GPS coordinates | `52.3793` / `4.8201` |
 | `active` | Show on map? | `yes` or `no` |
 
----
+Set `active` to `no` to temporarily hide your location (for example, outside summer). The data stays in the spreadsheet and can be turned back on at any time.
 
-## Optional fields
+### Optional fields
 
-| Field | Description |
-|-------|-------------|
-| `website_url` | Location website |
-| `photo_url` | Link to a photo (see §Photos) |
+| Field | What it is |
+|-------|------------|
+| `website_url` | Link to your website |
+| `photo_url` | Link to a photo (see below) |
 | `description` | Short description in Dutch |
-| `note` | Practical note (e.g. "Lift available") |
+| `note` | Practical note, e.g. "Lift available" |
+| `description_en` | English translation of `description` (optional; falls back to Dutch) |
+| `note_en` | English translation of `note` (optional; falls back to Dutch) |
 
----
+### Amenities
 
-## Amenities (yes / no)
+Set each to `yes` or `no`:
 
-| Field | Meaning |
-|-------|---------|
-| `airco` | Air conditioning present |
-| `seating` | Seating available |
-| `toilets` | Toilet available |
-| `free_water` | Free drinking water |
-| `free_fruit` | Free fruit or snack |
-| `food_to_buy` | Food or drinks for purchase |
-| `own_food_ok` | Bringing own food is allowed |
-| `supervisor` | Staff or supervisor on-site |
-| `accessible` | Wheelchair accessible |
-| `games` | Games or activities available |
-| `pets_ok` | Pets allowed |
+`airco` · `seating` · `toilets` · `free_water` · `free_fruit` · `food_to_buy` · `own_food_ok` · `supervisor` · `accessible` · `games` · `pets_ok`
 
 ---
 
 ## Opening hours
 
-Provide opening hours per day in the format `HH:MM-HH:MM`. Leave blank if closed that day.
+Enter hours in `HH:MM-HH:MM` format. Leave the cell blank if the location is closed that day (or type `closed`).
 
-### Regular hours
+> **Tip:** if you type something the map can't read (e.g. `open all day`), it shows "unknown — check the website" rather than a wrong open/closed status. To mark a day closed, leave it blank or type `closed`.
 
 | Field | Day |
 |-------|-----|
@@ -80,71 +61,65 @@ Provide opening hours per day in the format `HH:MM-HH:MM`. Leave blank if closed
 
 **Example:** `09:00-21:00`
 
-### Heat plan hours
+---
 
-When the Amsterdam Heat Plan is active, locations may operate on extended or adjusted schedules. Provide those separately:
+## Heat plan hours
+
+When the Amsterdam Heat Plan is active, the map automatically uses heat plan hours instead of the regular ones. Only fill in **the days that differ** — for each day:
+
+- **Blank** → no change: that day's regular hours are used.
+- **`closed`** → closed that day during the heat plan (even if normally open).
+- **`HH:MM-HH:MM`** → special heat plan hours for that day.
+
+> Does a location have no regular hours (only open during a heat plan)? Then fill in the heat plan hours completely. Outside the heat plan the map shows the location as closed.
 
 | Field | Day |
 |-------|-----|
-| `heat_mon` | Monday (heat plan) |
-| `heat_tue` | Tuesday (heat plan) |
-| `heat_wed` | Wednesday (heat plan) |
-| `heat_thu` | Thursday (heat plan) |
-| `heat_fri` | Friday (heat plan) |
-| `heat_sat` | Saturday (heat plan) |
-| `heat_sun` | Sunday (heat plan) |
+| `heat_mon` | Monday |
+| `heat_tue` | Tuesday |
+| `heat_wed` | Wednesday |
+| `heat_thu` | Thursday |
+| `heat_fri` | Friday |
+| `heat_sat` | Saturday |
+| `heat_sun` | Sunday |
 
-Leave blank if hours are the same as regular. The map automatically shows heat plan hours when the heat plan is active.
-
----
-
-## Location Categories
-
-Use one of the following values for the `type` field:
-
-| Value | Description |
-|-------|-------------|
-| `library` | Public library (OBA) |
-| `church` | Church or place of worship |
-| `supermarket` | Supermarket |
-| `urban_farm` | Urban farm (stadsboerderij) |
-| `community_center` | Community centre |
-| `theater` | Theatre |
-| `sports` | Sports facility |
-
-Not sure? Choose `community_center` or contact the project team.
+**Example:** a library normally open `09:00-17:00` that stays open later during the heat plan enters `09:00-21:00`. A day that is closed during the heat plan gets `closed`.
 
 ---
 
-## Providing Photos
+## Activating or deactivating the heat plan
 
-1. Upload the photo to **Google Drive** and set sharing to *"Anyone with the link can view"*.
-2. Copy the share link (`https://drive.google.com/file/d/FILE_ID/view?usp=sharing`).
-3. Paste the full link into the `photo_url` field — the map converts it automatically.
+The heat plan is controlled from the **Settings tab** in the Google Spreadsheet.
 
-**Recommended:** landscape orientation, at least 800 × 500 px, max 2 MB, JPG or WebP.
+1. Open the spreadsheet and go to the **Settings** tab.
+2. Find the row labelled `heat_plan_active`.
+3. Change the value to `yes` to activate the heat plan, or `no` to deactivate it.
 
----
-
-## When Will My Location Appear?
-
-Once your details are reviewed by the project team, the location is added to the Google Spreadsheet. Changes are **live within minutes** — the map fetches fresh data on every visit.
-
-To temporarily hide a location (e.g. outside the summer season), set `active` to `no`. The data is retained and the location can be re-enabled at any time.
+When the heat plan is active, a red banner appears at the top of the map and all locations switch to their heat plan hours (if provided).
 
 ---
 
-## The Amsterdam Heat Plan
+## Adding a photo
 
-When the **Amsterdam Heat Plan** is active, a red banner appears at the top of the map. Locations with `active = yes` are shown as cooling spots and display heat plan hours if provided.
+1. Upload your photo to **Google Drive**.
+2. Right-click the file → **Share** → set to *"Anyone with the link can view"*.
+3. Copy the link and paste it into the `photo_url` field in the spreadsheet.
 
-The heat plan is activated and deactivated by the GGD team via the Google Spreadsheet settings tab.
+Recommended: landscape orientation, at least 800 × 500 px, JPG or WebP, max 2 MB.
 
 ---
 
-## Questions or updates?
+## Location categories
 
-Contact the GGD Amsterdam project team:
+Use one of these values for the `type` field:
 
-- **Heat stress questions:** Leefomgeving@ggd.amsterdam.nl — +31 20 555 5405
-- **Register a location:** pratischa.koirala@amsterdam.nl — +31 6 117 38 325
+`library` · `church` · `supermarket` · `urban_farm` · `community_center` · `theater` · `sports`
+
+Not sure? Use `community_center` or ask the project team.
+
+---
+
+## Questions or changes?
+
+- **Heat stress / heat plan:** Leefomgeving@ggd.amsterdam.nl — +31 20 555 5405
+- **Add or update a location:** pratischa.koirala@amsterdam.nl — +31 6 117 38 325

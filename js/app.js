@@ -452,6 +452,18 @@ const TR = {
     lv_no_results_sub: "Pas de filters aan om locaties te zien.",
     lv_always_open: "24/7",
     lv_unknown: "Onbekend",
+    aria_search: "Zoeken",
+    aria_switch_lang: "Taal wisselen",
+    aria_filters: "Filters",
+    aria_active_filters: "Actieve filters",
+    aria_open_legend: "Legenda openen",
+    aria_view_mode: "Weergavemodus",
+    aria_map_controls: "Kaartbediening en filters",
+    aria_swim_filter: "Filter zwemplektypes",
+    aria_panel_collapse: "Locatiepaneel inklappen",
+    aria_panel_expand: "Locatiepaneel uitklappen",
+    aria_sidebar_collapse: "Filter zijbalk inklappen",
+    aria_sidebar_expand: "Filter zijbalk uitklappen",
   },
   en: {
     weather_temp_label: "Current temperature",
@@ -574,10 +586,46 @@ const TR = {
     lv_no_results_sub: "Adjust the filters to see locations.",
     lv_always_open: "24/7",
     lv_unknown: "Unknown",
+    aria_search: "Search",
+    aria_switch_lang: "Switch language",
+    aria_filters: "Filters",
+    aria_active_filters: "Active filters",
+    aria_open_legend: "Open legend",
+    aria_view_mode: "View mode",
+    aria_map_controls: "Map controls and filters",
+    aria_swim_filter: "Filter swimming spot types",
+    aria_panel_collapse: "Collapse location panel",
+    aria_panel_expand: "Expand location panel",
+    aria_sidebar_collapse: "Collapse filter sidebar",
+    aria_sidebar_expand: "Expand filter sidebar",
   }
 };
 
 function t(key) { return TR[state.lang]?.[key] ?? TR.en[key] ?? key; }
+
+/**
+ * The week of opening hours that applies to a feature right now, accounting for
+ * the live heat-plan state. Single entry point so the list badge and the detail
+ * panel always agree. See effectiveHours() in hours.js for the override rules.
+ */
+function featureHours(p) {
+  return effectiveHours(p.hours, p.hours_heat, state.heatPlanActive);
+}
+
+/**
+ * Pick the language-appropriate variant of an author-entered free-text field.
+ * Sheet content is Dutch by default; an optional `<field>_en` column supplies
+ * an English translation. When viewing in English we use it if present, else
+ * fall back to the Dutch text so nothing ever renders blank.
+ * @param {Object} props - Feature properties.
+ * @param {string} base - Dutch field name (e.g. "notes").
+ * @returns {string}
+ */
+function localizedField(props, base) {
+  const nl = props[base] || "";
+  if (state.lang !== "en") return nl;
+  return (props[base + "_en"] || "").trim() || nl;
+}
 
 // ── State ──────────────────────────────────────────────────────────────────
 // Default on/off state for each map layer — single source of truth used both
@@ -642,6 +690,25 @@ function applyLanguage() {
     const key = el.dataset.tooltipI18n;
     if (key) { el.setAttribute("data-tooltip", t(key)); el.setAttribute("aria-label", t(key)); }
   });
+  // Screen-reader-only labels that should follow the selected language. Buttons
+  // whose label flips with an expanded/collapsed state manage their own label
+  // in their click handler, so they're intentionally not driven from here.
+  document.querySelectorAll("[data-aria-i18n]").forEach(el => {
+    const key = el.dataset.ariaI18n;
+    if (key) el.setAttribute("aria-label", t(key));
+  });
+  // Collapse/expand toggles: label depends on the current open state, so derive
+  // it from aria-expanded rather than a fixed key.
+  const panelToggle = document.getElementById("right-panel-toggle");
+  if (panelToggle) {
+    const expanded = panelToggle.getAttribute("aria-expanded") === "true";
+    panelToggle.setAttribute("aria-label", t(expanded ? "aria_panel_collapse" : "aria_panel_expand"));
+  }
+  const sidebarToggle = document.getElementById("sidebar-collapse-btn");
+  if (sidebarToggle) {
+    const expanded = sidebarToggle.getAttribute("aria-expanded") !== "false";
+    sidebarToggle.setAttribute("aria-label", t(expanded ? "aria_sidebar_collapse" : "aria_sidebar_expand"));
+  }
   updateSearchPlaceholder();
   const langBtn = document.getElementById("btn-lang");
   if (langBtn) langBtn.textContent = state.lang === "nl" ? "EN" : "NL";
@@ -661,6 +728,9 @@ function applyLanguage() {
   updatePanelTitle();
 
   rerenderCurrentDetailPanel();
+  // List view caches language-specific labels (type, neighbourhood, amenity
+  // pills) at build time — rebuild it so a language switch takes effect there.
+  refreshListIfActive();
 
   // Footer width depends on the language (NL/EN labels differ) — re-evaluate.
   if (footerRemeasure) footerRemeasure();
@@ -716,7 +786,13 @@ function _applySettings(rows) {
   if (!row) return;
   const was = state.heatPlanActive;
   state.heatPlanActive = csvToBool((row.value || "").trim()) === true;
-  if (was !== state.heatPlanActive) updateBannerText();
+  if (was !== state.heatPlanActive) {
+    updateBannerText();
+    // Heat plan flipping changes which hours apply, so open/closed badges and
+    // the detail panel must be recomputed.
+    refreshListIfActive();
+    rerenderCurrentDetailPanel();
+  }
 }
 
 /** Read the heat-plan flag: live sheet when available, else the static file. */
@@ -1073,7 +1149,9 @@ function _rowToFeature(row) {
       hours:            _parseHoursFromRow(row),
       hours_heat:       _parseHoursFromRow(row, _CSV_HEAT_DAY_COLS),
       hours_note:       (row.hours_note || row.note        || "").trim(),
+      hours_note_en:    (row.hours_note_en || row.note_en  || "").trim(),
       notes:            (row.notes      || row.description  || "").trim(),
+      notes_en:         (row.notes_en   || row.description_en || "").trim(),
       active:           row.active?.trim() ? csvToBool(row.active) : true,
       ac:               csvToBool(row.ac    || row.airco),
       seating:          csvToBool(row.seating),
@@ -1527,9 +1605,9 @@ function rebuildSwimmingPoolChips() {
     container.id = "swimming-filter-chips";
     container.className = "filter-chips swimming-filter-chips";
     container.setAttribute("role", "group");
-    container.setAttribute("aria-label", "Filter swimming spot types");
     row.insertAdjacentElement("afterend", container);
   }
+  container.setAttribute("aria-label", t("aria_swim_filter"));
   container.innerHTML = "";
 
   SWIM_TYPE_DEFS.forEach(def => {
@@ -1559,10 +1637,7 @@ function setupRightPanelToggle() {
     const collapsed = section.classList.toggle("right-panel-collapsed");
 
     btn.setAttribute("aria-expanded", String(!collapsed));
-    btn.setAttribute(
-      "aria-label",
-      collapsed ? "Locatiepaneel uitklappen" : "Locatiepaneel inklappen"
-    );
+    btn.setAttribute("aria-label", t(collapsed ? "aria_panel_expand" : "aria_panel_collapse"));
 
     // Redraw map tiles once the CSS transition has finished
     setTimeout(() => {
@@ -1833,8 +1908,7 @@ function setupSidebarCollapseDesktop() {
   btn.addEventListener("click", () => {
     const collapsed = section.classList.toggle("sidebar-collapsed");
     btn.setAttribute("aria-expanded", String(!collapsed));
-    btn.setAttribute("aria-label",
-      collapsed ? "Filter zijbalk uitklappen" : "Filter zijbalk inklappen");
+    btn.setAttribute("aria-label", t(collapsed ? "aria_sidebar_expand" : "aria_sidebar_collapse"));
     // Redraw map tiles once the CSS transition has finished
     setTimeout(() => { if (state.map) state.map.invalidateSize(); }, 260);
   });
@@ -2168,7 +2242,7 @@ function openDetailPanel(feature, renderFn) {
   if (section && isDesktop() && section.classList.contains("right-panel-collapsed")) {
     section.classList.remove("right-panel-collapsed");
     const btn = document.getElementById("right-panel-toggle");
-    if (btn) { btn.setAttribute("aria-expanded", "true"); btn.setAttribute("aria-label", "Locatiepaneel inklappen"); }
+    if (btn) { btn.setAttribute("aria-expanded", "true"); btn.setAttribute("aria-label", t("aria_panel_collapse")); }
     setTimeout(() => { if (state.map) state.map.invalidateSize(); }, 260);
   }
   const backTo = isDesktop() ? "list" : (state.mobileView === "list" ? "list" : "map");
@@ -2218,17 +2292,12 @@ function renderKoelteDetailContent(feature, container) {
   nameEl.textContent = p.name || "Koelteplek";
   info.append(catLbl, nameEl);
 
-  // Decide which hours to show. When heat plan is active, override per-day:
-  // only days that have heat hours defined use heat hours; the rest fall back to regular hours.
-  const useHeat = state.heatPlanActive && p.hours_heat;
-  let hoursToShow;
-  if (useHeat) {
-    hoursToShow = p.hours
-      ? p.hours_heat.map((heatSlot, i) => heatSlot !== null ? heatSlot : p.hours[i])
-      : p.hours_heat;
-  } else {
-    hoursToShow = p.hours;
-  }
+  // Hours to show resolve through the same heat-aware logic as the list badge.
+  const hoursToShow = featureHours(p);
+  // We surface the "heat hours are being shown" note only when the heat plan is
+  // active AND this location actually carries a heat override (else the regular
+  // week is what's displayed and the note would be misleading).
+  const useHeat = state.heatPlanActive && !!p.hours_heat;
 
   // ── Open/closed status — sits beside the "Openingstijden" section title ──
   const openStatus = getOpenStatus(hoursToShow);
@@ -2256,7 +2325,8 @@ function renderKoelteDetailContent(feature, container) {
   const statusRow = hoursBlock.querySelector(".hours-status");
   if (statusRow) statusRow.style.display = "none"; // status shown inline above
   hoursSec.appendChild(hoursBlock);
-  if (p.hours_note) hoursSec.appendChild(adsInfoNote(p.hours_note));
+  const hoursNote = localizedField(p, "hours_note");
+  if (hoursNote) hoursSec.appendChild(adsInfoNote(hoursNote));
   info.appendChild(hoursSec);
 
   // ── Section: Facilities (scannable present/absent grid) ──
@@ -2283,10 +2353,11 @@ function renderKoelteDetailContent(feature, container) {
   }
 
   // ── Section: About this place (free-text notes) ──
-  if (p.notes) {
+  const notesText = localizedField(p, "notes");
+  if (notesText) {
     const notesSec = dpSection("Over deze plek", "About this place");
     const notesBox = document.createElement("div"); notesBox.className = "detail-notes";
-    notesBox.textContent = p.notes;
+    notesBox.textContent = notesText;
     notesSec.appendChild(notesBox);
     info.appendChild(notesSec);
   }
@@ -2789,7 +2860,7 @@ function getListItems() {
     items.sort((a, b) => {
       const getOrd = f => {
         if (f.properties?.active === false) return 2;
-        return ord[getOpenStatus(f.properties?.hours).status] ?? 1;
+        return ord[getOpenStatus(featureHours(f.properties || {})).status] ?? 1;
       };
       return getOrd(a.feature) - getOrd(b.feature);
     });
@@ -2836,7 +2907,7 @@ function buildListItem(feature) {
   const nameEl = document.createElement("span"); nameEl.className = "lv-name";
   nameEl.textContent = p.name || "Koelteplek";
   const badge = document.createElement("span"); badge.className = "lv-status-badge";
-  const s = getOpenStatus(p.hours);
+  const s = getOpenStatus(featureHours(p));
   if (s.status === "open") {
     const nowM = new Date().getHours() * 60 + new Date().getMinutes();
     const minsLeft = parseMinutes(s.closesAt) - nowM;
