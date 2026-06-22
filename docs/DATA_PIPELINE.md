@@ -86,9 +86,22 @@ Done once, then hands-off. The spreadsheet stays **private** the whole time.
    A green run that commits/deploys data means it's working. The service-account
    key does not expire, so this keeps running untouched.
 
-To make edits propagate in ~1 minute (instead of waiting for the schedule), keep
-the optional Apps Script that fires `repository_dispatch: sheet-updated` on edit;
-the schedule is the guaranteed fallback either way.
+### Instant updates (Apps Script trigger)
+
+The GitHub schedule alone is best-effort (often delayed 15–45 min). For ~1-minute
+updates, an Apps Script pings GitHub on every sheet edit. Script + setup steps are
+in `docs/apps-script-trigger.gs`. It needs a GitHub token:
+
+1. GitHub → Settings → Developer settings → **Fine-grained personal access tokens**
+   → Generate. **Resource owner:** Koeltekaart. **Repository access:** Only select
+   repositories → `koeltekaart-amsterdam`. **Permissions:** Repository →
+   **Contents: Read and write** (the minimum `repository_dispatch` needs). Set an
+   expiration (e.g. 1 year) and note the renewal date.
+2. Put it in the Apps Script as the `GITHUB_TOKEN` script property and run `setup`
+   (see the .gs file). The schedule stays as a self-healing backup.
+
+If the Apps Script is ever removed, nothing breaks — updates just fall back to the
+schedule until it's restored.
 
 The frontend needs **no** sheet configuration — it serves the static files the
 Action produces. `DATA_SOURCE.liveSheet.sheetId` stays `""` in production.

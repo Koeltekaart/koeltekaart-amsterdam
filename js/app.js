@@ -2185,8 +2185,17 @@ function renderKoelteDetailContent(feature, container) {
 
   const body = document.createElement("div"); body.className = "detail-panel-body";
 
-  // Photos were removed: the source images (Google Drive / lh3.googleusercontent)
-  // loaded slowly or not at all. The list uses a colored placeholder instead.
+  // ── Full-width 16:9 photo ──
+  if (p.photo_url) {
+    const photoWrap = document.createElement("div"); photoWrap.className = "detail-img-full";
+    const img = document.createElement("img");
+    img.src = p.photo_url; img.alt = p.name || "";
+    // If the image genuinely can't load, hide the frame — no broken icon and no
+    // "Foto bekijken" outbound link (we keep users on the page).
+    img.onerror = () => { photoWrap.remove(); };
+    photoWrap.appendChild(img);
+    body.appendChild(photoWrap);
+  }
 
   // ── Info section (padded) ──
   const info = document.createElement("div"); info.className = "detail-panel-info";
@@ -2800,15 +2809,25 @@ function buildListItem(feature) {
   li.setAttribute("tabindex", "0");
   li.setAttribute("aria-label", `${p.name || "Koelteplek"}, ${[typeLabel, p.neighborhood].filter(Boolean).join(", ")}`);
 
-  // Thumbnail: always a colored placeholder. The real photos (Google Drive)
-  // loaded slowly/unreliably, so image loading was removed.
-  const photoEl = document.createElement("div"); photoEl.className = "lv-photo lv-photo--placeholder";
-  photoEl.style.background = color + "14";
-  photoEl.style.borderColor = color + "28";
-  const initial = document.createElement("span");
-  initial.textContent = (typeLabel || "K")[0].toUpperCase();
-  initial.style.color = color;
-  photoEl.appendChild(initial);
+  // Photo thumbnail (colored-initial placeholder when there's no photo / it fails)
+  const photoEl = document.createElement("div"); photoEl.className = "lv-photo";
+  const _placeholder = () => {
+    photoEl.classList.add("lv-photo--placeholder");
+    photoEl.style.background = color + "14";
+    photoEl.style.borderColor = color + "28";
+    const initial = document.createElement("span");
+    initial.textContent = (typeLabel || "K")[0].toUpperCase();
+    initial.style.color = color;
+    photoEl.appendChild(initial);
+  };
+  if (p.photo_url) {
+    const img = document.createElement("img");
+    img.src = p.photo_url; img.alt = ""; img.loading = "lazy";
+    img.onerror = () => { photoEl.innerHTML = ""; _placeholder(); };
+    photoEl.appendChild(img);
+  } else {
+    _placeholder();
+  }
 
   const content = document.createElement("div"); content.className = "lv-content";
 
