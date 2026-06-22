@@ -57,32 +57,33 @@ def main(path="data/locations.csv"):
         return 1
 
     rows = list(csv.DictReader(raw.splitlines()))
-    if len(rows) < MIN_ROWS:
-        print(f"FAIL: only {len(rows)} data rows (< {MIN_ROWS}) — looks like a bad export.")
+    # Only rows with a name are real locations (the app skips the rest). A
+    # half-entered or stray blank row must NOT block everyone else's updates.
+    named = [(i, r) for i, r in enumerate(rows, start=2) if (r.get("name") or "").strip()]
+    if len(named) < MIN_ROWS:
+        print(f"FAIL: only {len(named)} named locations (< {MIN_ROWS}) — looks like a bad/truncated export.")
         return 1
 
-    errors, warnings = [], []
-    for i, row in enumerate(rows, start=2):  # row 1 = header
-        name = (row.get("name") or "").strip() or f"<row {i}>"
+    # Per-row issues are WARNINGS, not blockers: the site already degrades
+    # gracefully (a coord-less row is skipped; an unparseable hours cell shows
+    # "unknown" rather than a wrong open/closed). Only a catastrophic export
+    # (caught above) blocks the deploy, so one editor typo can't freeze updates.
+    warnings = []
+    for i, row in named:
+        name = (row.get("name") or "").strip()
         if not (row.get("latitude") or "").strip() or not (row.get("longitude") or "").strip():
-            errors.append(f"row {i} [{name}]: missing latitude/longitude")
+            warnings.append(f"row {i} [{name}]: missing latitude/longitude → won't appear on the map")
         for col in DAY_COLS + HEAT_COLS:
             kind, _ = classify(row.get(col))
             if kind == "unknown":
-                errors.append(f"row {i} [{name}] {col} = {row.get(col)!r} → unparseable hours")
+                warnings.append(f"row {i} [{name}] {col} = {row.get(col)!r} → unreadable, shows 'unknown'")
             elif kind == "repaired":
-                warnings.append(f"row {i} [{name}] {col} = {row.get(col)!r} → auto-repaired (please tidy in the sheet)")
+                warnings.append(f"row {i} [{name}] {col} = {row.get(col)!r} → auto-repaired (please tidy)")
 
     for w in warnings:
         print("WARN:", w)
-    for e in errors:
-        print("FAIL:", e)
-
-    if errors:
-        print(f"\n{len(errors)} blocking issue(s). Not deploying.")
-        return 1
-    print(f"\nOK: {len(rows)} rows valid"
-          + (f", {len(warnings)} auto-repaired cell(s) to tidy." if warnings else "."))
+    print(f"\nOK: {len(named)} locations valid"
+          + (f", {len(warnings)} thing(s) to tidy in the sheet (non-blocking)." if warnings else "."))
     return 0
 
 
