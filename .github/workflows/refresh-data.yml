@@ -24,7 +24,14 @@ jobs:
   refresh:
     runs-on: ubuntu-latest
     steps:
+      # Check out with a PAT so the data-refresh commit can trigger the Azure
+      # deploy workflow. A push made with the default GITHUB_TOKEN does NOT
+      # trigger other workflows (GitHub's loop-prevention), and Azure SWA only
+      # deploys from its own generated workflow file — so we let that workflow
+      # do the deploy, triggered by this push.
       - uses: actions/checkout@v6
+        with:
+          token: ${{ secrets.BOT_PAT }}
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -117,39 +124,12 @@ jobs:
             if git diff --cached --quiet; then
               echo "Already up to date after rebase — nothing to push."; exit 0
             fi
-            git commit -q -m "data: refresh from Google Sheet [skip ci]"
+            # NOTE: no "[skip ci]" — we WANT this push to trigger the Azure
+            # Static Web Apps workflow, which is the only place allowed to deploy.
+            git commit -q -m "data: refresh from Google Sheet"
             if git push -q origin HEAD:main; then
-              echo "Pushed on attempt $attempt."; exit 0
+              echo "Pushed on attempt $attempt — Azure deploy workflow will publish it."; exit 0
             fi
             echo "Push rejected (attempt $attempt), retrying…"; sleep $((RANDOM % 5 + 2))
           done
           echo "::error::Could not push refreshed data after 5 attempts."; exit 1
-
-      # Azure SWA requires an OIDC id-token in addition to the deploy token
-      # (token-only uploads are rejected with "api key was invalid"). Mirror the
-      # main CI workflow's auth so direct data deploys actually publish.
-      - name: Install OIDC client (for SWA deploy auth)
-        if: steps.diff.outputs.changed == 'true' && github.ref == 'refs/heads/main'
-        run: npm install @actions/core@1.6.0 @actions/http-client
-      - name: Get OIDC id token
-        id: idtoken
-        if: steps.diff.outputs.changed == 'true' && github.ref == 'refs/heads/main'
-        uses: actions/github-script@v9
-        with:
-          script: |
-            // NB: `core` is already a provided global here — requiring it into a
-            // `const core` throws "Identifier 'core' has already been declared".
-            const coredemo = require('@actions/core')
-            return await coredemo.getIDToken()
-          result-encoding: string
-
-      - name: Deploy refreshed data to Azure
-        if: steps.diff.outputs.changed == 'true' && github.ref == 'refs/heads/main'
-        uses: Azure/static-web-apps-deploy@v1
-        with:
-          azure_static_web_apps_api_token: ${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN_AMBITIOUS_BAY_01E7C5C03 }}
-          github_id_token: ${{ steps.idtoken.outputs.result }}
-          action: "upload"
-          app_location: "/"
-          output_location: ""
-          skip_app_build: true
