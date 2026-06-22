@@ -2185,23 +2185,8 @@ function renderKoelteDetailContent(feature, container) {
 
   const body = document.createElement("div"); body.className = "detail-panel-body";
 
-  // ── Full-width 16:9 photo ──
-  if (p.photo_url) {
-    const photoWrap = document.createElement("div"); photoWrap.className = "detail-img-full";
-    const img = document.createElement("img");
-    img.src = p.photo_url; img.alt = p.name || ""; img.loading = "lazy";
-    img.onerror = () => {
-      // Image failed (e.g. Drive file not publicly shared) — show a fallback link
-      photoWrap.innerHTML = "";
-      const link = document.createElement("a");
-      link.href = p.photo_url; link.target = "_blank"; link.rel = "noopener noreferrer";
-      link.className = "detail-photo-fallback";
-      link.textContent = state.lang === "nl" ? "Foto bekijken ↗" : "View photo ↗";
-      photoWrap.appendChild(link);
-    };
-    photoWrap.appendChild(img);
-    body.appendChild(photoWrap);
-  }
+  // Photos were removed: the source images (Google Drive / lh3.googleusercontent)
+  // loaded slowly or not at all. The list uses a colored placeholder instead.
 
   // ── Info section (padded) ──
   const info = document.createElement("div"); info.className = "detail-panel-info";
@@ -2815,21 +2800,15 @@ function buildListItem(feature) {
   li.setAttribute("tabindex", "0");
   li.setAttribute("aria-label", `${p.name || "Koelteplek"}, ${[typeLabel, p.neighborhood].filter(Boolean).join(", ")}`);
 
-  // Photo thumbnail
-  const photoEl = document.createElement("div"); photoEl.className = "lv-photo";
-  if (p.photo_url) {
-    const img = document.createElement("img");
-    img.src = p.photo_url; img.alt = ""; img.loading = "lazy";
-    photoEl.appendChild(img);
-  } else {
-    photoEl.classList.add("lv-photo--placeholder");
-    photoEl.style.background = color + "14";
-    photoEl.style.borderColor = color + "28";
-    const initial = document.createElement("span");
-    initial.textContent = (typeLabel || "K")[0].toUpperCase();
-    initial.style.color = color;
-    photoEl.appendChild(initial);
-  }
+  // Thumbnail: always a colored placeholder. The real photos (Google Drive)
+  // loaded slowly/unreliably, so image loading was removed.
+  const photoEl = document.createElement("div"); photoEl.className = "lv-photo lv-photo--placeholder";
+  photoEl.style.background = color + "14";
+  photoEl.style.borderColor = color + "28";
+  const initial = document.createElement("span");
+  initial.textContent = (typeLabel || "K")[0].toUpperCase();
+  initial.style.color = color;
+  photoEl.appendChild(initial);
 
   const content = document.createElement("div"); content.className = "lv-content";
 
