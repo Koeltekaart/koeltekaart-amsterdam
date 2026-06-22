@@ -97,9 +97,24 @@ jobs:
         run: |
           git config user.name  "koeltekaart-bot"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add data/locations.csv data/settings.csv
-          git commit -m "data: refresh from Google Sheet [skip ci]"
-          git push
+          # Race-proof push: rapid edit-triggered runs can collide on main
+          # ("! [rejected] (fetch first)"). Rebase our freshly-generated files
+          # onto the latest main and retry. Because we regenerate the whole file
+          # from the sheet (the source of truth), the newest fetch always wins.
+          for attempt in 1 2 3 4 5; do
+            git fetch -q origin main
+            git reset -q --soft origin/main        # keep our fetched files, re-base on latest
+            git add data/locations.csv data/settings.csv
+            if git diff --cached --quiet; then
+              echo "Already up to date after rebase — nothing to push."; exit 0
+            fi
+            git commit -q -m "data: refresh from Google Sheet [skip ci]"
+            if git push -q origin HEAD:main; then
+              echo "Pushed on attempt $attempt."; exit 0
+            fi
+            echo "Push rejected (attempt $attempt), retrying…"; sleep $((RANDOM % 5 + 2))
+          done
+          echo "::error::Could not push refreshed data after 5 attempts."; exit 1
 
       - name: Deploy refreshed data to Azure
         if: steps.diff.outputs.changed == 'true' && github.ref == 'refs/heads/main'
