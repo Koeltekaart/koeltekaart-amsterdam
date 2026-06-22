@@ -128,8 +128,10 @@ jobs:
         uses: actions/github-script@v9
         with:
           script: |
-            const core = require('@actions/core')
-            return await core.getIDToken()
+            // NB: `core` is already a provided global here — requiring it into a
+            // `const core` throws "Identifier 'core' has already been declared".
+            const coredemo = require('@actions/core')
+            return await coredemo.getIDToken()
           result-encoding: string
 
       - name: Deploy refreshed data to Azure
