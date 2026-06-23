@@ -387,6 +387,7 @@ const TR = {
     closed_now: "Gesloten",
     closes_soon: "Sluit binnenkort",
     temporarily_closed: "Tijdelijk gesloten",
+    temp_closed_detail: "Deze locatie is tijdelijk gesloten als koelteplek. De openingstijden hieronder gelden normaal gesproken.",
     closes_at: "Sluit om",
     opens_at: "Opent om",
     opens_on: "Opent op",
@@ -522,6 +523,7 @@ const TR = {
     closed_now: "Closed",
     closes_soon: "Closes soon",
     temporarily_closed: "Temporarily closed",
+    temp_closed_detail: "This location is temporarily closed as a cooling spot. The hours below are its usual schedule.",
     closes_at: "Closes at",
     opens_at: "Opens at",
     opens_on: "Opens on",
@@ -2277,16 +2279,6 @@ function renderKoelteDetailContent(feature, container) {
   const info = document.createElement("div"); info.className = "detail-panel-info";
   body.appendChild(info);
 
-  if (p.active === false) {
-    const notice = document.createElement("div"); notice.className = "inactive-notice";
-    const noticeIc = document.createElement("span"); noticeIc.className = "inactive-notice-ic";
-    noticeIc.innerHTML = adsIcon("InfoFill", { size: 16 });
-    const noticeTx = document.createElement("span");
-    noticeTx.textContent = t("temporarily_closed");
-    notice.append(noticeIc, noticeTx);
-    info.appendChild(notice);
-  }
-
   const catLbl = document.createElement("div"); catLbl.className = "dp-cat";
   catLbl.textContent = [catLabel, locationLabel].filter(Boolean).join(" · ");
 
@@ -2301,28 +2293,38 @@ function renderKoelteDetailContent(feature, container) {
   // week is what's displayed and the note would be misleading).
   const useHeat = state.heatPlanActive && !!p.hours_heat;
 
-  // ── Open/closed status — sits beside the "Openingstijden" section title ──
-  // Suppressed for disabled locations: their weekly hours still show (so users
-  // know the usual schedule), but a live "Open"/"Closed" pill would contradict
-  // the "temporarily closed" notice above.
-  const openStatus = p.active === false ? { status: "unknown" } : getOpenStatus(hoursToShow);
+  // ── Open/closed status — rides beside the "Openingstijden" section title ──
+  // A disabled location gets the same pill design as open/closed, but in the
+  // neutral "temporarily closed" style; its live open/closed status would
+  // contradict that, so we don't compute it. The weekly hours still render
+  // below (the usual schedule) with an info note elaborating on the closure.
   let statusTag = null;
-  if (openStatus.status === "open" || openStatus.status === "closed") {
+  if (p.active === false) {
     statusTag = document.createElement("span");
-    if (openStatus.status === "open") {
-      statusTag.className = "tag tag--open dp-status";
-      statusTag.textContent = t("open_now") + (openStatus.closesAt ? ` – ${t("closes_at")} ${openStatus.closesAt}` : "");
-    } else {
-      statusTag.className = "tag tag--closed dp-status";
-      let txt = t("closed_now");
-      if (openStatus.opensAt) txt += ` – ${t("opens_at")} ${openStatus.opensAt}`;
-      statusTag.textContent = txt;
+    statusTag.className = "tag tag--inactive dp-status";
+    statusTag.textContent = t("temporarily_closed");
+  } else {
+    const openStatus = getOpenStatus(hoursToShow);
+    if (openStatus.status === "open" || openStatus.status === "closed") {
+      statusTag = document.createElement("span");
+      if (openStatus.status === "open") {
+        statusTag.className = "tag tag--open dp-status";
+        statusTag.textContent = t("open_now") + (openStatus.closesAt ? ` – ${t("closes_at")} ${openStatus.closesAt}` : "");
+      } else {
+        statusTag.className = "tag tag--closed dp-status";
+        let txt = t("closed_now");
+        if (openStatus.opensAt) txt += ` – ${t("opens_at")} ${openStatus.opensAt}`;
+        statusTag.textContent = txt;
+      }
     }
   }
 
   // ── Section: Opening hours (status pill rides on the title row) ──
   const hoursSec = dpSection("Openingstijden", "Opening hours");
   if (statusTag) hoursSec.querySelector(".dp-section-title").appendChild(statusTag);
+  if (p.active === false) {
+    hoursSec.appendChild(adsInfoNote(t("temp_closed_detail")));
+  }
   if (useHeat) {
     hoursSec.appendChild(adsInfoNote(state.lang === "nl" ? "Hitteplan-openingstijden worden getoond" : "Heat plan opening hours shown"));
   }
