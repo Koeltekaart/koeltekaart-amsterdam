@@ -1019,7 +1019,6 @@ body.mode-user #sidebar-policy { display: none; }
 .tag--open .tag-dot   { background: #00893c; }
 .tag--closed .tag-dot { background: #ec0000; }
 .tag--category { font-weight: 500; }
-.tag--inactive { background: rgba(118,118,118,0.10); color: var(--ams-color-text-secondary); border-color: rgba(118,118,118,0.22); }
 
 /* ── Detail (sheet / mobile) ─────────────────────────────────────────────── */
 .detail-media-row { display: flex; gap: 10px; align-items: stretch; margin-bottom: 10px; }
@@ -1131,16 +1130,10 @@ body.mode-user #sidebar-policy { display: none; }
 }
 .dp-section-title-text { min-width: 0; }
 /* Open/closed/temporarily-closed status pill — rides on the right of the
-   Openingstijden title. Matches the list-view badge look: bold, uppercase,
-   no outline. Colours come from the .tag--* classes (open/closed already
-   match the list); the inactive grey is aligned to the list pill below. */
-.dp-status {
-  flex-shrink: 0;
-  font-size: 10.5px; font-weight: 700;
-  text-transform: uppercase; letter-spacing: 0.05em;
-  padding: 2px 6px; border: none; border-radius: 4px;
-}
-.dp-status.tag--inactive { background: #dfe3ea; color: #475569; }
+   Openingstijden title. Visuals are inherited wholesale from .lv-status-badge
+   (the list view is the single source of truth); .dp-status only handles the
+   layout difference (don't let it shrink on the flex title row). */
+.dp-status { flex-shrink: 0; }
 
 /* Amsterdam Design System info note (replaces the plain grey hours box) */
 .ads-info-note {

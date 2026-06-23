@@ -2296,24 +2296,33 @@ function renderKoelteDetailContent(feature, container) {
   // neutral "temporarily closed" style; its live open/closed status would
   // contradict that, so we don't compute it. The weekly hours still render
   // below (the usual schedule).
+  // Mirror the list-view badge exactly (it's the source of truth): same
+  // lv-status-badge classes/colours and the same open/closing/closed/temp
+  // states, with the detail view's richer "– closes/opens at" suffix.
   let statusTag = null;
   if (p.active === false) {
     statusTag = document.createElement("span");
-    statusTag.className = "tag tag--inactive dp-status";
+    statusTag.className = "lv-status-badge lv-status-badge--temp-closed dp-status";
     statusTag.textContent = t("temporarily_closed");
   } else {
     const openStatus = getOpenStatus(hoursToShow);
-    if (openStatus.status === "open" || openStatus.status === "closed") {
+    if (openStatus.status === "open") {
       statusTag = document.createElement("span");
-      if (openStatus.status === "open") {
-        statusTag.className = "tag tag--open dp-status";
-        statusTag.textContent = t("open_now") + (openStatus.closesAt ? ` – ${t("closes_at")} ${openStatus.closesAt}` : "");
+      const nowM = new Date().getHours() * 60 + new Date().getMinutes();
+      const minsLeft = parseMinutes(openStatus.closesAt) - nowM;
+      if (minsLeft > 0 && minsLeft <= 60) {
+        statusTag.className = "lv-status-badge lv-status-badge--closing dp-status";
+        statusTag.textContent = t("closes_soon") + (openStatus.closesAt ? ` – ${t("closes_at")} ${openStatus.closesAt}` : "");
       } else {
-        statusTag.className = "tag tag--closed dp-status";
-        let txt = t("closed_now");
-        if (openStatus.opensAt) txt += ` – ${t("opens_at")} ${openStatus.opensAt}`;
-        statusTag.textContent = txt;
+        statusTag.className = "lv-status-badge lv-status-badge--open dp-status";
+        statusTag.textContent = t("open_now") + (openStatus.closesAt ? ` – ${t("closes_at")} ${openStatus.closesAt}` : "");
       }
+    } else if (openStatus.status === "closed") {
+      statusTag = document.createElement("span");
+      statusTag.className = "lv-status-badge lv-status-badge--closed dp-status";
+      let txt = t("closed_now");
+      if (openStatus.opensAt) txt += ` – ${t("opens_at")} ${openStatus.opensAt}`;
+      statusTag.textContent = txt;
     }
   }
 
