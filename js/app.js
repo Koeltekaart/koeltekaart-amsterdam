@@ -2292,42 +2292,48 @@ function renderKoelteDetailContent(feature, container) {
   nameEl.textContent = p.name || "Koelteplek";
   info.append(catLbl, nameEl);
 
-  // Hours to show resolve through the same heat-aware logic as the list badge.
-  const hoursToShow = featureHours(p);
-  // We surface the "heat hours are being shown" note only when the heat plan is
-  // active AND this location actually carries a heat override (else the regular
-  // week is what's displayed and the note would be misleading).
-  const useHeat = state.heatPlanActive && !!p.hours_heat;
+  // Opening hours are only meaningful for active locations. A location disabled
+  // in the sheet is hidden from the map and shown in the list as closed; here we
+  // skip the hours section entirely so it can't contradict the "unavailable"
+  // notice above.
+  if (p.active !== false) {
+    // Hours to show resolve through the same heat-aware logic as the list badge.
+    const hoursToShow = featureHours(p);
+    // We surface the "heat hours are being shown" note only when the heat plan is
+    // active AND this location actually carries a heat override (else the regular
+    // week is what's displayed and the note would be misleading).
+    const useHeat = state.heatPlanActive && !!p.hours_heat;
 
-  // ── Open/closed status — sits beside the "Openingstijden" section title ──
-  const openStatus = getOpenStatus(hoursToShow);
-  let statusTag = null;
-  if (openStatus.status === "open" || openStatus.status === "closed") {
-    statusTag = document.createElement("span");
-    if (openStatus.status === "open") {
-      statusTag.className = "tag tag--open dp-status";
-      statusTag.textContent = t("open_now") + (openStatus.closesAt ? ` – ${t("closes_at")} ${openStatus.closesAt}` : "");
-    } else {
-      statusTag.className = "tag tag--closed dp-status";
-      let txt = t("closed_now");
-      if (openStatus.opensAt) txt += ` – ${t("opens_at")} ${openStatus.opensAt}`;
-      statusTag.textContent = txt;
+    // ── Open/closed status — sits beside the "Openingstijden" section title ──
+    const openStatus = getOpenStatus(hoursToShow);
+    let statusTag = null;
+    if (openStatus.status === "open" || openStatus.status === "closed") {
+      statusTag = document.createElement("span");
+      if (openStatus.status === "open") {
+        statusTag.className = "tag tag--open dp-status";
+        statusTag.textContent = t("open_now") + (openStatus.closesAt ? ` – ${t("closes_at")} ${openStatus.closesAt}` : "");
+      } else {
+        statusTag.className = "tag tag--closed dp-status";
+        let txt = t("closed_now");
+        if (openStatus.opensAt) txt += ` – ${t("opens_at")} ${openStatus.opensAt}`;
+        statusTag.textContent = txt;
+      }
     }
-  }
 
-  // ── Section: Opening hours (status pill rides on the title row) ──
-  const hoursSec = dpSection("Openingstijden", "Opening hours");
-  if (statusTag) hoursSec.querySelector(".dp-section-title").appendChild(statusTag);
-  if (useHeat) {
-    hoursSec.appendChild(adsInfoNote(state.lang === "nl" ? "Hitteplan-openingstijden worden getoond" : "Heat plan opening hours shown"));
+    // ── Section: Opening hours (status pill rides on the title row) ──
+    const hoursSec = dpSection("Openingstijden", "Opening hours");
+    if (statusTag) hoursSec.querySelector(".dp-section-title").appendChild(statusTag);
+    if (useHeat) {
+      hoursSec.appendChild(adsInfoNote(state.lang === "nl" ? "Hitteplan-openingstijden worden getoond" : "Heat plan opening hours shown"));
+    }
+    const hoursBlock = renderHoursBlock(hoursToShow);
+    const statusRow = hoursBlock.querySelector(".hours-status");
+    if (statusRow) statusRow.style.display = "none"; // status shown inline above
+    hoursSec.appendChild(hoursBlock);
+    const hoursNote = localizedField(p, "hours_note");
+    if (hoursNote) hoursSec.appendChild(adsInfoNote(hoursNote));
+    info.appendChild(hoursSec);
   }
-  const hoursBlock = renderHoursBlock(hoursToShow);
-  const statusRow = hoursBlock.querySelector(".hours-status");
-  if (statusRow) statusRow.style.display = "none"; // status shown inline above
-  hoursSec.appendChild(hoursBlock);
-  const hoursNote = localizedField(p, "hours_note");
-  if (hoursNote) hoursSec.appendChild(adsInfoNote(hoursNote));
-  info.appendChild(hoursSec);
 
   // ── Section: Facilities (scannable present/absent grid) ──
   if (AMENITY_DEFS.length) {
@@ -2839,9 +2845,10 @@ function renderTipsPage() {
 
 // ── List view ──────────────────────────────────────────────────────────────
 function getListItems() {
-  // Koelteplekken only (water taps excluded from list); hide inactive locations
+  // Koelteplekken only (water taps excluded from list). Inactive locations stay
+  // in the list (labelled closed) even though they're hidden from the map — see
+  // buildListItem and the map-layer filter in _renderKoelteplekkenLayerInner.
   let items = state.features.koelteplekken
-    .filter(f => (f.properties || {}).active !== false)
     .filter(f => koelteplekPassesFilters(f.properties || {}))
     .map(f => ({ feature: f, cat: "koelteplekken" }));
 
@@ -2907,7 +2914,8 @@ function buildListItem(feature) {
   const nameEl = document.createElement("span"); nameEl.className = "lv-name";
   nameEl.textContent = p.name || "Koelteplek";
   const badge = document.createElement("span"); badge.className = "lv-status-badge";
-  const s = getOpenStatus(featureHours(p));
+  // Disabled in the sheet → always reads as closed; its hours are irrelevant.
+  const s = p.active === false ? { status: "closed" } : getOpenStatus(featureHours(p));
   if (s.status === "open") {
     const nowM = new Date().getHours() * 60 + new Date().getMinutes();
     const minsLeft = parseMinutes(s.closesAt) - nowM;
