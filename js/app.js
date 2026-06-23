@@ -807,7 +807,7 @@ async function fetchSettings() {
   if (!_dataReady()) return;
   try {
     const { url, format } = _settingsRequest();
-    const r = await fetch(url);
+    const r = await fetch(url, { cache: "no-cache" }); // always revalidate; ETag → cheap 304
     if (!r.ok) return;
     const rows = format === "json"
       ? Object.entries(await r.json()).map(([key, value]) => ({ key, value: String(value) }))
@@ -1206,7 +1206,7 @@ async function _loadKoelteplekken(def) {
   }
   await _ensureSettingsLoaded(); // labels/translations must be ready before building markers
   const { url, format } = _locationsRequest();
-  const r = await fetch(url);
+  const r = await fetch(url, { cache: "no-cache" }); // always revalidate; ETag → cheap 304
   if (!r.ok) throw new Error(`locations fetch failed: ${r.status}`);
   const features = format === "geojson"
     ? ((await r.json()).features || []).map(_featureFromGeoJson).filter(Boolean)

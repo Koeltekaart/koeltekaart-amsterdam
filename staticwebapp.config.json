@@ -24,7 +24,7 @@
   "routes": [
     {
       "route": "/data/*",
-      "headers": { "Cache-Control": "public, max-age=300, must-revalidate" }
+      "headers": { "Cache-Control": "no-cache" }
     },
     {
       "route": "/fonts/*",

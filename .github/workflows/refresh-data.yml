@@ -6,11 +6,15 @@ name: Refresh data from Google Sheet
 # changes go live within the schedule interval below.
 
 on:
+  # NOTE: GitHub's cron is unreliable on low-traffic repos (delayed by hours or
+  # dropped), so it is only a tertiary backup — NOT the real poll. The reliable
+  # ~5-min poll comes from a Google Apps Script time-driven trigger that fires
+  # repository_dispatch:sheet-updated (see docs/apps-script-trigger.gs).
   schedule:
-    - cron: "*/15 * * * *"   # fallback poll every 15 minutes
+    - cron: "*/15 * * * *"   # best-effort extra backup only
   workflow_dispatch: {}       # allow manual "Run workflow"
   repository_dispatch:
-    types: [sheet-updated]    # triggered by Google Apps Script on sheet edit
+    types: [sheet-updated]    # Apps Script: on every edit + every 5 min heartbeat
 
 permissions:
   contents: write

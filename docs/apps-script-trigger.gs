@@ -3,8 +3,13 @@
  *
  * When an editor changes the sheet, this pings GitHub (repository_dispatch:
  * sheet-updated), which runs .github/workflows/refresh-data.yml: read the sheet
- * (service account) → validate → deploy. Edits go live in ~1 minute. The 15-min
- * GitHub schedule stays as a backup, so a missed trigger self-heals.
+ * (service account) → validate → deploy. Edits go live in ~1 minute.
+ *
+ * RELIABILITY: GitHub's own cron schedule is unreliable on low-traffic repos —
+ * it gets delayed by hours or dropped entirely, so it is NOT a real safety net.
+ * Instead we install a time-driven trigger here (Google's scheduler, which is
+ * reliable) that pings every 5 minutes. So even if an on-edit is ever missed or
+ * throttled, the site is at most ~5 minutes stale — never hours.
  *
  * This is the ONLY thing the Apps Script does. It does NOT read or write data —
  * the GitHub Action reads the sheet itself via the service account.
@@ -26,26 +31,41 @@
  */
 
 const GITHUB_REPO = 'Koeltekaart/koeltekaart-amsterdam';
-const THROTTLE_MS = 60 * 1000; // coalesce edit bursts: at most one ping per minute
+const THROTTLE_MS = 60 * 1000; // coalesce edit bursts: at most one edit-ping per minute
+const HEARTBEAT_MIN = 5;       // reliable Google-scheduled poll, independent of GitHub cron
+const HANDLERS = ['onSheetEdit', 'heartbeat'];
 
 /** Run ONCE to install the triggers. Safe to re-run (clears duplicates first). */
 function setup() {
   const ss = SpreadsheetApp.getActive();
   ScriptApp.getProjectTriggers().forEach(t => {
-    if (t.getHandlerFunction() === 'onSheetEdit') ScriptApp.deleteTrigger(t);
+    if (HANDLERS.includes(t.getHandlerFunction())) ScriptApp.deleteTrigger(t);
   });
-  // Installable triggers (unlike simple onEdit, these may call external URLs).
+  // Instant updates: installable edit triggers (unlike simple onEdit, these may
+  // call external URLs).
   ScriptApp.newTrigger('onSheetEdit').forSpreadsheet(ss).onEdit().create();
   ScriptApp.newTrigger('onSheetEdit').forSpreadsheet(ss).onChange().create();
-  console.log('Triggers installed. Editors changing the sheet will now refresh the site.');
+  // Reliability floor: a guaranteed ping every 5 min from Google's scheduler, so
+  // a missed/throttled edit can never leave the site stale for more than ~5 min.
+  ScriptApp.newTrigger('heartbeat').timeBased().everyMinutes(HEARTBEAT_MIN).create();
+  console.log(`Triggers installed: on-edit (instant) + heartbeat every ${HEARTBEAT_MIN} min.`);
 }
 
-/** Trigger handler — throttled so a burst of edits coalesces into one refresh. */
+/** Edit handler — throttled so a burst of edits coalesces into one refresh.
+ * If an edit is throttled away, the 5-min heartbeat below still catches it. */
 function onSheetEdit() {
   const props = PropertiesService.getScriptProperties();
   const now = Date.now();
   if (now - Number(props.getProperty('lastDispatch') || 0) < THROTTLE_MS) return;
   props.setProperty('lastDispatch', String(now));
+  notifyGitHub();
+}
+
+/** Time-driven safety net: ping every HEARTBEAT_MIN minutes regardless of edits.
+ * The refresh workflow only commits/deploys when the sheet actually changed, so
+ * an unchanged poll is a cheap no-op. */
+function heartbeat() {
+  PropertiesService.getScriptProperties().setProperty('lastDispatch', String(Date.now()));
   notifyGitHub();
 }
 
