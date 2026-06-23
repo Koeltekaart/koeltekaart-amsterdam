@@ -387,7 +387,6 @@ const TR = {
     closed_now: "Gesloten",
     closes_soon: "Sluit binnenkort",
     temporarily_closed: "Tijdelijk gesloten",
-    temp_closed_detail: "Deze locatie is tijdelijk gesloten als koelteplek. De openingstijden hieronder gelden normaal gesproken.",
     closes_at: "Sluit om",
     opens_at: "Opent om",
     opens_on: "Opent op",
@@ -523,7 +522,6 @@ const TR = {
     closed_now: "Closed",
     closes_soon: "Closes soon",
     temporarily_closed: "Temporarily closed",
-    temp_closed_detail: "This location is temporarily closed as a cooling spot. The hours below are its usual schedule.",
     closes_at: "Closes at",
     opens_at: "Opens at",
     opens_on: "Opens on",
@@ -2297,7 +2295,7 @@ function renderKoelteDetailContent(feature, container) {
   // A disabled location gets the same pill design as open/closed, but in the
   // neutral "temporarily closed" style; its live open/closed status would
   // contradict that, so we don't compute it. The weekly hours still render
-  // below (the usual schedule) with an info note elaborating on the closure.
+  // below (the usual schedule).
   let statusTag = null;
   if (p.active === false) {
     statusTag = document.createElement("span");
@@ -2322,9 +2320,6 @@ function renderKoelteDetailContent(feature, container) {
   // ── Section: Opening hours (status pill rides on the title row) ──
   const hoursSec = dpSection("Openingstijden", "Opening hours");
   if (statusTag) hoursSec.querySelector(".dp-section-title").appendChild(statusTag);
-  if (p.active === false) {
-    hoursSec.appendChild(adsInfoNote(t("temp_closed_detail")));
-  }
   if (useHeat) {
     hoursSec.appendChild(adsInfoNote(state.lang === "nl" ? "Hitteplan-openingstijden worden getoond" : "Heat plan opening hours shown"));
   }
@@ -3065,9 +3060,9 @@ function renderListView() {
     appendSection(activeItems, null);
   }
 
-  // Temporarily-closed (disabled) locations always render last, in their own
-  // labelled section, regardless of geolocation grouping.
-  appendSection(inactiveItems, t("temporarily_closed"));
+  // Temporarily-closed (disabled) locations always render last — below all
+  // others, no separate header; their grey pill marks them.
+  appendSection(inactiveItems, null);
 }
 
 function isListViewActive() {
