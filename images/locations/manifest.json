@@ -7,6 +7,10 @@
     "file": "images/locations/albert-heijn-bijlmerplein.jpg",
     "src": "1OfQm5IxCEA7ZYhEVZJFNmwoIpmO9VPmU"
   },
+  "amc-sportcentrum": {
+    "file": "images/locations/amc-sportcentrum.jpg",
+    "src": "1vQcy6pOl7Y2yLBP2wlTZS6WyCNCa4ouS"
+  },
   "amstelring-de-bogt": {
     "file": "images/locations/amstelring-de-bogt.jpg",
     "src": "10n_YxmtH-kEotLGIkyRDSk03iGD7_xJX"
@@ -162,10 +166,6 @@
   "unmanageable-artists": {
     "file": "images/locations/unmanageable-artists.jpg",
     "src": "1GXz9Qn_zJizWVGZfOpWxhlkOjP6ZhEz5"
-  },
-  "usc-asc-amc-sportcentrum": {
-    "file": "images/locations/usc-asc-amc-sportcentrum.jpg",
-    "src": "1vQcy6pOl7Y2yLBP2wlTZS6WyCNCa4ouS"
   },
   "westcord-art-hotel": {
     "file": "images/locations/westcord-art-hotel.jpg",
