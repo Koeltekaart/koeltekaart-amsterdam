@@ -242,10 +242,13 @@ const CATEGORY_DEFS = [
   { key: "urban_farm",       label_en: "Urban farm",       label_nl: "Stadsboerderij" },
   { key: "community_center", label_en: "Community centre", label_nl: "Buurtcentrum" },
   { key: "theater",          label_en: "Theater",          label_nl: "Theater" },
+  { key: "Café",             label_en: "Café",             label_nl: "Café" },
+  { key: "Hotel",            label_en: "Hotel",            label_nl: "Hotel" },
+  { key: "Stadsarchief",     label_en: "City archive",     label_nl: "Stadsarchief" },
 ];
 
-const TYPE_DISPLAY_NL = { library: "Bibliotheek", church: "Kerk", supermarket: "Supermarkt", urban_farm: "Stadsboerderij", community_center: "Buurtcentrum", sports: "Sport", theater: "Theater" };
-const TYPE_DISPLAY_EN = { library: "Library", church: "Church", supermarket: "Supermarket", urban_farm: "Urban farm", community_center: "Community centre", sports: "Sports", theater: "Theater" };
+const TYPE_DISPLAY_NL = { library: "Bibliotheek", church: "Kerk", supermarket: "Supermarkt", urban_farm: "Stadsboerderij", community_center: "Buurtcentrum", sports: "Sport", theater: "Theater", "Café": "Café", "Hotel": "Hotel", "Stadsarchief": "Stadsarchief" };
+const TYPE_DISPLAY_EN = { library: "Library", church: "Church", supermarket: "Supermarket", urban_farm: "Urban farm", community_center: "Community centre", sports: "Sports", theater: "Theater", "Café": "Café", "Hotel": "Hotel", "Stadsarchief": "City archive" };
 
 const CATEGORY_COLORS = {
   library:          "#004699",  // Amsterdam dark blue
@@ -643,6 +646,7 @@ const state = {
   features: { koelteplekken: [], water_taps: [], parks: [], swimming_pools: [] },
   userMarker: null,
   userPos: null,
+  geoWatchId: null,
   rings: [],
   filters: {},
   swimTypes: Object.fromEntries(SWIM_TYPE_DEFS.map(d => [d.key, false])),
@@ -2070,6 +2074,10 @@ function setupSidebarToggle() {
 
 // ── User location + Near me ────────────────────────────────────────────────
 function clearNearMe() {
+  if (state.geoWatchId !== null && navigator.geolocation) {
+    navigator.geolocation.clearWatch(state.geoWatchId);
+    state.geoWatchId = null;
+  }
   if (state.userMarker) { state.userMarker.remove(); state.userMarker = null; }
   clearRings();
   state.userPos = null;
@@ -2087,29 +2095,53 @@ function setupNearBtn() {
     }
     if (!navigator.geolocation) { alert("Geolocation not supported."); return; }
     setLoading(true);
-    navigator.geolocation.getCurrentPosition(
+    let firstFix = true;
+    // watchPosition keeps the dot tracking the user as they move, rather than a
+    // one-off snapshot. We only recenter / scroll / rebuild the list on the first
+    // fix; later updates just slide the marker so we don't yank the map around.
+    state.geoWatchId = navigator.geolocation.watchPosition(
       pos => {
-        setLoading(false);
-        placeUserMarker(pos.coords.latitude, pos.coords.longitude);
-        state.map.setView([pos.coords.latitude, pos.coords.longitude], 15);
-        document.getElementById("btn-near").classList.add("active");
-        // Scroll into the map area so the user sees their location
-        const mapSection = document.getElementById("map-section");
-        if (mapSection) mapSection.scrollIntoView({ behavior: "smooth" });
-        setTimeout(() => { if (state.map) state.map.invalidateSize(); }, 300);
-        // Exit detail mode so the list is shown sorted by distance
-        if (state.panelMode === "detail") exitDetailMode();
-        else refreshListIfActive();
+        const { latitude, longitude } = pos.coords;
+        placeUserMarker(latitude, longitude);
+        if (firstFix) {
+          firstFix = false;
+          setLoading(false);
+          state.map.setView([latitude, longitude], 15);
+          document.getElementById("btn-near").classList.add("active");
+          // Scroll into the map area so the user sees their location
+          const mapSection = document.getElementById("map-section");
+          if (mapSection) mapSection.scrollIntoView({ behavior: "smooth" });
+          setTimeout(() => { if (state.map) state.map.invalidateSize(); }, 300);
+          // Exit detail mode so the list is shown sorted by distance
+          if (state.panelMode === "detail") exitDetailMode();
+          else refreshListIfActive();
+        } else {
+          // Distances changed — re-sort the list so it stays accurate.
+          refreshListIfActive();
+        }
       },
-      () => { setLoading(false); alert("Could not retrieve your location. Check browser permissions."); }
+      () => {
+        setLoading(false);
+        if (firstFix) {
+          alert("Could not retrieve your location. Check browser permissions.");
+          clearNearMe();
+        }
+      },
+      { enableHighAccuracy: true, maximumAge: 5000, timeout: 20000 }
     );
   });
 }
 
 function placeUserMarker(lat, lon) {
-  if (state.userMarker) state.userMarker.remove();
-  clearRings();
   state.userPos = { lat, lon };
+  // Reuse the existing marker/ring on live-location updates so the dot smoothly
+  // slides to the new position instead of flickering out and back in.
+  if (state.userMarker) {
+    state.userMarker.setLatLng([lat, lon]);
+    if (state.rings[0]) state.rings[0].setLatLng([lat, lon]);
+    else placeDistanceRings(lat, lon);
+    return;
+  }
   state.userMarker = L.marker([lat,lon],{
     icon: L.divIcon({className:"user-marker-icon",html:'<div class="user-dot"></div><div class="user-pulse"></div>',iconSize:[28,28],iconAnchor:[14,14]}),
     interactive:false, zIndexOffset:1000,
@@ -2418,6 +2450,14 @@ function cell(label, value, full=false) {
 
 function showKoelteplaatsDetail(feature) {
   openDetailPanel(feature, renderKoelteDetailContent);
+}
+
+/** Pan + zoom the map to a Point feature (used when picking from the list). */
+function focusFeatureOnMap(feature) {
+  if (!state.map || feature?.geometry?.type !== "Point") return;
+  const [lon, lat] = feature.geometry.coordinates;
+  if (lat == null || lon == null) return;
+  state.map.setView([lat, lon], Math.max(state.map.getZoom(), 16));
 }
 
 function translateTapStatus(value) {
@@ -2978,7 +3018,7 @@ function buildListItem(feature) {
   rightCol.append(badge, chevron);
 
   li.append(photoEl, content, rightCol);
-  li.addEventListener("click", () => showKoelteplaatsDetail(feature));
+  li.addEventListener("click", () => { focusFeatureOnMap(feature); showKoelteplaatsDetail(feature); });
   li.addEventListener("keydown", e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); li.click(); } });
   return li;
 }
