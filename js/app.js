@@ -180,6 +180,7 @@ const TYPE_LABEL_NL = { koelteplekken: "Koelteplek", water_taps: "Drinkwaterkraa
 // ── Amenity label map (translatable) — new keys discovered in data auto-add ─
 const AMENITY_LABELS = {
   ac:               { en: "A/C",           nl: "Airco" },
+  wifi:             { en: "Wi-Fi",         nl: "Wifi" },
   free_water:       { en: "Free water",    nl: "Gratis water" },
   seating:          { en: "Seating",       nl: "Zitplaatsen" },
   toilets:          { en: "Toilets",       nl: "Toiletten" },
@@ -239,25 +240,25 @@ const CATEGORY_DEFS = [
   { key: "library",          label_en: "Library",          label_nl: "Bibliotheek" },
   { key: "church",           label_en: "Church",           label_nl: "Kerk" },
   { key: "supermarket",      label_en: "Supermarket",      label_nl: "Supermarkt" },
-  { key: "urban_farm",       label_en: "Urban farm",       label_nl: "Stadsboerderij" },
   { key: "community_center", label_en: "Community centre", label_nl: "Buurtcentrum" },
   { key: "theater",          label_en: "Theater",          label_nl: "Theater" },
   { key: "Café",             label_en: "Café",             label_nl: "Café" },
   { key: "Hotel",            label_en: "Hotel",            label_nl: "Hotel" },
   { key: "Stadsarchief",     label_en: "City archive",     label_nl: "Stadsarchief" },
+  { key: "overig",           label_en: "Other",            label_nl: "Overig" },
 ];
 
-const TYPE_DISPLAY_NL = { library: "Bibliotheek", church: "Kerk", supermarket: "Supermarkt", urban_farm: "Stadsboerderij", community_center: "Buurtcentrum", sports: "Sport", theater: "Theater", "Café": "Café", "Hotel": "Hotel", "Stadsarchief": "Stadsarchief" };
-const TYPE_DISPLAY_EN = { library: "Library", church: "Church", supermarket: "Supermarket", urban_farm: "Urban farm", community_center: "Community centre", sports: "Sports", theater: "Theater", "Café": "Café", "Hotel": "Hotel", "Stadsarchief": "City archive" };
+const TYPE_DISPLAY_NL = { library: "Bibliotheek", church: "Kerk", supermarket: "Supermarkt", community_center: "Buurtcentrum", sports: "Sport", theater: "Theater", "Café": "Café", "Hotel": "Hotel", "Stadsarchief": "Stadsarchief", overig: "Overig" };
+const TYPE_DISPLAY_EN = { library: "Library", church: "Church", supermarket: "Supermarket", community_center: "Community centre", sports: "Sports", theater: "Theater", "Café": "Café", "Hotel": "Hotel", "Stadsarchief": "City archive", overig: "Other" };
 
 const CATEGORY_COLORS = {
   library:          "#004699",  // Amsterdam dark blue
   church:           "#a00078",  // Amsterdam purple
   supermarket:      "#00893c",  // Amsterdam dark green
-  urban_farm:       "#bed200",  // Amsterdam lime green
   community_center: "#ff9100",  // Amsterdam orange
   sports:           "#e50082",  // Amsterdam magenta
   theater:          "#e50082",  // Amsterdam magenta
+  overig:           "#202020",  // Amsterdam dark grey
   default:          "#004699",  // Amsterdam dark blue
 };
 
@@ -278,9 +279,12 @@ let _paletteIndex = Object.keys(CATEGORY_COLORS).filter(k => k !== "default").le
 function getCategoryColor(type) {
   if (!type) return CATEGORY_COLORS.default;
   if (CATEGORY_COLORS[type]) return CATEGORY_COLORS[type];
-  // Auto-assign next available palette color
-  const color = AMSTERDAM_PALETTE[_paletteIndex % AMSTERDAM_PALETTE.length];
-  _paletteIndex++;
+  // Auto-assign the first palette colour not already in use, so categories stay
+  // visually distinct. Only once every palette colour is taken do we start
+  // cycling (and accept repeats).
+  const used = new Set(Object.values(CATEGORY_COLORS));
+  const color = AMSTERDAM_PALETTE.find(c => !used.has(c))
+             || AMSTERDAM_PALETTE[_paletteIndex++ % AMSTERDAM_PALETTE.length];
   CATEGORY_COLORS[type] = color;
   return color;
 }
@@ -1160,6 +1164,7 @@ function _rowToFeature(row) {
       notes_en:         (row.notes_en   || row.description_en || "").trim(),
       active:           row.active?.trim() ? csvToBool(row.active) : true,
       ac:               csvToBool(row.ac    || row.airco),
+      wifi:             csvToBool(row.wifi  || row.wi_fi),
       seating:          csvToBool(row.seating),
       toilets:          csvToBool(row.toilets),
       free_water:       csvToBool(row.free_water),
