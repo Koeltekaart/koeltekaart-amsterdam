@@ -1196,8 +1196,6 @@ body.mode-user #sidebar-policy { display: none; }
 .btn-website:hover { background: #003580; }
 .btn-website:active { transform: scale(0.98); }
 .btn-directions { background: var(--ams-color-text-default); color: #fff; }
-/* Keep a long street address on one line — truncate rather than overflow */
-.btn-directions-label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
 .btn-directions:hover { filter: brightness(1.25); }
 .btn-directions:active { transform: scale(0.98); }
 

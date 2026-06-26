@@ -2314,8 +2314,12 @@ function renderKoelteDetailContent(feature, container) {
   const info = document.createElement("div"); info.className = "detail-panel-info";
   body.appendChild(info);
 
+  // Tag line above the name: category · neighbourhood · district · address.
+  // Strip a trailing ", Amsterdam" from the address — the whole map is
+  // Amsterdam, so it's just noise.
+  const addressText = (p.address || "").replace(/,\s*Amsterdam\s*$/i, "").trim();
   const catLbl = document.createElement("div"); catLbl.className = "dp-cat";
-  catLbl.textContent = [catLabel, locationLabel].filter(Boolean).join(" · ");
+  catLbl.textContent = [catLabel, locationLabel, addressText].filter(Boolean).join(" · ");
 
   const nameEl = document.createElement("div"); nameEl.className = "detail-panel-name";
   nameEl.textContent = p.name || "Koelteplek";
@@ -2419,7 +2423,7 @@ function renderKoelteDetailContent(feature, container) {
     actions.appendChild(a);
   }
   const [lon, lat] = feature.geometry.coordinates;
-  actions.appendChild(makeDirectionsBtn(lat, lon, p.address));
+  actions.appendChild(makeDirectionsBtn(lat, lon));
   body.appendChild(actions); // outside the padded info → full-width sticky footer
 
   container.appendChild(body);
@@ -2678,33 +2682,12 @@ function renderSwimmingPoolDetailContent(feature, container) {
 
 function showSwimmingPoolDetail(feature) { openDetailPanel(feature, renderSwimmingPoolDetailContent); }
 
-function makeDirectionsBtn(lat, lon, address) {
+function makeDirectionsBtn(lat, lon) {
   const isIOS=/iPad|iPhone|iPod/.test(navigator.userAgent);
-  // Our stored coordinates aren't always accurate, so when we have a street
-  // address we route by that (the geocoder lands on the building); we keep the
-  // city in the query so the geocoder doesn't stray, even though the visible
-  // label is trimmed. Fall back to coordinates when there's no address.
-  const addr = (address || "").trim();
-  const dest = addr ? encodeURIComponent(addr) : `${lat},${lon}`;
-  const href=isIOS?`maps://?daddr=${dest}`:`https://www.google.com/maps/dir/?api=1&destination=${dest}`;
+  const href=isIOS?`maps://?daddr=${lat},${lon}`:`https://www.google.com/maps/dir/?api=1&destination=${lat},${lon}`;
   const a=document.createElement("a");
   a.className="btn-directions"; a.href=href; a.target="_blank"; a.rel="noopener noreferrer";
-  // Label shows the street + postcode, dropping only the trailing city so it
-  // stays compact. Addresses read "Street 12, 1083 GV Amsterdam", so we keep
-  // "Street 12, 1083 GV" and drop the city that follows the postcode. Legacy
-  // rows without a postcode lose only a bare ", City".
-  const label = addr
-    ? (addr
-        .replace(/\.\s*$/, "")                                  // stray trailing dot
-        .replace(/(,\s*\d{4}\s*[A-Z]{2})\b[^,]*$/i, "$1")       // drop city after postcode
-        .replace(/,\s*[A-Za-zÀ-ÿ.'\- ]+$/, "")                  // legacy bare ", Amsterdam"
-        .trim() || addr)
-    : t("get_directions");
-  const labelSpan = document.createElement("span");
-  labelSpan.className = "btn-directions-label";
-  labelSpan.textContent = label;
-  a.innerHTML = adsIcon("CrossHair", { size: 13, fill: "white" });
-  a.appendChild(labelSpan);
+  a.innerHTML = `${adsIcon("CrossHair", { size: 13, fill: "white" })}${t("get_directions")}`;
   return a;
 }
 
@@ -2914,19 +2897,6 @@ function renderTipsPage() {
   const disc=document.createElement("div"); disc.className="tp-disclaimer"; disc.textContent=t("tips_disclaimer"); body.appendChild(disc);
 }
 
-// Amsterdam's stadsdelen. A location whose district is set but isn't one of
-// these sits in a neighbouring municipality (Diemen, Uithoorn, Duivendrecht,
-// Ouderkerk aan de Amstel…). Those work a bit differently, so the list groups
-// them at the very bottom, just above the temporarily-closed ones.
-const AMSTERDAM_DISTRICTS = new Set([
-  "centrum", "noord", "oost", "west", "nieuw-west",
-  "zuid", "zuidoost", "zuid-oost", "weesp",
-]);
-function isOutsideAmsterdam(p) {
-  const d = (p?.district || "").trim().toLowerCase();
-  return d !== "" && !AMSTERDAM_DISTRICTS.has(d);
-}
-
 // ── List view ──────────────────────────────────────────────────────────────
 function getListItems() {
   // Koelteplekken only (water taps excluded from list). Inactive locations stay
@@ -2947,14 +2917,9 @@ function getListItems() {
       return getD(a.feature) - getD(b.feature);
     });
   } else {
-    // Sort by open status. Locations outside Amsterdam sink to the bottom of the
-    // list (they work a bit differently) — but only here: with a user position
-    // the distance sort above keeps them in "Near you" where they belong.
+    // Sort by open status
     const ord = { open: 0, unknown: 1, closed: 2 };
     items.sort((a, b) => {
-      const oa = isOutsideAmsterdam(a.feature.properties) ? 1 : 0;
-      const ob = isOutsideAmsterdam(b.feature.properties) ? 1 : 0;
-      if (oa !== ob) return oa - ob;
       const getOrd = f => {
         if (f.properties?.active === false) return 2;
         return ord[getOpenStatus(featureHours(f.properties || {})).status] ?? 1;
