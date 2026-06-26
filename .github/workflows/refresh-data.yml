@@ -123,7 +123,14 @@ jobs:
           # from the sheet (the source of truth), the newest fetch always wins.
           for attempt in 1 2 3 4 5; do
             git fetch -q origin main
-            git reset -q --soft origin/main        # keep our fetched files, re-base on latest
+            # Mixed (not --soft) reset: move HEAD *and* the index to latest main,
+            # leaving only the working tree's freshly-fetched files. A --soft
+            # reset keeps the index from the (possibly stale) initial checkout,
+            # so any source file that changed on main since then would get
+            # committed back at its old version — silently reverting code pushes.
+            # We regenerate data from the sheet (source of truth), so staging
+            # only data/images below is all this commit should ever contain.
+            git reset -q origin/main
             git add -A -- data images/locations
             if git diff --cached --quiet; then
               echo "Already up to date after rebase — nothing to push."; exit 0
