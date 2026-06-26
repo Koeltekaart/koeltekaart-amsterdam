@@ -2314,8 +2314,12 @@ function renderKoelteDetailContent(feature, container) {
   const info = document.createElement("div"); info.className = "detail-panel-info";
   body.appendChild(info);
 
+  // Tag line above the name: category · neighbourhood · district · address.
+  // Strip a trailing ", Amsterdam" from the address — the whole map is
+  // Amsterdam, so it's just noise.
+  const addressText = (p.address || "").replace(/,\s*Amsterdam\s*$/i, "").trim();
   const catLbl = document.createElement("div"); catLbl.className = "dp-cat";
-  catLbl.textContent = [catLabel, locationLabel].filter(Boolean).join(" · ");
+  catLbl.textContent = [catLabel, locationLabel, addressText].filter(Boolean).join(" · ");
 
   const nameEl = document.createElement("div"); nameEl.className = "detail-panel-name";
   nameEl.textContent = p.name || "Koelteplek";
