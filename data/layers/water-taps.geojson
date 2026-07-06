@@ -806,38 +806,6 @@
       "geometry": {
         "type": "Point",
         "coordinates": [
-          4.826664886285802,
-          52.41781577255813
-        ]
-      },
-      "properties": {
-        "OBJECTID": "4992",
-        "Dichtstbijzijnde adres binnen 100 meter": "Nieuwe Hemweg 203 AMSTERDAM",
-        "District": "1",
-        "Eigenaar": "Waternet",
-        "Gemeente": "Amsterdam",
-        "Aangemaakt op": "2019-01-16 01:00:00",
-        "Datum laatste wijziging": "2023-11-15 14:54:09",
-        "Aanlegjaar": "2018.0",
-        "Jaar vervallen of uitgehaald": null,
-        "Nummer": "398998.0",
-        "MSLINK": "717017",
-        "Nauwkeurigheid ligging": "Nauwkeurig",
-        "Postcodewijk_PC4": "1041",
-        "Spuiwijk": "412.0",
-        "Stadsdeel of buurt": "B102",
-        "Status": "Verwijderd",
-        "Subtype afnamepunt": "Delta tappunt",
-        "Symboolhoek": "89",
-        "Type afnamepunt": "Tapplaats",
-        "GLOBALID": "{C7A8FA3E-8169-44B8-AF97-D961CC6594DE}"
-      }
-    },
-    {
-      "type": "Feature",
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
           4.838242043770098,
           52.36642317724634
         ]
@@ -2399,38 +2367,6 @@
         "Symboolhoek": "0",
         "Type afnamepunt": "Tapplaats",
         "GLOBALID": "{5EAD9667-26A7-492C-89F5-DFDE84EA5A41}"
-      }
-    },
-    {
-      "type": "Feature",
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          4.884485929314572,
-          52.33603277910377
-        ]
-      },
-      "properties": {
-        "OBJECTID": "5133",
-        "Dichtstbijzijnde adres binnen 100 meter": "Antonio Vivaldistraat 5B69 AMSTERDAM",
-        "District": "1",
-        "Eigenaar": "Waternet",
-        "Gemeente": "Amsterdam",
-        "Aangemaakt op": "2017-08-11 02:00:00",
-        "Datum laatste wijziging": "2025-06-05 15:17:59",
-        "Aanlegjaar": "2017.0",
-        "Jaar vervallen of uitgehaald": null,
-        "Nummer": "395624.0",
-        "MSLINK": "695419",
-        "Nauwkeurigheid ligging": "Nauwkeurig",
-        "Postcodewijk_PC4": "1083",
-        "Spuiwijk": "832.0",
-        "Stadsdeel of buurt": "W910",
-        "Status": "Verwijderd",
-        "Subtype afnamepunt": "Delta tappunt",
-        "Symboolhoek": "270",
-        "Type afnamepunt": "Tapplaats",
-        "GLOBALID": "{DA6F7481-3FBF-463F-82E9-6F4648143BB9}"
       }
     },
     {
@@ -5510,38 +5446,6 @@
       "geometry": {
         "type": "Point",
         "coordinates": [
-          4.892064904198525,
-          52.35862635599128
-        ]
-      },
-      "properties": {
-        "OBJECTID": "5308",
-        "Dichtstbijzijnde adres binnen 100 meter": "Tweede Weteringplantsoen 10 AMSTERDAM",
-        "District": "2",
-        "Eigenaar": "Waternet",
-        "Gemeente": "Amsterdam",
-        "Aangemaakt op": "2026-01-16 15:28:00",
-        "Datum laatste wijziging": "2026-02-24 10:33:00",
-        "Aanlegjaar": "2014.0",
-        "Jaar vervallen of uitgehaald": "2026.0",
-        "Nummer": "389450.0",
-        "MSLINK": "650137",
-        "Nauwkeurigheid ligging": "Nauwkeurig",
-        "Postcodewijk_PC4": "1017",
-        "Spuiwijk": "174.0",
-        "Stadsdeel of buurt": "A075",
-        "Status": "Verwijderd",
-        "Subtype afnamepunt": "Delta tappunt",
-        "Symboolhoek": "276",
-        "Type afnamepunt": "Tapplaats",
-        "GLOBALID": "{9617B186-DC54-4F36-89BB-E67E40DEE743}"
-      }
-    },
-    {
-      "type": "Feature",
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
           4.889064611620402,
           52.36072113286031
         ]
@@ -7071,38 +6975,6 @@
         "Symboolhoek": "277",
         "Type afnamepunt": "Tapplaats",
         "GLOBALID": "{AF0DEB7F-B809-4FF1-90C7-CFF7D2BA2297}"
-      }
-    },
-    {
-      "type": "Feature",
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          4.953779252646394,
-          52.391599751654184
-        ]
-      },
-      "properties": {
-        "OBJECTID": "5443",
-        "Dichtstbijzijnde adres binnen 100 meter": "Werengouw 85 AMSTERDAM",
-        "District": "2",
-        "Eigenaar": "Waternet",
-        "Gemeente": "Amsterdam",
-        "Aangemaakt op": "2014-06-17 02:00:00",
-        "Datum laatste wijziging": "2023-07-25 14:10:31",
-        "Aanlegjaar": "2014.0",
-        "Jaar vervallen of uitgehaald": null,
-        "Nummer": "387468.0",
-        "MSLINK": "643547",
-        "Nauwkeurigheid ligging": "Nauwkeurig",
-        "Postcodewijk_PC4": "1024",
-        "Spuiwijk": "241.0",
-        "Stadsdeel of buurt": "N681",
-        "Status": "Verwijderd",
-        "Subtype afnamepunt": "Delta tappunt",
-        "Symboolhoek": "66",
-        "Type afnamepunt": "Tapplaats",
-        "GLOBALID": "{ADFA7F51-D684-4971-9F55-6B22467C3269}"
       }
     },
     {
@@ -10054,38 +9926,6 @@
       "geometry": {
         "type": "Point",
         "coordinates": [
-          4.832380534921161,
-          52.36119822685131
-        ]
-      },
-      "properties": {
-        "OBJECTID": "5638",
-        "Dichtstbijzijnde adres binnen 100 meter": "Hermanus van der Tuukhof 484 AMSTERDAM",
-        "District": "1",
-        "Eigenaar": "Waternet",
-        "Gemeente": "Amsterdam",
-        "Aangemaakt op": "2018-01-18 01:00:00",
-        "Datum laatste wijziging": "2024-05-27 13:23:31",
-        "Aanlegjaar": "2018.0",
-        "Jaar vervallen of uitgehaald": null,
-        "Nummer": "396617.0",
-        "MSLINK": "702564",
-        "Nauwkeurigheid ligging": "Nauwkeurig",
-        "Postcodewijk_PC4": "1065",
-        "Spuiwijk": "651.0",
-        "Stadsdeel of buurt": "R851",
-        "Status": "Verwijderd",
-        "Subtype afnamepunt": "Delta tappunt",
-        "Symboolhoek": "359",
-        "Type afnamepunt": "Tapplaats",
-        "GLOBALID": "{3654256D-4E3A-45A3-B8C5-CEAB235443C8}"
-      }
-    },
-    {
-      "type": "Feature",
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
           4.832451129548247,
           52.36796349120679
         ]
@@ -10303,38 +10143,6 @@
         "Symboolhoek": "349",
         "Type afnamepunt": "Tapplaats",
         "GLOBALID": "{70B7D15F-9BBA-40B5-8B67-7D6CCAC707FA}"
-      }
-    },
-    {
-      "type": "Feature",
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          4.788432634480067,
-          52.35081657369544
-        ]
-      },
-      "properties": {
-        "OBJECTID": "5657",
-        "Dichtstbijzijnde adres binnen 100 meter": "Iwan Kantemanplein 26 AMSTERDAM",
-        "District": "1",
-        "Eigenaar": "Waternet",
-        "Gemeente": "Amsterdam",
-        "Aangemaakt op": "2018-06-08 02:00:00",
-        "Datum laatste wijziging": "2022-08-30 09:25:56",
-        "Aanlegjaar": "2018.0",
-        "Jaar vervallen of uitgehaald": null,
-        "Nummer": "396799.0",
-        "MSLINK": "707236",
-        "Nauwkeurigheid ligging": "Nauwkeurig",
-        "Postcodewijk_PC4": "1060",
-        "Spuiwijk": "602.0",
-        "Stadsdeel of buurt": "Q840",
-        "Status": "Verwijderd",
-        "Subtype afnamepunt": "Delta tappunt",
-        "Symboolhoek": "155",
-        "Type afnamepunt": "Tapplaats",
-        "GLOBALID": "{463195D9-30ED-4297-96AC-3C2F63283604}"
       }
     },
     {
@@ -10943,38 +10751,6 @@
         "Symboolhoek": "332",
         "Type afnamepunt": "Tapplaats",
         "GLOBALID": "{BE039894-6F3A-42EC-AEFA-3E4944CEDD15}"
-      }
-    },
-    {
-      "type": "Feature",
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          4.966676314251833,
-          52.40674208175654
-        ]
-      },
-      "properties": {
-        "OBJECTID": "5684",
-        "Dichtstbijzijnde adres binnen 100 meter": "Kerklaan Zunderdorp 36 AMSTERDAM",
-        "District": "2",
-        "Eigenaar": "Waternet",
-        "Gemeente": "Amsterdam",
-        "Aangemaakt op": "2018-05-15 02:00:00",
-        "Datum laatste wijziging": "2021-10-27 10:05:56",
-        "Aanlegjaar": "2018.0",
-        "Jaar vervallen of uitgehaald": null,
-        "Nummer": "397212.0",
-        "MSLINK": "706224",
-        "Nauwkeurigheid ligging": "Nauwkeurig",
-        "Postcodewijk_PC4": "1027",
-        "Spuiwijk": "271.0",
-        "Stadsdeel of buurt": "N736",
-        "Status": "Verwijderd",
-        "Subtype afnamepunt": "Delta tappunt",
-        "Symboolhoek": "18",
-        "Type afnamepunt": "Tapplaats",
-        "GLOBALID": "{3B29521A-D1D5-4C22-AD20-823A727E9823}"
       }
     },
     {
@@ -13254,38 +13030,6 @@
       "geometry": {
         "type": "Point",
         "coordinates": [
-          4.934449525341103,
-          52.37476377431421
-        ]
-      },
-      "properties": {
-        "OBJECTID": "8838",
-        "Dichtstbijzijnde adres binnen 100 meter": null,
-        "District": "2",
-        "Eigenaar": "Waternet",
-        "Gemeente": "Amsterdam",
-        "Aangemaakt op": "2020-10-16 15:24:13",
-        "Datum laatste wijziging": "2023-10-31 10:54:41",
-        "Aanlegjaar": "2020.0",
-        "Jaar vervallen of uitgehaald": null,
-        "Nummer": "395303.0",
-        "MSLINK": "821907",
-        "Nauwkeurigheid ligging": "Nauwkeurig",
-        "Postcodewijk_PC4": "1019",
-        "Spuiwijk": "192.0",
-        "Stadsdeel of buurt": "G332",
-        "Status": "Afgesneden (vervallen of uitgehaald)",
-        "Subtype afnamepunt": "Delta tappunt",
-        "Symboolhoek": "106",
-        "Type afnamepunt": "Tapplaats",
-        "GLOBALID": "{55C4D3F6-1703-4F0F-90BC-DAFEF9F0C400}"
-      }
-    },
-    {
-      "type": "Feature",
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
           4.948032248012302,
           52.3921133295417
         ]
@@ -14726,38 +14470,6 @@
       "geometry": {
         "type": "Point",
         "coordinates": [
-          4.899348214812868,
-          52.34085428464013
-        ]
-      },
-      "properties": {
-        "OBJECTID": "5241",
-        "Dichtstbijzijnde adres binnen 100 meter": "Alblasstraat 66H AMSTERDAM",
-        "District": "1",
-        "Eigenaar": "Waternet",
-        "Gemeente": "Amsterdam",
-        "Aangemaakt op": "2012-05-25 02:00:00",
-        "Datum laatste wijziging": "2022-04-21 15:17:51",
-        "Aanlegjaar": "1995.0",
-        "Jaar vervallen of uitgehaald": null,
-        "Nummer": "154454.0",
-        "MSLINK": "294841",
-        "Nauwkeurigheid ligging": "1001",
-        "Postcodewijk_PC4": "1079",
-        "Spuiwijk": "793.0",
-        "Stadsdeel of buurt": "W543",
-        "Status": "Verwijderd",
-        "Subtype afnamepunt": "Drinkfontein",
-        "Symboolhoek": "39",
-        "Type afnamepunt": "Tapplaats",
-        "GLOBALID": "{83370880-5FEF-4895-8DB4-1EC79A3FA8D8}"
-      }
-    },
-    {
-      "type": "Feature",
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
           4.884382531090514,
           52.3434581548218
         ]
@@ -15871,38 +15583,6 @@
         "Symboolhoek": "252",
         "Type afnamepunt": "Tapplaats",
         "GLOBALID": "{B782961D-5AB2-43AA-98F6-58ED87CCC309}"
-      }
-    },
-    {
-      "type": "Feature",
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          4.895395384711929,
-          52.37418024143982
-        ]
-      },
-      "properties": {
-        "OBJECTID": "5775",
-        "Dichtstbijzijnde adres binnen 100 meter": "Beursplein 15 AMSTERDAM",
-        "District": "2",
-        "Eigenaar": "Waternet",
-        "Gemeente": "Amsterdam",
-        "Aangemaakt op": "2018-03-09 01:00:00",
-        "Datum laatste wijziging": "2021-03-01 14:11:10",
-        "Aanlegjaar": "2018.0",
-        "Jaar vervallen of uitgehaald": "2020.0",
-        "Nummer": "396858.0",
-        "MSLINK": "704339",
-        "Nauwkeurigheid ligging": "Nauwkeurig",
-        "Postcodewijk_PC4": "1012",
-        "Spuiwijk": "123.0",
-        "Stadsdeel of buurt": "A001",
-        "Status": "Verwijderd",
-        "Subtype afnamepunt": "Drinkfontein",
-        "Symboolhoek": "224",
-        "Type afnamepunt": "Tapplaats",
-        "GLOBALID": "{7F95D36C-0545-466C-8A88-17B21C6820C4}"
       }
     },
     {
