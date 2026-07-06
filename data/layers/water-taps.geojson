@@ -5222,38 +5222,6 @@
       "geometry": {
         "type": "Point",
         "coordinates": [
-          4.911163481377734,
-          52.386844004169646
-        ]
-      },
-      "properties": {
-        "OBJECTID": "5296",
-        "Dichtstbijzijnde adres binnen 100 meter": "Laanweg 131 AMSTERDAM",
-        "District": "2",
-        "Eigenaar": "Waternet",
-        "Gemeente": "Amsterdam",
-        "Aangemaakt op": "2015-09-28 02:00:00",
-        "Datum laatste wijziging": "2015-09-30 02:00:00",
-        "Aanlegjaar": "2014.0",
-        "Jaar vervallen of uitgehaald": null,
-        "Nummer": "388605.0",
-        "MSLINK": "663523",
-        "Nauwkeurigheid ligging": "Nauwkeurig",
-        "Postcodewijk_PC4": "1031",
-        "Spuiwijk": "313.0",
-        "Stadsdeel of buurt": "N600",
-        "Status": "In bedrijf",
-        "Subtype afnamepunt": "Delta tappunt",
-        "Symboolhoek": "331",
-        "Type afnamepunt": "Tapplaats",
-        "GLOBALID": "{03662273-1B88-4D7F-BA40-6D3229D0DAAD}"
-      }
-    },
-    {
-      "type": "Feature",
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
           4.915662094864348,
           52.38932007190718
         ]
@@ -5439,38 +5407,6 @@
         "Symboolhoek": "302",
         "Type afnamepunt": "Tapplaats",
         "GLOBALID": "{98989150-C687-41AD-A677-F2CA8FED2D4F}"
-      }
-    },
-    {
-      "type": "Feature",
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          4.911702352498127,
-          52.38734742482426
-        ]
-      },
-      "properties": {
-        "OBJECTID": "5304",
-        "Dichtstbijzijnde adres binnen 100 meter": "Meidoornplein 38 AMSTERDAM",
-        "District": "2",
-        "Eigenaar": "Waternet",
-        "Gemeente": "Amsterdam",
-        "Aangemaakt op": "2018-02-09 01:00:00",
-        "Datum laatste wijziging": "2024-09-25 13:37:08",
-        "Aanlegjaar": "2018.0",
-        "Jaar vervallen of uitgehaald": null,
-        "Nummer": "395613.0",
-        "MSLINK": "703470",
-        "Nauwkeurigheid ligging": "Nauwkeurig",
-        "Postcodewijk_PC4": "1031",
-        "Spuiwijk": "313.0",
-        "Stadsdeel of buurt": "N600",
-        "Status": "Verwijderd",
-        "Subtype afnamepunt": "Delta tappunt",
-        "Symboolhoek": "320",
-        "Type afnamepunt": "Tapplaats",
-        "GLOBALID": "{160CAA8B-0146-4848-8E99-FB02BBE9B887}"
       }
     },
     {
