@@ -244,12 +244,12 @@ const CATEGORY_DEFS = [
   { key: "theater",          label_en: "Theater",          label_nl: "Theater" },
   { key: "Café",             label_en: "Café",             label_nl: "Café" },
   { key: "Hotel",            label_en: "Hotel",            label_nl: "Hotel" },
-  { key: "Stadsarchief",     label_en: "City archive",     label_nl: "Stadsarchief" },
+  { key: "museum",           label_en: "Museum",           label_nl: "Museum" },
   { key: "overig",           label_en: "Other",            label_nl: "Overig" },
 ];
 
-const TYPE_DISPLAY_NL = { library: "Bibliotheek", church: "Kerk", supermarket: "Supermarkt", community_center: "Buurtcentrum", sports: "Sport", theater: "Theater", "Café": "Café", "Hotel": "Hotel", "Stadsarchief": "Stadsarchief", overig: "Overig" };
-const TYPE_DISPLAY_EN = { library: "Library", church: "Church", supermarket: "Supermarket", community_center: "Community centre", sports: "Sports", theater: "Theater", "Café": "Café", "Hotel": "Hotel", "Stadsarchief": "City archive", overig: "Other" };
+const TYPE_DISPLAY_NL = { library: "Bibliotheek", church: "Kerk", supermarket: "Supermarkt", community_center: "Buurtcentrum", sports: "Sport", theater: "Theater", "Café": "Café", "Hotel": "Hotel", museum: "Museum", overig: "Overig" };
+const TYPE_DISPLAY_EN = { library: "Library", church: "Church", supermarket: "Supermarket", community_center: "Community centre", sports: "Sports", theater: "Theater", "Café": "Café", "Hotel": "Hotel", museum: "Museum", overig: "Other" };
 
 const CATEGORY_COLORS = {
   library:          "#004699",  // Amsterdam dark blue
@@ -293,11 +293,15 @@ function getCategoryColor(type) {
 function _ensureCategoryDef(type) {
   if (!type || CATEGORY_DEFS.find(d => d.key === type)) return;
   getCategoryColor(type); // ensure color is assigned
-  CATEGORY_DEFS.push({
+  const def = {
     key:      type,
     label_en: TYPE_DISPLAY_EN[type] || type.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase()),
     label_nl: TYPE_DISPLAY_NL[type] || type.replace(/_/g, " "),
-  });
+  };
+  // Keep "Other" (overig) last: insert new categories before it when present.
+  const otherIdx = CATEGORY_DEFS.findIndex(d => d.key === "overig");
+  if (otherIdx === -1) CATEGORY_DEFS.push(def);
+  else CATEGORY_DEFS.splice(otherIdx, 0, def);
 }
 
 // ── Swimming pool sub-types ────────────────────────────────────────────────
@@ -438,7 +442,7 @@ const TR = {
     contact_submit_title: "Koelteplek aanmelden",
     contact_submit_body: "Kent u een locatie die als koelteplek kan dienen? Neem dan contact op.",
     contact_submit_email_label: "E-mail",
-    contact_submit_email: "pratischa.koirala@amsterdam.nl",
+    contact_submit_email: "hitte@ggd.amsterdam.nl",
     district: "Stadsdeel",
     neighborhood: "Buurt",
     area: "Oppervlakte",
