@@ -2325,61 +2325,67 @@ function renderKoelteDetailContent(feature, container) {
   nameEl.textContent = p.name || "Koelteplek";
   info.append(catLbl, nameEl);
 
-  // Hours to show resolve through the same heat-aware logic as the list badge.
-  const hoursToShow = featureHours(p);
-  // We surface the "heat hours are being shown" note only when the heat plan is
-  // active AND this location actually carries a heat override (else the regular
-  // week is what's displayed and the note would be misleading).
-  const useHeat = state.heatPlanActive && !!p.hours_heat;
+  // Opening times only mean something while the heat plan is active — with the
+  // plan off, locations aren't operating as cooling spots, so the detail panel
+  // shows no open/closed status and no hours section at all (mirrors the list
+  // view, which drops its badges too).
+  if (state.heatPlanActive) {
+    // Hours to show resolve through the same heat-aware logic as the list badge.
+    const hoursToShow = featureHours(p);
+    // We surface the "heat hours are being shown" note only when this location
+    // actually carries a heat override (else the regular week is what's
+    // displayed and the note would be misleading).
+    const useHeat = !!p.hours_heat;
 
-  // ── Open/closed status — rides beside the "Openingstijden" section title ──
-  // A disabled location gets the same pill design as open/closed, but in the
-  // neutral "temporarily closed" style; its live open/closed status would
-  // contradict that, so we don't compute it. The weekly hours still render
-  // below (the usual schedule).
-  // Mirror the list-view badge exactly (it's the source of truth): same
-  // lv-status-badge classes/colours and the same open/closing/closed/temp
-  // states, with the detail view's richer "– closes/opens at" suffix.
-  let statusTag = null;
-  if (p.active === false) {
-    statusTag = document.createElement("span");
-    statusTag.className = "lv-status-badge lv-status-badge--temp-closed dp-status";
-    statusTag.textContent = t("temporarily_closed");
-  } else {
-    const openStatus = getOpenStatus(hoursToShow);
-    if (openStatus.status === "open") {
+    // ── Open/closed status — rides beside the "Openingstijden" section title ──
+    // A disabled location gets the same pill design as open/closed, but in the
+    // neutral "temporarily closed" style; its live open/closed status would
+    // contradict that, so we don't compute it. The weekly hours still render
+    // below (the usual schedule).
+    // Mirror the list-view badge exactly (it's the source of truth): same
+    // lv-status-badge classes/colours and the same open/closing/closed/temp
+    // states, with the detail view's richer "– closes/opens at" suffix.
+    let statusTag = null;
+    if (p.active === false) {
       statusTag = document.createElement("span");
-      const nowM = new Date().getHours() * 60 + new Date().getMinutes();
-      const minsLeft = parseMinutes(openStatus.closesAt) - nowM;
-      if (minsLeft > 0 && minsLeft <= 60) {
-        statusTag.className = "lv-status-badge lv-status-badge--closing dp-status";
-        statusTag.textContent = t("closes_soon") + (openStatus.closesAt ? ` – ${t("closes_at")} ${openStatus.closesAt}` : "");
-      } else {
-        statusTag.className = "lv-status-badge lv-status-badge--open dp-status";
-        statusTag.textContent = t("open_now") + (openStatus.closesAt ? ` – ${t("closes_at")} ${openStatus.closesAt}` : "");
+      statusTag.className = "lv-status-badge lv-status-badge--temp-closed dp-status";
+      statusTag.textContent = t("temporarily_closed");
+    } else {
+      const openStatus = getOpenStatus(hoursToShow);
+      if (openStatus.status === "open") {
+        statusTag = document.createElement("span");
+        const nowM = new Date().getHours() * 60 + new Date().getMinutes();
+        const minsLeft = parseMinutes(openStatus.closesAt) - nowM;
+        if (minsLeft > 0 && minsLeft <= 60) {
+          statusTag.className = "lv-status-badge lv-status-badge--closing dp-status";
+          statusTag.textContent = t("closes_soon") + (openStatus.closesAt ? ` – ${t("closes_at")} ${openStatus.closesAt}` : "");
+        } else {
+          statusTag.className = "lv-status-badge lv-status-badge--open dp-status";
+          statusTag.textContent = t("open_now") + (openStatus.closesAt ? ` – ${t("closes_at")} ${openStatus.closesAt}` : "");
+        }
+      } else if (openStatus.status === "closed") {
+        statusTag = document.createElement("span");
+        statusTag.className = "lv-status-badge lv-status-badge--closed dp-status";
+        let txt = t("closed_now");
+        if (openStatus.opensAt) txt += ` – ${t("opens_at")} ${openStatus.opensAt}`;
+        statusTag.textContent = txt;
       }
-    } else if (openStatus.status === "closed") {
-      statusTag = document.createElement("span");
-      statusTag.className = "lv-status-badge lv-status-badge--closed dp-status";
-      let txt = t("closed_now");
-      if (openStatus.opensAt) txt += ` – ${t("opens_at")} ${openStatus.opensAt}`;
-      statusTag.textContent = txt;
     }
-  }
 
-  // ── Section: Opening hours (status pill rides on the title row) ──
-  const hoursSec = dpSection("Openingstijden", "Opening hours");
-  if (statusTag) hoursSec.querySelector(".dp-section-title").appendChild(statusTag);
-  if (useHeat) {
-    hoursSec.appendChild(adsInfoNote(state.lang === "nl" ? "Hitteplan-openingstijden worden getoond" : "Heat plan opening hours shown"));
+    // ── Section: Opening hours (status pill rides on the title row) ──
+    const hoursSec = dpSection("Openingstijden", "Opening hours");
+    if (statusTag) hoursSec.querySelector(".dp-section-title").appendChild(statusTag);
+    if (useHeat) {
+      hoursSec.appendChild(adsInfoNote(state.lang === "nl" ? "Hitteplan-openingstijden worden getoond" : "Heat plan opening hours shown"));
+    }
+    const hoursBlock = renderHoursBlock(hoursToShow);
+    const statusRow = hoursBlock.querySelector(".hours-status");
+    if (statusRow) statusRow.style.display = "none"; // status shown inline above
+    hoursSec.appendChild(hoursBlock);
+    const hoursNote = localizedField(p, "hours_note");
+    if (hoursNote) hoursSec.appendChild(adsInfoNote(hoursNote));
+    info.appendChild(hoursSec);
   }
-  const hoursBlock = renderHoursBlock(hoursToShow);
-  const statusRow = hoursBlock.querySelector(".hours-status");
-  if (statusRow) statusRow.style.display = "none"; // status shown inline above
-  hoursSec.appendChild(hoursBlock);
-  const hoursNote = localizedField(p, "hours_note");
-  if (hoursNote) hoursSec.appendChild(adsInfoNote(hoursNote));
-  info.appendChild(hoursSec);
 
   // ── Section: Facilities (scannable present/absent grid) ──
   if (AMENITY_DEFS.length) {
@@ -2959,6 +2965,9 @@ function getListItems() {
       const oa = isOutsideAmsterdam(a.feature.properties) ? 1 : 0;
       const ob = isOutsideAmsterdam(b.feature.properties) ? 1 : 0;
       if (oa !== ob) return oa - ob;
+      // With the heat plan off no open/closed status is shown, so ordering by
+      // it would look arbitrary — keep the sheet order (sort is stable).
+      if (!state.heatPlanActive) return 0;
       const getOrd = f => {
         if (f.properties?.active === false) return 2;
         return ord[getOpenStatus(featureHours(f.properties || {})).status] ?? 1;
@@ -3007,12 +3016,17 @@ function buildListItem(feature) {
   const topRow = document.createElement("div"); topRow.className = "lv-top-row";
   const nameEl = document.createElement("span"); nameEl.className = "lv-name";
   nameEl.textContent = p.name || "Koelteplek";
-  const badge = document.createElement("span"); badge.className = "lv-status-badge";
+  // Open/closed only means something while the heat plan is active — with the
+  // plan off no status badge renders. "Temporarily closed" still does: that's a
+  // sheet-level flag on the location, not an opening-times status.
+  let badge = null;
   if (p.active === false) {
     // Disabled in the sheet → its own "temporarily closed" flag, distinct from a
     // location that's merely shut right now. Its real hours still show in detail.
+    badge = document.createElement("span"); badge.className = "lv-status-badge";
     badge.textContent = t("temporarily_closed"); badge.classList.add("lv-status-badge--temp-closed");
-  } else {
+  } else if (state.heatPlanActive) {
+    badge = document.createElement("span"); badge.className = "lv-status-badge";
     const s = getOpenStatus(featureHours(p));
     if (s.status === "open") {
       const nowM = new Date().getHours() * 60 + new Date().getMinutes();
@@ -3063,7 +3077,7 @@ function buildListItem(feature) {
   chevron.className = "lv-chevron";
   chevron.setAttribute("aria-hidden", "true");
   chevron.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path fill-rule="evenodd" clip-rule="evenodd" d="M7.91148 2.5L17.5 12L7.91148 21.5L6.5 20.1016L14.677 12L6.5 3.89845L7.91148 2.5Z"/></svg>';
-  rightCol.append(badge, chevron);
+  rightCol.append(...(badge ? [badge, chevron] : [chevron]));
 
   li.append(photoEl, content, rightCol);
   li.addEventListener("click", () => { focusFeatureOnMap(feature); showKoelteplaatsDetail(feature); });
