@@ -348,43 +348,50 @@
               <span class="lang-en">Location categories</span>
               <span class="filter-section-chevron" aria-hidden="true"><svg class="filter-section-chevron-icon" viewBox="0 0 24 24" fill="currentColor"><path fill-rule="evenodd" clip-rule="evenodd" d="M2.5 7.91148L12 17.5L21.5 7.91148L20.1016 6.5L12 14.677L3.89845 6.5L2.5 7.91148Z"/></svg></span>
             </summary>
-            <!-- Pre-rendered for instant first paint; JS re-binds these and appends any extra categories found in the data. -->
+            <!-- Hard-coded chips; JS only wires their click behaviour (no data-driven categories). -->
             <div id="category-chips" class="category-chips" role="group" aria-label="Filter by category">
               <button class="cat-chip active" data-cat="null" aria-pressed="true"><span class="lang-nl">Alles</span><span class="lang-en">All</span></button>
               <button class="cat-chip" data-cat="library" aria-pressed="false" style="--cat-color:#004699"><span class="cat-chip-dot" style="background:#004699"></span><span class="lang-nl">Bibliotheek</span><span class="lang-en">Library</span></button>
               <button class="cat-chip" data-cat="church" aria-pressed="false" style="--cat-color:#a00078"><span class="cat-chip-dot" style="background:#a00078"></span><span class="lang-nl">Kerk</span><span class="lang-en">Church</span></button>
+              <button class="cat-chip" data-cat="Café" aria-pressed="false" style="--cat-color:#ec0000"><span class="cat-chip-dot" style="background:#ec0000"></span><span class="lang-nl">Café</span><span class="lang-en">Café</span></button>
               <button class="cat-chip" data-cat="supermarket" aria-pressed="false" style="--cat-color:#00893c"><span class="cat-chip-dot" style="background:#00893c"></span><span class="lang-nl">Supermarkt</span><span class="lang-en">Supermarket</span></button>
               <button class="cat-chip" data-cat="community_center" aria-pressed="false" style="--cat-color:#ff9100"><span class="cat-chip-dot" style="background:#ff9100"></span><span class="lang-nl">Buurtcentrum</span><span class="lang-en">Community centre</span></button>
               <button class="cat-chip" data-cat="theater" aria-pressed="false" style="--cat-color:#e50082"><span class="cat-chip-dot" style="background:#e50082"></span><span class="lang-nl">Theater</span><span class="lang-en">Theater</span></button>
+              <button class="cat-chip" data-cat="Hotel" aria-pressed="false" style="--cat-color:#009de6"><span class="cat-chip-dot" style="background:#009de6"></span><span class="lang-nl">Hotel</span><span class="lang-en">Hotel</span></button>
+              <button class="cat-chip" data-cat="museum" aria-pressed="false" style="--cat-color:#bed200"><span class="cat-chip-dot" style="background:#bed200"></span><span class="lang-nl">Museum</span><span class="lang-en">Museum</span></button>
+              <button class="cat-chip" data-cat="overig" aria-pressed="false" style="--cat-color:#202020"><span class="cat-chip-dot" style="background:#202020"></span><span class="lang-nl">Overig</span><span class="lang-en">Other</span></button>
             </div>
           </details>
           <!-- Collapsible: Amenities -->
-          <details class="filter-section-accordion" id="amenity-accordion">
+          <details class="filter-section-accordion" id="amenity-accordion" open>
             <summary class="filter-section-summary">
               <span class="lang-nl">Voorzieningen</span>
               <span class="lang-en">Amenities</span>
               <span class="filter-section-chevron" aria-hidden="true"><svg class="filter-section-chevron-icon" viewBox="0 0 24 24" fill="currentColor"><path fill-rule="evenodd" clip-rule="evenodd" d="M2.5 7.91148L12 17.5L21.5 7.91148L20.1016 6.5L12 14.677L3.89845 6.5L2.5 7.91148Z"/></svg></span>
             </summary>
-            <!-- Pre-rendered for instant first paint; JS re-binds these and unions in any extra amenity flags found in the data. -->
+            <!-- Hard-coded, curated chips; JS only wires their click behaviour (no data-driven amenities). -->
             <div id="filter-chips" class="filter-chips" role="group" aria-label="Filter amenities">
               <button class="filter-chip" data-filter="ac" aria-pressed="false"><span class="lang-nl">Airco</span><span class="lang-en">A/C</span></button>
-              <button class="filter-chip" data-filter="free_water" aria-pressed="false"><span class="lang-nl">Gratis water</span><span class="lang-en">Free water</span></button>
-              <button class="filter-chip" data-filter="seating" aria-pressed="false"><span class="lang-nl">Zitplaatsen</span><span class="lang-en">Seating</span></button>
-              <button class="filter-chip" data-filter="toilets" aria-pressed="false"><span class="lang-nl">Toiletten</span><span class="lang-en">Toilets</span></button>
+              <button class="filter-chip" data-filter="wifi" aria-pressed="false"><span class="lang-nl">Wifi</span><span class="lang-en">Wi-Fi</span></button>
               <button class="filter-chip" data-filter="wheelchair" aria-pressed="false"><span class="lang-nl">Toegankelijk</span><span class="lang-en">Accessible</span></button>
               <button class="filter-chip" data-filter="pets_allowed" aria-pressed="false"><span class="lang-nl">Huisdieren OK</span><span class="lang-en">Pets OK</span></button>
-              <button class="filter-chip" data-filter="food_to_buy" aria-pressed="false"><span class="lang-nl">Eten te koop</span><span class="lang-en">Food nearby</span></button>
-              <button class="filter-chip" data-filter="free_fruit" aria-pressed="false"><span class="lang-nl">Gratis fruit</span><span class="lang-en">Free fruit</span></button>
+              <button class="filter-chip" data-filter="food_to_buy" aria-pressed="false"><span class="lang-nl">Eten te koop</span><span class="lang-en">Food on site</span></button>
               <button class="filter-chip" data-filter="own_food_allowed" aria-pressed="false"><span class="lang-nl">Eigen eten OK</span><span class="lang-en">Own food OK</span></button>
-              <button class="filter-chip" data-filter="supervisor" aria-pressed="false"><span class="lang-nl">Begeleiding</span><span class="lang-en">Staff on-site</span></button>
-              <button class="filter-chip" data-filter="games" aria-pressed="false"><span class="lang-nl">Activiteiten</span><span class="lang-en">Activities</span></button>
             </div>
           </details>
-          <div class="layer-row" data-cat="water_taps" role="switch" aria-checked="false" tabindex="0">
-            <span class="l-dot" style="background:#009de6;"></span>
-            <span class="l-name" data-i18n="water_label">Drinkwaterkranen</span>
-            <span class="l-count" id="cnt-water_taps"></span>
+          <div class="layer-row" data-cat="shade" role="switch" aria-checked="false" tabindex="0">
+            <span class="l-dot" style="background:#004699;"></span>
+            <span class="l-name" data-i18n="shade_label">Loopschaduw</span>
+            <span class="l-count" id="cnt-shade"></span>
             <span class="l-sw" aria-hidden="true"></span>
+          </div>
+          <div class="shade-legend" id="shade-legend" hidden>
+            <div class="shade-slots" id="shade-slots" role="group" aria-label="Tijdstip / Time of day"></div>
+            <div class="shade-scale" aria-hidden="true">
+              <span class="shade-scale-label lang-nl">Schaduw</span><span class="shade-scale-label lang-en">Shade</span>
+              <span class="shade-scale-bar"></span>
+              <span class="shade-scale-label lang-nl">Zon</span><span class="shade-scale-label lang-en">Sun</span>
+            </div>
           </div>
           <div class="layer-row" data-cat="swimming_pools" role="switch" aria-checked="false" tabindex="0">
             <span class="l-dot" style="background:#009de6;"></span>
@@ -414,19 +421,11 @@
             <span class="l-count" id="cnt-parks"></span>
             <span class="l-sw" aria-hidden="true"></span>
           </div>
-          <div class="layer-row" data-cat="shade" role="switch" aria-checked="false" tabindex="0">
-            <span class="l-dot" style="background:#004699;"></span>
-            <span class="l-name" data-i18n="shade_label">Loopschaduw</span>
-            <span class="l-count" id="cnt-shade"></span>
+          <div class="layer-row" data-cat="water_taps" role="switch" aria-checked="false" tabindex="0">
+            <span class="l-dot" style="background:#009de6;"></span>
+            <span class="l-name" data-i18n="water_label">Drinkwaterkranen</span>
+            <span class="l-count" id="cnt-water_taps"></span>
             <span class="l-sw" aria-hidden="true"></span>
-          </div>
-          <div class="shade-legend" id="shade-legend" hidden>
-            <div class="shade-slots" id="shade-slots" role="group" aria-label="Tijdstip / Time of day"></div>
-            <div class="shade-scale" aria-hidden="true">
-              <span class="shade-scale-label lang-nl">Schaduw</span><span class="shade-scale-label lang-en">Shade</span>
-              <span class="shade-scale-bar"></span>
-              <span class="shade-scale-label lang-nl">Zon</span><span class="shade-scale-label lang-en">Sun</span>
-            </div>
           </div>
         </div>
       </div>

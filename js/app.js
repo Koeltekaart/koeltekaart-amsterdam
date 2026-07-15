@@ -189,9 +189,12 @@ const AMENITY_LABELS = {
   food_to_buy:      { en: "Food nearby",   nl: "Eten te koop" },
   free_fruit:       { en: "Free fruit",    nl: "Gratis fruit" },
   own_food_allowed: { en: "Own food OK",   nl: "Eigen eten OK" },
-  supervisor:       { en: "Staff on-site", nl: "Begeleiding" },
+  supervisor:       { en: "Staff on-site", nl: "Medewerker aanwezig" },
   games:            { en: "Activities",    nl: "Activiteiten" },
 };
+// Amenities shown under the "Always available" (Altijd aanwezig) heading in the
+// location detail panel; everything else falls under "Other amenities".
+const ALWAYS_AVAILABLE_KEYS = ["free_water", "seating", "toilets", "supervisor"];
 // Fields that are boolean but NOT amenity tags
 const NON_AMENITY = new Set([
   "id","name","type","municipality","district","neighborhood",
@@ -258,6 +261,9 @@ const CATEGORY_COLORS = {
   community_center: "#ff9100",  // Amsterdam orange
   sports:           "#e50082",  // Amsterdam magenta
   theater:          "#e50082",  // Amsterdam magenta
+  "Café":           "#ec0000",  // Amsterdam red
+  "Hotel":          "#009de6",  // Amsterdam light blue
+  museum:           "#bed200",  // Amsterdam lime
   overig:           "#202020",  // Amsterdam dark grey
   default:          "#004699",  // Amsterdam dark blue
 };
@@ -398,10 +404,13 @@ const TR = {
     closed_now: "Gesloten",
     closes_soon: "Sluit binnenkort",
     temporarily_closed: "Tijdelijk gesloten",
+    cool_open: "Open als koelteplek",
+    cool_closed: "Niet open als koelteplek",
     closes_at: "Sluit om",
     opens_at: "Opent om",
     opens_on: "Opent op",
     hours_unknown: "Openingstijden onbekend",
+    hours_koelteplek_title: "Openingstijden koelteplek",
     get_directions: "Routebeschrijving",
     website_hours: "Website",
     near_you: "In jouw buurt",
@@ -529,14 +538,17 @@ const TR = {
     banner_inactive: "No heat plan active — locations are not available as cooling spots",
     banner_inactive_short: "No heat plan active",
     banner_toggle: "Toggle status",
-    open_now: "Open now",
-    closed_now: "Closed",
+    open_now: "Open",
+    closed_now: "Not open now",
     closes_soon: "Closes soon",
     temporarily_closed: "Temporarily closed",
+    cool_open: "Open as a cooling spot",
+    cool_closed: "Not open as a cooling spot",
     closes_at: "Closes at",
     opens_at: "Opens at",
     opens_on: "Opens on",
     hours_unknown: "Opening hours unknown",
+    hours_koelteplek_title: "Cooling spot opening hours",
     get_directions: "Get directions",
     website_hours: "Website",
     near_you: "Near you",
@@ -727,11 +739,7 @@ function applyLanguage() {
   const langBtn = document.getElementById("btn-lang");
   if (langBtn) langBtn.textContent = state.lang === "nl" ? "EN" : "NL";
   setupCategoryFilter();
-  document.querySelectorAll(".filter-chip[data-filter]").forEach(btn => {
-    const key = btn.dataset.filter;
-    const def = AMENITY_DEFS.find(d => d.key === key);
-    if (def) btn.textContent = state.lang === "nl" ? def.label_nl : def.label_en;
-  });
+  // Amenity chip labels are bilingual spans toggled by CSS — no re-texting needed.
   updateBannerText();
   rebuildFilterChips();
   rebuildSwimmingPoolChips();
@@ -954,6 +962,34 @@ function renderHoursBlock(hours) {
     wrap.appendChild(table);
   }
   return wrap;
+}
+
+/**
+ * Two-column week grid for the detail panel: days flow down the first column
+ * (Mo–Th) then the second (Fr–Su), today highlighted in navy. Mirrors the
+ * reference layout — no status badge (the header pill covers "now").
+ */
+function renderWeekGrid(hours) {
+  const dayShort = state.lang === "nl" ? DAY_SHORT_NL : DAY_SHORT_EN;
+  const closed   = state.lang === "nl" ? "Gesloten" : "Closed";
+  const now = new Date(), todayIdx = (now.getDay()+6)%7;
+  const grid = document.createElement("div"); grid.className = "dp-hours-grid";
+  if (!Array.isArray(hours)) return grid;
+  hours.forEach((slot, i) => {
+    const row = document.createElement("div");
+    row.className = "dp-hours-cell" + (i===todayIdx ? " dp-hours-cell--today" : "");
+    const day  = document.createElement("span"); day.className = "dp-hours-day"; day.textContent = dayShort[i];
+    const time = document.createElement("span");
+    if (slot === HOURS_UNKNOWN) {
+      time.className = "dp-hours-time dp-hours-time--unknown";
+      time.textContent = state.lang === "nl" ? "onbekend" : "unknown";
+    } else {
+      time.className = "dp-hours-time" + (!slot ? " dp-hours-time--closed" : "");
+      time.textContent = slot ? slot.replace("-"," – ") : closed;
+    }
+    row.append(day, time); grid.appendChild(row);
+  });
+  return grid;
 }
 
 // ── Suppress heat pulse during layer rebuild (prevents animation restart flash) ──
@@ -1179,8 +1215,17 @@ function _rowToFeature(row) {
       wheelchair:       csvToBool(row.wheelchair || row.accessible),
       games:            csvToBool(row.games),
       pets_allowed:     csvToBool(row.pets_allowed || row.pets_ok),
+      activities:       _parseActivities(row.activities),
     },
   };
+}
+
+/** Parse an "activities" cell/field into a clean list. Accepts an array (GeoJSON)
+ *  or a comma/semicolon/newline-separated string (CSV). Empty ⇒ []. */
+function _parseActivities(value) {
+  if (Array.isArray(value)) return value.map(v => String(v).trim()).filter(Boolean);
+  if (typeof value === "string") return value.split(/[;,\n]/).map(s => s.trim()).filter(Boolean);
+  return [];
 }
 
 /**
@@ -1302,7 +1347,7 @@ function buildKoelteplekkenLayer(def, data) {
   initAmenities(features);
   _renderKoelteplekkenLayer(def, features);
   refreshListIfActive();
-  setupCategoryFilter(); // rebuild chips so dynamically-added types appear
+  setupCategoryFilter(); // keep hard-coded chips in sync with active state
   renderMobileFilterBar();
 }
 
@@ -1733,58 +1778,62 @@ function decorateLegendIcons() {
 }
 
 // ── Category filter ────────────────────────────────────────────────────────
+// The category chips are hard-coded in index.html (bilingual labels toggled via
+// CSS). We only wire their click behaviour once per chip and keep active state
+// in sync — nothing is rendered or discovered from the data at runtime.
 function setupCategoryFilter() {
   const container = document.getElementById("category-chips");
   if (!container) return;
-  container.innerHTML = "";
-  CATEGORY_DEFS.forEach(def => {
-    const btn = document.createElement("button");
-    const isActive = def.key === null ? state.activeCategories.size === 0 : state.activeCategories.has(def.key);
-    btn.className = "cat-chip" + (isActive ? " active" : "");
-    btn.dataset.cat = String(def.key);
-    btn.setAttribute("aria-pressed", String(isActive));
-    if (def.key !== null) {
-      const dot = document.createElement("span"); dot.className="cat-chip-dot";
-      dot.style.background = getCategoryColor(def.key);
-      btn.appendChild(dot);
-    }
-    const label = document.createElement("span");
-    label.textContent = state.lang==="nl" ? def.label_nl : def.label_en;
-    btn.appendChild(label);
-    if (def.key !== null) btn.style.setProperty("--cat-color", getCategoryColor(def.key));
+  container.querySelectorAll(".cat-chip:not([data-wired])").forEach(btn => {
+    btn.dataset.wired = "1";
     btn.addEventListener("click", () => {
-      if (def.key === null) {
+      const key = btn.dataset.cat === "null" ? null : btn.dataset.cat;
+      if (key === null) {
         state.activeCategories.clear();
       } else {
-        if (state.activeCategories.has(def.key)) state.activeCategories.delete(def.key);
-        else state.activeCategories.add(def.key);
+        if (state.activeCategories.has(key)) state.activeCategories.delete(key);
+        else state.activeCategories.add(key);
       }
-      container.querySelectorAll(".cat-chip").forEach(c => {
-        const k = c.dataset.cat === "null" ? null : c.dataset.cat;
-        const on = k === null ? state.activeCategories.size === 0 : state.activeCategories.has(k);
-        c.classList.toggle("active", on);
-        c.setAttribute("aria-pressed", String(on));
-      });
+      syncCategoryChips();
       rebuildKoelteplekkenLayer();
       renderMobileFilterBar();
     });
-    container.appendChild(btn);
+  });
+  syncCategoryChips();
+}
+
+/** Reflect state.activeCategories onto the hard-coded category chips. */
+function syncCategoryChips() {
+  const container = document.getElementById("category-chips");
+  if (!container) return;
+  container.querySelectorAll(".cat-chip").forEach(c => {
+    const k = c.dataset.cat === "null" ? null : c.dataset.cat;
+    const on = k === null ? state.activeCategories.size === 0 : state.activeCategories.has(k);
+    c.classList.toggle("active", on);
+    c.setAttribute("aria-pressed", String(on));
   });
 }
 
 // ── Amenity filter chips ───────────────────────────────────────────────────
+// The amenity chips are hard-coded in index.html (a curated subset — not every
+// amenity is filterable). We only wire their click behaviour once per chip and
+// keep active state in sync — we don't render them from AMENITY_DEFS.
 function rebuildFilterChips() {
   const container = document.getElementById("filter-chips");
   if (!container) return;
-  container.innerHTML = "";
-  AMENITY_DEFS.filter(d => d.filterable).forEach(def => {
-    const btn = document.createElement("button");
-    btn.className = "filter-chip" + (state.filters[def.key] ? " active" : "");
-    btn.dataset.filter = def.key;
-    btn.setAttribute("aria-pressed", String(!!state.filters[def.key]));
-    btn.textContent = state.lang==="nl" ? def.label_nl : def.label_en;
-    btn.addEventListener("click", () => toggleFilter(def.key, btn));
-    container.appendChild(btn);
+  container.querySelectorAll(".filter-chip:not([data-wired])").forEach(btn => {
+    btn.dataset.wired = "1";
+    btn.addEventListener("click", () => toggleFilter(btn.dataset.filter, btn));
+  });
+  syncFilterChips();
+}
+
+/** Reflect state.filters onto the hard-coded amenity chips. */
+function syncFilterChips() {
+  document.querySelectorAll("#filter-chips .filter-chip").forEach(c => {
+    const on = !!state.filters[c.dataset.filter];
+    c.classList.toggle("active", on);
+    c.setAttribute("aria-pressed", String(on));
   });
 }
 
@@ -1848,13 +1897,7 @@ function renderMobileFilterBar() {
     chip.textContent = state.lang === "nl" ? def.label_nl : def.label_en;
     chip.addEventListener("click", () => {
       state.activeCategories.delete(catKey);
-      const container = document.getElementById("category-chips");
-      if (container) container.querySelectorAll(".cat-chip").forEach(c => {
-        const k = c.dataset.cat === "null" ? null : c.dataset.cat;
-        const on = k === null ? state.activeCategories.size === 0 : state.activeCategories.has(k);
-        c.classList.toggle("active", on);
-        c.setAttribute("aria-pressed", String(on));
-      });
+      syncCategoryChips();
       rebuildKoelteplekkenLayer();
       renderMobileFilterBar();
     });
@@ -2302,112 +2345,129 @@ function renderKoelteDetailContent(feature, container) {
 
   const body = document.createElement("div"); body.className = "detail-panel-body";
 
-  // ── Full-width 16:9 photo ──
-  if (p.photo_url) {
-    const photoWrap = document.createElement("div"); photoWrap.className = "detail-img-full";
+  const cs = coolingSpotStatus(p);
+  const photoSrc = featurePhotoSrc(p);
+
+  // ── Photo: full-bleed banner at the panel top. The back button lives in the
+  //    always-visible panel header, so it isn't overlaid here. ──
+  if (photoSrc) {
+    const photo = document.createElement("div"); photo.className = "loc-hero";
     const img = document.createElement("img");
-    img.src = p.photo_url; img.alt = p.name || "";
-    // If the image genuinely can't load, hide the frame — no broken icon and no
-    // "Foto bekijken" outbound link (we keep users on the page).
-    img.onerror = () => { photoWrap.remove(); };
-    photoWrap.appendChild(img);
-    body.appendChild(photoWrap);
+    img.src = photoSrc; img.alt = p.name || ""; img.loading = "lazy";
+    img.onerror = () => { photo.remove(); };
+    photo.appendChild(img);
+    body.appendChild(photo);
   }
 
   // ── Info section (padded) ──
   const info = document.createElement("div"); info.className = "detail-panel-info";
   body.appendChild(info);
 
-  const catLbl = document.createElement("div"); catLbl.className = "dp-cat";
-  catLbl.textContent = [catLabel, locationLabel].filter(Boolean).join(" · ");
+  // ── Header: name + status pill on one row → subtitle → collapsible
+  //    opening-hours summary + two-column week grid. ──
+  const locTop = document.createElement("div"); locTop.className = "loc-top";
 
+  const head = document.createElement("div"); head.className = "dp-head";
+
+  // Name + subtitle on the left, status pill top-right on the same row. The pill
+  // is the one focal-coloured element: with live hours it shows the colour-coded
+  // open/closed state plus timing (identical to the list view); otherwise it
+  // states the cooling-spot status in neutral grey.
+  const headRow = document.createElement("div"); headRow.className = "dp-head-row";
+  const headInfo = document.createElement("div"); headInfo.className = "dp-head-info";
   const nameEl = document.createElement("div"); nameEl.className = "detail-panel-name";
   nameEl.textContent = p.name || "Koelteplek";
-  info.append(catLbl, nameEl);
+  const subEl = document.createElement("div"); subEl.className = "dp-cat";
+  subEl.textContent = [catLabel, locationLabel].filter(Boolean).join(" · ");
+  headInfo.append(nameEl, subEl);
+  headRow.append(headInfo);
+  // With live opening hours the colour-coded status pill moves down onto the
+  // Openingstijden row (it's a property of the hours). Only the neutral
+  // open/closed fallback — shown when there are no live hours and thus no hours
+  // section — rides here in the header.
+  if (!cs.boxVariant) {
+    const statusBox = document.createElement("span");
+    statusBox.className = "ams-badge ams-badge--neutral";
+    statusBox.textContent = (cs.showHours) ? t("cool_open") : t("cool_closed");
+    headRow.append(statusBox);
+  }
+  head.appendChild(headRow);
 
-  // Opening times only mean something while the heat plan is active — with the
-  // plan off, locations aren't operating as cooling spots, so the detail panel
-  // shows no open/closed status and no hours section at all (mirrors the list
-  // view, which drops its badges too).
-  if (state.heatPlanActive) {
-    // Hours to show resolve through the same heat-aware logic as the list badge.
-    const hoursToShow = featureHours(p);
-    // We surface the "heat hours are being shown" note only when this location
-    // actually carries a heat override (else the regular week is what's
-    // displayed and the note would be misleading).
-    const useHeat = !!p.hours_heat;
+  locTop.appendChild(head);
+  info.appendChild(locTop);
 
-    // ── Open/closed status — rides beside the "Openingstijden" section title ──
-    // A disabled location gets the same pill design as open/closed, but in the
-    // neutral "temporarily closed" style; its live open/closed status would
-    // contradict that, so we don't compute it. The weekly hours still render
-    // below (the usual schedule).
-    // Mirror the list-view badge exactly (it's the source of truth): same
-    // lv-status-badge classes/colours and the same open/closing/closed/temp
-    // states, with the detail view's richer "– closes/opens at" suffix.
-    let statusTag = null;
-    if (p.active === false) {
-      statusTag = document.createElement("span");
-      statusTag.className = "lv-status-badge lv-status-badge--temp-closed dp-status";
-      statusTag.textContent = t("temporarily_closed");
-    } else {
-      const openStatus = getOpenStatus(hoursToShow);
-      if (openStatus.status === "open") {
-        statusTag = document.createElement("span");
-        const nowM = new Date().getHours() * 60 + new Date().getMinutes();
-        const minsLeft = parseMinutes(openStatus.closesAt) - nowM;
-        if (minsLeft > 0 && minsLeft <= 60) {
-          statusTag.className = "lv-status-badge lv-status-badge--closing dp-status";
-          statusTag.textContent = t("closes_soon") + (openStatus.closesAt ? ` – ${t("closes_at")} ${openStatus.closesAt}` : "");
-        } else {
-          statusTag.className = "lv-status-badge lv-status-badge--open dp-status";
-          statusTag.textContent = t("open_now") + (openStatus.closesAt ? ` – ${t("closes_at")} ${openStatus.closesAt}` : "");
-        }
-      } else if (openStatus.status === "closed") {
-        statusTag = document.createElement("span");
-        statusTag.className = "lv-status-badge lv-status-badge--closed dp-status";
-        let txt = t("closed_now");
-        if (openStatus.opensAt) txt += ` – ${t("opens_at")} ${openStatus.opensAt}`;
-        statusTag.textContent = txt;
-      }
-    }
-
-    // ── Section: Opening hours (status pill rides on the title row) ──
-    const hoursSec = dpSection("Openingstijden", "Opening hours");
-    if (statusTag) hoursSec.querySelector(".dp-section-title").appendChild(statusTag);
-    if (useHeat) {
-      hoursSec.appendChild(adsInfoNote(state.lang === "nl" ? "Hitteplan-openingstijden worden getoond" : "Heat plan opening hours shown"));
-    }
-    const hoursBlock = renderHoursBlock(hoursToShow);
-    const statusRow = hoursBlock.querySelector(".hours-status");
-    if (statusRow) statusRow.style.display = "none"; // status shown inline above
-    hoursSec.appendChild(hoursBlock);
-    const hoursNote = localizedField(p, "hours_note");
-    if (hoursNote) hoursSec.appendChild(adsInfoNote(hoursNote));
-    info.appendChild(hoursSec);
+  // Live hours: rendered as a first-class collapsible section — same divider and
+  // title styling as the facility sections below, so the whole panel reads as
+  // one consistent stack. The title row pairs the "Openingstijden" toggle
+  // (label + inline chevron) on the left with the colour-coded status pill on
+  // the right; clicking the toggle expands the collapsed week grid.
+  if (cs.boxVariant) {
+    const sec = document.createElement("div"); sec.className = "dp-section dp-hours-section";
+    const headRow2 = document.createElement("div"); headRow2.className = "dp-hours-head";
+    const summary = document.createElement("button");
+    summary.type = "button"; summary.className = "dp-hours-summary";
+    summary.setAttribute("aria-expanded", "false");
+    const sumText = document.createElement("span"); sumText.className = "dp-section-title-text";
+    // Label the hours as cooling-spot hours (not the venue's regular hours).
+    sumText.textContent = t("hours_koelteplek_title");
+    const chev = document.createElement("span"); chev.className = "dp-hours-chevron";
+    chev.innerHTML = adsIcon("ChevronDown", { size: 13, fill: "currentColor" });
+    summary.append(sumText, chev);
+    const statusBox = document.createElement("span");
+    statusBox.className = "ams-badge ams-badge--" + cs.boxVariant;
+    statusBox.textContent = cs.boxText;
+    headRow2.append(summary, statusBox);
+    const grid = renderWeekGrid(featureHours(p));
+    grid.hidden = true;
+    summary.addEventListener("click", () => {
+      const expanded = summary.getAttribute("aria-expanded") === "true";
+      summary.setAttribute("aria-expanded", String(!expanded));
+      grid.hidden = expanded;
+    });
+    sec.append(headRow2, grid);
+    info.appendChild(sec);
   }
 
-  // ── Section: Facilities (scannable present/absent grid) ──
+  // ── Facilities — split into "always available" (the core set every cooling
+  //    spot is expected to have) and "other amenities" (everything else). ──
   if (AMENITY_DEFS.length) {
-    const items = AMENITY_DEFS.filter(d => d.filterable && (p[d.key] === true || p[d.key] === false));
-    if (items.length) {
-      const amSec = dpSection("Voorzieningen", "Facilities");
-      const grid = document.createElement("div"); grid.className = "dp-amenity-grid";
-      items
-        .sort((a, b) => (p[b.key] === true) - (p[a.key] === true)) // present first
-        .forEach(def => {
-          const has = p[def.key] === true;
-          const item = document.createElement("div"); item.className = "dp-amenity " + (has ? "has" : "no");
-          const ic = document.createElement("span"); ic.className = "dp-amenity-ic";
-          ic.innerHTML = adsIcon(has ? "CheckMark" : "Close", { size: 11 });
-          const lbl = document.createElement("span"); lbl.className = "dp-amenity-lbl";
-          lbl.textContent = state.lang === "nl" ? def.label_nl : def.label_en;
-          item.append(ic, lbl);
-          grid.appendChild(item);
-        });
-      amSec.appendChild(grid);
-      info.appendChild(amSec);
+    const hasVal = def => p[def.key] === true || p[def.key] === false;
+
+    // Always available: a guaranteed baseline every cooling spot provides, so we
+    // render the whole fixed set as present regardless of the data (these aren't
+    // all backed by columns — e.g. staff-on-site).
+    const alwaysItems = ALWAYS_AVAILABLE_KEYS
+      .map(k => AMENITY_DEFS.find(d => d.key === k))
+      .filter(Boolean);
+    if (alwaysItems.length) {
+      const sec = dpSection("Altijd aanwezig", "Always available");
+      sec.appendChild(dpAmenityGrid(alwaysItems, p, { forceAllPresent: true }));
+      info.appendChild(sec);
     }
+
+    // Other amenities: everything not in the always-available set (present-first).
+    const extraItems = AMENITY_DEFS.filter(d =>
+      d.filterable && hasVal(d) && !ALWAYS_AVAILABLE_KEYS.includes(d.key));
+    if (extraItems.length) {
+      const sec = dpSection("Extra voorzieningen", "Other amenities");
+      sec.appendChild(dpAmenityGrid(extraItems, p, { sortPresentFirst: true }));
+      info.appendChild(sec);
+    }
+  }
+
+  // ── Section: Activities (concrete list) — only when the data provides them.
+  //    We don't have this data yet, so this stays hidden until an "activities"
+  //    field appears; the yes/no "Activities" flag lives under Other amenities. ──
+  if (Array.isArray(p.activities) && p.activities.length) {
+    const sec = dpSection("Activiteiten", "Activities");
+    const list = document.createElement("ul"); list.className = "dp-activity-list";
+    p.activities.forEach(name => {
+      const li = document.createElement("li"); li.className = "dp-activity";
+      li.textContent = name;
+      list.appendChild(li);
+    });
+    sec.appendChild(list);
+    info.appendChild(sec);
   }
 
   // ── Section: About this place (free-text notes) ──
@@ -2425,7 +2485,7 @@ function renderKoelteDetailContent(feature, container) {
   if (p.website_url) {
     const a = document.createElement("a");
     a.className = "btn-website"; a.href = p.website_url; a.target = "_blank"; a.rel = "noopener noreferrer";
-    a.innerHTML = `${adsIcon("MapMarkerOnMap", { size: 13, fill: "white" })}${t("website_hours")}`;
+    a.innerHTML = `${adsIcon("MapMarkerOnMap", { size: 13, fill: "currentColor" })}${t("website_hours")}`;
     actions.appendChild(a);
   }
   const [lon, lat] = feature.geometry.coordinates;
@@ -2435,7 +2495,101 @@ function renderKoelteDetailContent(feature, container) {
   container.appendChild(body);
 }
 
+/** Build a present/absent amenity grid (check/cross) for the detail panel.
+ *  @param {Array} items - amenity defs to render.
+ *  @param {Object} p - feature properties.
+ *  @param {Object} [opts]
+ *  @param {boolean} [opts.sortPresentFirst] - when true, present amenities sort ahead.
+ *  @param {boolean} [opts.forceAllPresent] - when true, every item renders as present
+ *    (used by "Always available", which is a guaranteed baseline, not data-driven). */
+function dpAmenityGrid(items, p, { sortPresentFirst = false, forceAllPresent = false } = {}) {
+  const grid = document.createElement("div"); grid.className = "dp-amenity-grid";
+  const ordered = sortPresentFirst
+    ? [...items].sort((a, b) => (p[b.key] === true) - (p[a.key] === true))
+    : items;
+  ordered.forEach(def => {
+    const has = forceAllPresent || p[def.key] === true;
+    const item = document.createElement("div"); item.className = "dp-amenity " + (has ? "has" : "no");
+    const ic = document.createElement("span"); ic.className = "dp-amenity-ic";
+    ic.innerHTML = adsIcon(has ? "CheckMark" : "Close", { size: 11 });
+    const lbl = document.createElement("span"); lbl.className = "dp-amenity-lbl";
+    lbl.textContent = state.lang === "nl" ? def.label_nl : def.label_en;
+    item.append(ic, lbl);
+    grid.appendChild(item);
+  });
+  return grid;
+}
+
 /** Small labelled section wrapper used in the detail panel. */
+/**
+ * Resolve a location's "open as a cooling spot" status, folding together the
+ * three things that decide it: the heat plan (the master switch), the
+ * per-location `active` flag (is it taking part), and today's opening hours.
+ *
+ * The cooling-spot answer is the headline shown by the name; the opening-hours
+ * strings are supporting detail. A spot only counts as open when the plan is on
+ * AND it participates AND it's within its hours right now.
+ *
+ * @param {Object} p - Feature properties.
+ * @returns {{showHours:boolean, open:boolean, closingSoon:boolean,
+ *            hoursStatus:("open"|"closing"|"closed"|"unknown"|null),
+ *            boxText:string|null, boxVariant:("green"|"orange"|"red"|null)}}
+ */
+/**
+ * Local (de-Googled) photo path for a location. Photos live at
+ * images/locations/<id>.jpg — keyed by the same slug as p.id — so we serve
+ * those directly instead of the Drive/Google-CDN links in the sheet's
+ * photo_url (which don't render in-browser). Returns null when no photo exists.
+ * @param {Object} p - Feature properties.
+ * @returns {string|null}
+ */
+function featurePhotoSrc(p) {
+  // TEMPORARILY DISABLED (de-Google migration paused): local repo-hosted images.
+  // While the local-image path is off, fall back to the resolved photo_url
+  // (Drive links are already rewritten to lh3.googleusercontent.com/d/<id> by
+  // _resolvePhotoUrl, so they render in-browser). To restore the de-Googled
+  // behavior, re-enable the line below and remove the fallback return.
+  // return (p.photo_url && p.id) ? `images/locations/${p.id}.jpg` : null;
+  return p.photo_url || null;
+}
+
+function coolingSpotStatus(p) {
+  const participating = p.active !== false;
+  // Opening hours only mean "cooling-spot hours" while the plan is on; a
+  // withdrawn spot shows no hours at all.
+  const showHours = state.heatPlanActive && participating;
+  let open = false, closingSoon = false;
+  // The opening-hours status as one colour-coded, single-line box, shown both in
+  // the list and (identically) as the detail-panel status pill:
+  //   green "Open · sluit 22:00" · orange "Sluit binnenkort · 18:00" ·
+  //   red "Niet open nu · opent 09:00". Unknown hours → no box (boxVariant null).
+  let hoursStatus = null, boxText = null, boxVariant = null;
+
+  if (showHours) {
+    const s = getOpenStatus(featureHours(p));
+    if (s.status === "open") {
+      open = true;
+      const nowM = new Date().getHours() * 60 + new Date().getMinutes();
+      const minsLeft = parseMinutes(s.closesAt) - nowM;
+      closingSoon = minsLeft > 0 && minsLeft <= 60;
+      if (closingSoon) {
+        hoursStatus = "closing"; boxVariant = "orange";
+        boxText = t("closes_soon") + (s.closesAt ? ` · ${s.closesAt}` : "");
+      } else {
+        hoursStatus = "open"; boxVariant = "green";
+        boxText = t("open_now") + (s.closesAt ? ` · ${t("closes_at")} ${s.closesAt}` : "");
+      }
+    } else if (s.status === "closed") {
+      hoursStatus = "closed"; boxVariant = "red";
+      boxText = t("closed_now") + (s.opensAt ? ` · ${t("opens_at")} ${s.opensAt}` : "");
+    } else {
+      hoursStatus = "unknown"; // hours unparseable → no box
+    }
+  }
+
+  return { showHours, open, closingSoon, hoursStatus, boxText, boxVariant };
+}
+
 function dpSection(titleNl, titleEn) {
   const sec = document.createElement("div"); sec.className = "dp-section";
   const h = document.createElement("div"); h.className = "dp-section-title";
@@ -3001,9 +3155,10 @@ function buildListItem(feature) {
     initial.style.color = color;
     photoEl.appendChild(initial);
   };
-  if (p.photo_url) {
+  const lvPhotoSrc = featurePhotoSrc(p);
+  if (lvPhotoSrc) {
     const img = document.createElement("img");
-    img.src = p.photo_url; img.alt = ""; img.loading = "lazy";
+    img.src = lvPhotoSrc; img.alt = ""; img.loading = "lazy";
     img.onerror = () => { photoEl.innerHTML = ""; _placeholder(); };
     photoEl.appendChild(img);
   } else {
@@ -3016,70 +3171,62 @@ function buildListItem(feature) {
   const topRow = document.createElement("div"); topRow.className = "lv-top-row";
   const nameEl = document.createElement("span"); nameEl.className = "lv-name";
   nameEl.textContent = p.name || "Koelteplek";
-  // Open/closed only means something while the heat plan is active — with the
-  // plan off no status badge renders. "Temporarily closed" still does: that's a
-  // sheet-level flag on the location, not an opening-times status.
-  let badge = null;
-  if (p.active === false) {
-    // Disabled in the sheet → its own "temporarily closed" flag, distinct from a
-    // location that's merely shut right now. Its real hours still show in detail.
-    badge = document.createElement("span"); badge.className = "lv-status-badge";
-    badge.textContent = t("temporarily_closed"); badge.classList.add("lv-status-badge--temp-closed");
-  } else if (state.heatPlanActive) {
-    badge = document.createElement("span"); badge.className = "lv-status-badge";
-    const s = getOpenStatus(featureHours(p));
-    if (s.status === "open") {
-      const nowM = new Date().getHours() * 60 + new Date().getMinutes();
-      const minsLeft = parseMinutes(s.closesAt) - nowM;
-      if (minsLeft > 0 && minsLeft <= 60) {
-        badge.textContent = t("closes_soon"); badge.classList.add("lv-status-badge--closing");
-      } else {
-        badge.textContent = t("open_now"); badge.classList.add("lv-status-badge--open");
-      }
-    } else if (s.status === "closed") {
-      badge.textContent = t("closed_now"); badge.classList.add("lv-status-badge--closed");
-    } else {
-      badge.textContent = t("lv_unknown"); badge.classList.add("lv-status-badge--unknown");
+  // Status box: one line, inline on the name row, only while the heat plan is
+  // active (off-season the banner carries it). With the plan on every listed
+  // spot is a cooling spot, so we don't restate that — participating spots show
+  // a colour-coded opening-hours box (green/orange/red); unknown hours show no
+  // box; only a withdrawn spot gets the neutral "Niet open als koelteplek".
+  let statusBox = null;
+  if (state.heatPlanActive) {
+    const cs = coolingSpotStatus(p);
+    if (p.active === false) {
+      statusBox = document.createElement("span");
+      statusBox.className = "ams-badge ams-badge--neutral";
+      statusBox.textContent = t("cool_closed");
+    } else if (cs.boxVariant) {
+      statusBox = document.createElement("span");
+      statusBox.className = "ams-badge ams-badge--" + cs.boxVariant;
+      statusBox.textContent = cs.boxText;
     }
   }
-  topRow.append(nameEl);
+  topRow.append(...[nameEl, statusBox].filter(Boolean));
 
   // Meta: type + neighbourhood
   const meta = document.createElement("div"); meta.className = "lv-meta";
   meta.textContent = [typeLabel, p.neighborhood].filter(Boolean).join(" · ");
 
-  // Footer: distance (if near-me) + amenity pills
+  // Footer: amenity info on the left, a blue "opens detail" affordance sitting
+  // in the bottom-right corner (signals each row opens a detail view).
   const footer = document.createElement("div"); footer.className = "lv-footer";
+  const amen = document.createElement("div"); amen.className = "lv-amenities";
   if (state.userPos && feature.geometry?.type === "Point") {
     const [lo, la] = feature.geometry.coordinates;
     const dist = haversine(state.userPos.lat, state.userPos.lon, la, lo);
     const distEl = document.createElement("span"); distEl.className = "lv-dist";
     distEl.textContent = fmtDist(dist);
-    footer.appendChild(distEl);
+    amen.appendChild(distEl);
   }
-  const trueAmenities = AMENITY_DEFS.filter(d => p[d.key] === true);
+  // Exclude the "always available" core set — every spot has those, so showing
+  // them as amenity pills is redundant noise; surface only distinguishing ones.
+  const trueAmenities = AMENITY_DEFS.filter(d => p[d.key] === true && !ALWAYS_AVAILABLE_KEYS.includes(d.key));
   trueAmenities.slice(0, 3).forEach(def => {
     const pill = document.createElement("span"); pill.className = "lv-amenity";
     pill.textContent = state.lang === "nl" ? def.label_nl : def.label_en;
-    footer.appendChild(pill);
+    amen.appendChild(pill);
   });
   if (trueAmenities.length > 3) {
     const more = document.createElement("span"); more.className = "lv-amenity lv-amenity--more";
     more.textContent = `+${trueAmenities.length - 3}`;
-    footer.appendChild(more);
+    amen.appendChild(more);
   }
+  const cta = document.createElement("span"); cta.className = "lv-cta";
+  cta.setAttribute("aria-hidden", "true");
+  cta.innerHTML = adsIcon("ChevronForward", { size: 15, fill: "currentColor" });
+  footer.append(amen, cta);
 
   content.append(topRow, meta, footer);
 
-  // Right column — status badge on top, click chevron below it
-  const rightCol = document.createElement("div"); rightCol.className = "lv-right";
-  const chevron = document.createElement("span");
-  chevron.className = "lv-chevron";
-  chevron.setAttribute("aria-hidden", "true");
-  chevron.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path fill-rule="evenodd" clip-rule="evenodd" d="M7.91148 2.5L17.5 12L7.91148 21.5L6.5 20.1016L14.677 12L6.5 3.89845L7.91148 2.5Z"/></svg>';
-  rightCol.append(...(badge ? [badge, chevron] : [chevron]));
-
-  li.append(photoEl, content, rightCol);
+  li.append(photoEl, content);
   li.addEventListener("click", () => { focusFeatureOnMap(feature); showKoelteplaatsDetail(feature); });
   li.addEventListener("keydown", e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); li.click(); } });
   return li;
