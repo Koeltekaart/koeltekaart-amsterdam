@@ -3324,6 +3324,11 @@ function renderListView() {
 }
 
 function isListViewActive() {
+  // In detail mode the list is never the active view — on mobile the detail
+  // panel reuses the #list-view element as its container, so checking .hidden
+  // alone would wrongly report the list as active and let a background refresh
+  // (e.g. a live geolocation update) clobber the open detail view.
+  if (state.panelMode === "detail") return false;
   if (isDesktop()) return state.panelMode === "list";
   const el = document.getElementById("list-view");
   return el && !el.hidden;
