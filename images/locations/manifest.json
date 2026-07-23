@@ -11,10 +11,6 @@
     "file": "images/locations/albert-heijn-bijlmerplein.jpg",
     "src": "1OfQm5IxCEA7ZYhEVZJFNmwoIpmO9VPmU"
   },
-  "albert-heijn-xl": {
-    "file": "images/locations/albert-heijn-xl.jpg",
-    "src": "1OJNP01mPKYe-sP29b4qzG9oJTmqC9PV2"
-  },
   "amc-sport-centrum-asc": {
     "file": "images/locations/amc-sport-centrum-asc.jpg",
     "src": "1vQcy6pOl7Y2yLBP2wlTZS6WyCNCa4ouS"
@@ -43,18 +39,6 @@
     "file": "images/locations/avani-museum-quarter.jpg",
     "src": "1OWBanZF8g9Ht-EuNcr9PxcXUtVWGwbzq"
   },
-  "bibliotheek-uithoorn": {
-    "file": "images/locations/bibliotheek-uithoorn.jpg",
-    "src": "1-bGYs8YNoVtwULPEMhkoMSFX5ICUfY_s"
-  },
-  "buurtkamer-de-kuyper": {
-    "file": "images/locations/buurtkamer-de-kuyper.jpg",
-    "src": "17BeknGZTk9WQbGFn2y7O0Akhd2g-k6GA"
-  },
-  "buurtkamer-meerwijk-het-fort-aan-de-drecht": {
-    "file": "images/locations/buurtkamer-meerwijk-het-fort-aan-de-drecht.jpg",
-    "src": "1zoUaGY8SDjXORTX2SvCQV4nk0V_aDVfY"
-  },
   "caf-groenhoven": {
     "file": "images/locations/caf-groenhoven.jpg",
     "src": "16Y8YVdwkAo8HeH8b8uYKSUB3vdVrAzoX"
@@ -79,10 +63,6 @@
     "file": "images/locations/die-port-van-cleve.jpg",
     "src": "1vpgyVe_CXnm3yupKaNqNsoTWUUfuJTfl"
   },
-  "dorpshuis-duivendrecht": {
-    "file": "images/locations/dorpshuis-duivendrecht.jpg",
-    "src": "1e0bpgRPNNnMF_FFRIApSnB254uPOad_N"
-  },
   "dynamo-ernst": {
     "file": "images/locations/dynamo-ernst.jpg",
     "src": "1qorOvkgMog8JozGYPKzYM0qp7xTna4yr"
@@ -94,10 +74,6 @@
   "het-eeco": {
     "file": "images/locations/het-eeco.jpg",
     "src": "1kIMy2Fm74dZ-fwljTP83TKI3bhJuZpBl"
-  },
-  "het-gemeentehuis-diemen": {
-    "file": "images/locations/het-gemeentehuis-diemen.jpg",
-    "src": "1YGuVs8t-WDZswdH-xOPdnWW77vzeDtZu"
   },
   "hotel-casa": {
     "file": "images/locations/hotel-casa.jpg",
@@ -135,14 +111,6 @@
     "file": "images/locations/huis-van-de-wijk-waterlandplein.jpg",
     "src": "1s2W3yGy_OOIR_oqX3cCQjRCeQIr9c4sR"
   },
-  "jumbo": {
-    "file": "images/locations/jumbo.jpg",
-    "src": "19vpqwEfGuXbf9piIBdBtzmr0bcbvyNXz"
-  },
-  "jumbo-ouderkerk-aan-de-amstel-sluisplein": {
-    "file": "images/locations/jumbo-ouderkerk-aan-de-amstel-sluisplein.jpg",
-    "src": "14xViHHR54w4BmAaVoV4buNSQUmtcPC0T"
-  },
   "kerk-de-ark": {
     "file": "images/locations/kerk-de-ark.jpg",
     "src": "1epflix1UpRKaoJVf_DaZodJts9kaNGhC"
@@ -162,10 +130,6 @@
   "mercure-amsterdam-city-hotel": {
     "file": "images/locations/mercure-amsterdam-city-hotel.jpg",
     "src": "1p8dGjWGNFYKiAKvTyInbcdhWiDXE2Wnp"
-  },
-  "mfa-de-scheg": {
-    "file": "images/locations/mfa-de-scheg.jpg",
-    "src": "1ra1OzsIpZUCCrbuQw7nY2YrnHb_JwjYc"
   },
   "muna-caf-kringloop": {
     "file": "images/locations/muna-caf-kringloop.jpg",
@@ -259,10 +223,6 @@
     "file": "images/locations/poolbar-de-gracht.jpg",
     "src": "17QbE7k9cNLPsaRvLYCEKklRmqJ62fGFs"
   },
-  "spar-city-diemen": {
-    "file": "images/locations/spar-city-diemen.jpg",
-    "src": "18_v-VT3lLxfmlfMbvyfkXDOdychAxtmQ"
-  },
   "stadsarchief": {
     "file": "images/locations/stadsarchief.jpg",
     "src": "1Xr5oz9SdhHgI0EMan_iviyQWqHIgDfhF"
@@ -274,10 +234,6 @@
   "stayokay-amsterdam-oost": {
     "file": "images/locations/stayokay-amsterdam-oost.jpg",
     "src": "1geMVv1eiOtm88lmXDfDpqnqS0BFsyXZ8"
-  },
-  "stichting-dorpshuis-de-kwakel": {
-    "file": "images/locations/stichting-dorpshuis-de-kwakel.jpg",
-    "src": "1aaGz_tyucng61-ZF33f1cYIRUBsNPwVQ"
   },
   "stichting-midwest": {
     "file": "images/locations/stichting-midwest.jpg",
@@ -303,17 +259,9 @@
     "file": "images/locations/the-social-hub-amsterdam-west.jpg",
     "src": "1a2QG5pFcmDfRS9OCNJFo21ZVVUnkuV0_"
   },
-  "theater-de-omval": {
-    "file": "images/locations/theater-de-omval.jpg",
-    "src": "1O1Ij4qM2A1l0lc_nJJ-dxDypYQyLlvQp"
-  },
   "unmanageable-artists": {
     "file": "images/locations/unmanageable-artists.jpg",
     "src": "1GXz9Qn_zJizWVGZfOpWxhlkOjP6ZhEz5"
-  },
-  "vomar-voordeelmarkt": {
-    "file": "images/locations/vomar-voordeelmarkt.jpg",
-    "src": "1ZmTYVObIiLpf0hk-u35pSWvKnLrjUIPr"
   },
   "westcord-art-hotel": {
     "file": "images/locations/westcord-art-hotel.jpg",
@@ -326,13 +274,5 @@
   "weteringskerk": {
     "file": "images/locations/weteringskerk.jpg",
     "src": "1BcPl6M46wlwx7rhJ5ajaav1ZVkpTTZoB"
-  },
-  "wijkcentrum-bilderdijkhof": {
-    "file": "images/locations/wijkcentrum-bilderdijkhof.jpg",
-    "src": "1nbX1a_ZT6sTGWWwqZZDV7I4VbSMYwfZ3"
-  },
-  "winkelcentrum-zijdelwaard": {
-    "file": "images/locations/winkelcentrum-zijdelwaard.jpg",
-    "src": "1logfLo-l6MtTDbj3AttT3VTA7S9vwBNP"
   }
 }
