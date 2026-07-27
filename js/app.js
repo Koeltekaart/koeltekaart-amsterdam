@@ -190,7 +190,18 @@ const AMENITY_LABELS = {
   free_fruit:       { en: "Free fruit",    nl: "Gratis fruit" },
   own_food_allowed: { en: "Own food OK",   nl: "Eigen eten OK" },
   supervisor:       { en: "Staff on-site", nl: "Medewerker aanwezig" },
-  games:            { en: "Activities",    nl: "Activiteiten" },
+  // `games` was mislabeled "Activities/Activiteiten"; the concrete-list field
+  // `activities` now owns that label, so `games` becomes Vermaak/Entertainment.
+  games:            { en: "Entertainment",     nl: "Vermaak" },
+  // Criteria 2.0 amenities. Inert until the source CSV carries these columns
+  // (empty/absent cells → csvToBool null → excluded from the detail panel),
+  // so staging them ahead of the mothersheet is safe.
+  accessible_toilet:{ en: "Accessible toilet", nl: "Invalidetoilet" },
+  loungers:         { en: "Loungers",          nl: "Ligplekken" },
+  child_friendly:   { en: "Child-friendly",    nl: "Kindvriendelijk" },
+  cooling_items:    { en: "Cooling items",     nl: "Verkoelende voorwerpen" },
+  free_consumption: { en: "Free refreshments", nl: "Gratis consumptie" },
+  cool_outdoor:     { en: "Cool outdoor area", nl: "Koele buitenplek" },
 };
 // Amenities shown under the "Always available" (Altijd aanwezig) heading in the
 // location detail panel; everything else falls under "Other amenities".
@@ -253,6 +264,46 @@ const CATEGORY_DEFS = [
 
 const TYPE_DISPLAY_NL = { library: "Bibliotheek", church: "Kerk", supermarket: "Supermarkt", community_center: "Buurtcentrum", sports: "Sport", theater: "Theater", "Café": "Café", "Hotel": "Hotel", museum: "Museum", overig: "Overig" };
 const TYPE_DISPLAY_EN = { library: "Library", church: "Church", supermarket: "Supermarket", community_center: "Community centre", sports: "Sports", theater: "Theater", "Café": "Café", "Hotel": "Hotel", museum: "Museum", overig: "Other" };
+
+/** Fold a type string to a comparison key: lowercase, diacritics stripped, all
+ *  punctuation/whitespace removed. "Café" / "cafe" / "Community centre" /
+ *  "community_center" all collapse onto a single comparable token. */
+function _foldType(s) {
+  return String(s || "")
+    .toLowerCase()
+    .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9]+/g, "");
+}
+
+// Accept the canonical key, its Dutch label, or its English label as the `type`
+// cell in the source data — the internal workbook is maintained in Dutch, so a
+// row may legitimately say "Supermarkt" rather than "supermarket". Built from
+// TYPE_DISPLAY_* so a new category needs no second edit here. Extra synonyms
+// cover wording the workbook uses that isn't the display label.
+const TYPE_ALIASES = (() => {
+  const index = {};
+  for (const key of Object.keys(TYPE_DISPLAY_NL)) {
+    index[_foldType(key)]               = key;
+    index[_foldType(TYPE_DISPLAY_NL[key])] = key;
+    index[_foldType(TYPE_DISPLAY_EN[key])] = key;
+  }
+  const synonyms = {
+    buurthuis: "community_center", wijkcentrum: "community_center",
+    dorpshuis: "community_center", sportcentrum: "sports", sporthal: "sports",
+    bibliotheek: "library", oba: "library", moskee: "church", kerkgebouw: "church",
+    restaurant: "Café", horeca: "Café", anders: "overig", overige: "overig", other: "overig",
+  };
+  for (const [alias, key] of Object.entries(synonyms)) index[_foldType(alias)] = key;
+  return index;
+})();
+
+/** Map a raw `type` cell onto its canonical key. Unrecognised values pass
+ *  through untouched, so a genuinely new category still auto-registers. */
+function normalizeType(raw) {
+  const text = String(raw || "").trim();
+  if (!text) return "";
+  return TYPE_ALIASES[_foldType(text)] || text;
+}
 
 const CATEGORY_COLORS = {
   library:          "#004699",  // Amsterdam dark blue
@@ -360,7 +411,6 @@ const TR = {
     search_placeholder: "Zoek straat, buurt of locatie…",
     search_placeholder_medium: "Zoek locatie…",
     search_placeholder_short: "Zoeken…",
-    near_me: "In mijn buurt",
     stay_cool: "Blijf koel",
     heat_advice_btn: "Hitteadvies",
     back: "Terug",
@@ -415,7 +465,11 @@ const TR = {
     website_hours: "Website",
     near_you: "In jouw buurt",
     other_locations: "Andere locaties",
-    no_near_results: "Geen locaties gevonden, probeer het later opnieuw.",
+    no_near_results: "Geen locaties binnen 500 m van je.",
+    near_me: "In mijn buurt",
+    near_me_recenter: "Centreer op mijn locatie",
+    near_me_blocked: "Locatie is geblokkeerd. Sta het toe via het slotje in de adresbalk → Locatie.",
+    near_me_unavailable: "Locatie is niet beschikbaar op dit apparaat.",
     no_search_results: "Geen resultaten gevonden in Amsterdam",
     tips_page_title: "Blijf koel",
     tips_page_subtitle: "Tips voor warme dagen van GGD Amsterdam",
@@ -498,7 +552,6 @@ const TR = {
     search_placeholder: "Search street, neighbourhood or place…",
     search_placeholder_medium: "Search place…",
     search_placeholder_short: "Search…",
-    near_me: "Near me",
     stay_cool: "Stay cool",
     heat_advice_btn: "Heat advice",
     back: "Back",
@@ -553,7 +606,11 @@ const TR = {
     website_hours: "Website",
     near_you: "Near you",
     other_locations: "Other locations",
-    no_near_results: "No locations found — wait a moment and try again.",
+    no_near_results: "No locations within 500 m of you.",
+    near_me: "Near me",
+    near_me_recenter: "Center on my location",
+    near_me_blocked: "Location is blocked. Allow it via the lock icon in the address bar → Location.",
+    near_me_unavailable: "Location isn't available on this device.",
     no_search_results: "No results found in Amsterdam",
     tips_page_title: "Stay cool",
     tips_page_subtitle: "Heat safety tips from GGD Amsterdam",
@@ -656,7 +713,7 @@ function localizedField(props, base) {
 // Default on/off state for each map layer — single source of truth used both
 // to initialise state.on and to count how many layers deviate from default.
 const DEFAULT_LAYER_ON = Object.freeze({
-  koelteplekken: true, water_taps: false, parks: true, swimming_pools: false, shade: false,
+  koelteplekken: true, water_taps: false, parks: false, swimming_pools: false, shade: false,
 });
 
 const state = {
@@ -736,6 +793,7 @@ function applyLanguage() {
     sidebarToggle.setAttribute("aria-label", t(expanded ? "aria_sidebar_collapse" : "aria_sidebar_expand"));
   }
   updateSearchPlaceholder();
+  updateNearMeBtn();   // label flips between "Near me" and "Center on my location"
   const langBtn = document.getElementById("btn-lang");
   if (langBtn) langBtn.textContent = state.lang === "nl" ? "EN" : "NL";
   setupCategoryFilter();
@@ -746,8 +804,6 @@ function applyLanguage() {
   renderMobileFilterBar();
 
 
-  // Update panel title if in list mode
-  updatePanelTitle();
 
   rerenderCurrentDetailPanel();
   // List view caches language-specific labels (type, neighbourhood, amenity
@@ -992,18 +1048,10 @@ function renderWeekGrid(hours) {
   return grid;
 }
 
-// ── Suppress heat pulse during layer rebuild (prevents animation restart flash) ──
-function _withoutHeatPulse(fn) {
-  const mapSection = document.getElementById("map-section");
-  const wasActive = mapSection?.classList.contains("heat-active");
-  if (wasActive) mapSection.classList.remove("heat-active");
-  fn();
-  if (wasActive) {
-    requestAnimationFrame(() => requestAnimationFrame(() => {
-      if (mapSection) mapSection.classList.add("heat-active");
-    }));
-  }
-}
+// Heat-plan markers no longer animate, so a layer rebuild has no animation to
+// restart — this is now a plain pass-through, kept so the call sites read the
+// same. (Was: temporarily stripped .heat-active to avoid a pulse restart flash.)
+function _withoutHeatPulse(fn) { fn(); }
 
 // ── Map init ───────────────────────────────────────────────────────────────
 function initMap() {
@@ -1106,10 +1154,49 @@ function parseCsv(text) {
   }
   if (field || fields.length) { fields.push(field); rows.push(fields); }
   if (!rows.length) return [];
-  const headers = rows[0].map(h => h.trim());
+  const headers = rows[0].map(canonicalHeader);
   return rows.slice(1)
     .filter(r => r.some(f => f.trim()))
     .map(r => Object.fromEntries(headers.map((h, j) => [h, (r[j] || "").trim()])));
+}
+
+// The internal workbook is maintained in Dutch, and its Approved tab is exported
+// with its own column names and ordering rather than being reshaped to match the
+// app. Row objects are keyed by header, never by position, so ordering is already
+// irrelevant — this table makes the *naming* irrelevant too, mapping each Dutch
+// column onto the canonical field name the rest of the app reads.
+const HEADER_ALIASES = {
+  organisatie: "name", naam: "name", locatie: "name",
+  adres: "address", straat: "address",
+  // Identity entries: the folded form is lowercase, so a capitalised "Type" or
+  // "Airco" in the workbook still reaches the app under the key it reads.
+  stadsdeel: "stadsdeel", wijk: "wijk", buurt: "wijk", type: "type",
+  airco: "airco", wifi: "wifi",
+  breedtegraad: "latitude", lengtegraad: "longitude",
+  actief: "active", website: "website_url", foto: "photo_url",
+  beschrijving: "description", omschrijving: "description",
+  opmerkingen: "note", opmerking: "note",
+  zitplekken: "seating", toilet: "toilets", gratiswater: "free_water",
+  etentekoop: "food_to_buy", eigenconsumptie: "own_food_ok",
+  activiteitenoplocatie: "activities", vermaak: "games",
+  verkoelendevoorwerpen: "cooling_items", koelebuitenplek: "cool_outdoor",
+  liggelegenheden: "loungers", ligplekken: "loungers",
+  rolstoelvriendelijk: "wheelchair_accessible", rolstoeltoegankelijk: "wheelchair_accessible",
+  kindvriendelijk: "child_friendly", diervriendelijk: "pets_ok",
+  invalidetoilet: "accessible_toilet", medewerkeraanwezig: "supervisor",
+  gratisconsumptie: "free_consumption",
+  maandag: "heat_mon", dinsdag: "heat_tue", woensdag: "heat_wed",
+  donderdag: "heat_thu", vrijdag: "heat_fri", zaterdag: "heat_sat",
+  zondag: "heat_sun",
+};
+
+/** Map one CSV header onto its canonical field name. Folding ignores case,
+ *  accents, spaces and underscores, so "Gratis water", "gratis_water" and
+ *  "GRATIS WATER" all match. Unknown headers pass through trimmed, so a new
+ *  column is readable under its own name without an edit here. */
+function canonicalHeader(raw) {
+  const text = String(raw || "").trim();
+  return HEADER_ALIASES[_foldType(text)] || text;
 }
 
 function csvToBool(value) {
@@ -1180,7 +1267,7 @@ function _rowToFeature(row) {
   const lat = csvToFloat(row.latitude || row.lat);
   const lon = csvToFloat(row.longitude || row.lon || row.lng);
   if (lat === null || lon === null) return null;
-  const type = (row.type || "").trim();
+  const type = normalizeType(row.type);
   // Auto-register any new category type found in data
   _ensureCategoryDef(type);
   return {
@@ -1215,6 +1302,13 @@ function _rowToFeature(row) {
       wheelchair:       csvToBool(row.wheelchair || row.accessible),
       games:            csvToBool(row.games),
       pets_allowed:     csvToBool(row.pets_allowed || row.pets_ok),
+      // Criteria 2.0 amenities (empty/absent cell → csvToBool null → hidden).
+      accessible_toilet: csvToBool(row.accessible_toilet),
+      loungers:          csvToBool(row.loungers),
+      child_friendly:    csvToBool(row.child_friendly),
+      cooling_items:     csvToBool(row.cooling_items),
+      free_consumption:  csvToBool(row.free_consumption),
+      cool_outdoor:      csvToBool(row.cool_outdoor),
       activities:       _parseActivities(row.activities),
     },
   };
@@ -2124,7 +2218,13 @@ function setupSidebarToggle() {
   if (sidebar)  sidebar.addEventListener("click",   e => e.stopPropagation());
 }
 
-// ── User location + Near me ────────────────────────────────────────────────
+// ── User location ("Near you") ─────────────────────────────────────────────
+// We do NOT ask on page load: a permission dialog thrown at someone who has not
+// yet seen what the map is gets a reflexive "Block", and a blocked origin can
+// never be re-prompted from script. Instead the request is gated on the visitor
+// docking the map app (see setupDockSnap), and the "Near me" control is the
+// permanent way back in — including for the denied case, where all we can do is
+// point at the browser's own site settings.
 function clearNearMe() {
   if (state.geoWatchId !== null && navigator.geolocation) {
     navigator.geolocation.clearWatch(state.geoWatchId);
@@ -2133,59 +2233,58 @@ function clearNearMe() {
   if (state.userMarker) { state.userMarker.remove(); state.userMarker = null; }
   clearRings();
   state.userPos = null;
-  const btn = document.getElementById("btn-near");
-  if (btn) btn.classList.remove("active");
+  updateNearMeBtn();
   refreshListIfActive();
 }
 
-function setupNearBtn() {
-  document.getElementById("btn-near").addEventListener("click", () => {
-    if (state.userPos) {
-      // Second click: clear location mode
-      clearNearMe();
-      return;
-    }
-    if (!navigator.geolocation) { alert("Geolocation not supported."); return; }
-    setLoading(true);
-    let firstFix = true;
-    // watchPosition keeps the dot tracking the user as they move, rather than a
-    // one-off snapshot. We only recenter / scroll / rebuild the list on the first
-    // fix; later updates just slide the marker so we don't yank the map around.
-    state.geoWatchId = navigator.geolocation.watchPosition(
-      pos => {
-        const { latitude, longitude } = pos.coords;
-        placeUserMarker(latitude, longitude);
-        if (firstFix) {
-          firstFix = false;
-          setLoading(false);
-          state.map.setView([latitude, longitude], 15);
-          document.getElementById("btn-near").classList.add("active");
-          // Scroll into the map area so the user sees their location
-          const mapSection = document.getElementById("map-section");
-          if (mapSection) mapSection.scrollIntoView({ behavior: "smooth" });
-          setTimeout(() => { if (state.map) state.map.invalidateSize(); }, 300);
-          // Exit detail mode so the list is shown sorted by distance
-          if (state.panelMode === "detail") exitDetailMode();
-          else refreshListIfActive();
-        } else {
-          // Distances changed — re-sort the list so it stays accurate.
-          refreshListIfActive();
-        }
-      },
-      () => {
-        setLoading(false);
-        if (firstFix) {
-          alert("Could not retrieve your location. Check browser permissions.");
-          clearNearMe();
-        }
-      },
-      { enableHighAccuracy: true, maximumAge: 5000, timeout: 20000 }
-    );
-  });
+// Rough Amsterdam bounding box. We only recenter the map on the user when they
+// are actually in/near the city — otherwise a visitor from elsewhere would land
+// on an empty map with no markers at all.
+const AMS_BBOX = { minLat: 52.26, maxLat: 52.45, minLon: 4.68, maxLon: 5.08 };
+function inAmsterdam(lat, lon) {
+  return lat >= AMS_BBOX.minLat && lat <= AMS_BBOX.maxLat
+      && lon >= AMS_BBOX.minLon && lon <= AMS_BBOX.maxLon;
+}
+
+function startGeolocation() {
+  if (!navigator.geolocation) return;
+  let firstFix = true;
+  // watchPosition keeps the dot tracking the user as they move, rather than a
+  // one-off snapshot. We only recenter on the first fix; later updates just
+  // slide the marker so we don't yank the map around.
+  state.geoWatchId = navigator.geolocation.watchPosition(
+    pos => {
+      const { latitude, longitude } = pos.coords;
+      placeUserMarker(latitude, longitude);
+      if (firstFix) {
+        firstFix = false;
+        setGeoPermission("granted");
+        // No scrollIntoView here — the fix arrives unprompted on page load and
+        // must not jump the visitor away from the landing intro.
+        if (inAmsterdam(latitude, longitude)) state.map.setView([latitude, longitude], 15);
+      }
+      // Distances changed — re-sort the list so it stays accurate.
+      // (refreshListIfActive is a no-op while a detail view is open.)
+      refreshListIfActive();
+    },
+    err => {
+      // code 1 = PERMISSION_DENIED. This is the only signal older Safari gives
+      // us, so it doubles as the permissions.query fallback. A timeout (code 3)
+      // is not a refusal — leave the button in its promptable state.
+      if (err && err.code === 1) {
+        _geoAsked = false;          // a later grant should be able to retry
+        setGeoPermission("denied");
+      }
+      if (firstFix) clearNearMe();
+    },
+    { enableHighAccuracy: true, maximumAge: 5000, timeout: 20000 }
+  );
 }
 
 function placeUserMarker(lat, lon) {
+  const hadPos = !!state.userPos;
   state.userPos = { lat, lon };
+  if (!hadPos) updateNearMeBtn();
   // Reuse the existing marker/ring on live-location updates so the dot smoothly
   // slides to the new position instead of flickering out and back in.
   if (state.userMarker) {
@@ -2202,9 +2301,9 @@ function placeUserMarker(lat, lon) {
 }
 function clearRings() { state.rings.forEach(r=>r.remove()); state.rings=[]; }
 function placeDistanceRings(lat, lon) {
-  // Single dashed circle — 1 km radius with a subtle navy tint inside
+  // Single dashed circle — matches NEAR_KM (500 m) with a subtle navy tint inside
   const r = L.circle([lat, lon], {
-    radius: 1000,
+    radius: 500,
     color: "#004699",
     weight: 2,
     opacity: 0.65,
@@ -2216,13 +2315,115 @@ function placeDistanceRings(lat, lon) {
   state.rings.push(r);
 }
 
-// ── Panel navigation ───────────────────────────────────────────────────────
-function updatePanelTitle() {
-  const titleEl = document.getElementById("panel-hdr-title");
-  if (titleEl && state.panelMode === "list") {
-    titleEl.textContent = state.userPos ? t("near_you") : t("lv_title");
-  }
+// ── "Near me" control ──────────────────────────────────────────────────────
+// Tri-state, because the browser gives us three genuinely different situations
+// and only one of them can produce a permission dialog:
+//   prompt  → clicking asks (the first real request, if the dock gate hasn't)
+//   granted → clicking recentres the map on the dot
+//   denied  → clicking can do nothing at all, so the button reads as struck out
+// Guessing the state would mean shipping a button that silently does nothing
+// for denied users, so we read it from the Permissions API where available.
+let _geoAsked = false;
+let _geoPermission = "prompt";   // "prompt" | "granted" | "denied" | "unsupported"
+
+/** Fire the location request at most once per page load. */
+function askGeolocationOnce() {
+  if (_geoAsked || _geoPermission === "denied" || _geoPermission === "unsupported") return;
+  _geoAsked = true;
+  startGeolocation();
 }
+
+function setGeoPermission(next) {
+  _geoPermission = next;
+  updateNearMeBtn();
+}
+
+function updateNearMeBtn() {
+  const btn = document.getElementById("btn-near-me");
+  if (!btn) return;
+  const blocked = _geoPermission === "denied" || _geoPermission === "unsupported";
+  btn.classList.toggle("is-active",  _geoPermission === "granted" && !!state.userPos);
+  btn.classList.toggle("is-blocked", blocked);
+  // The struck-through icon carries the whole message; the accessible name is
+  // the only place the reason lives, so it has to say more than "Near me".
+  const label = _geoPermission === "unsupported" ? t("near_me_unavailable")
+              : _geoPermission === "denied"      ? t("near_me_blocked")
+              : _geoPermission === "granted"     ? t("near_me_recenter")
+              :                                    t("near_me");
+  btn.setAttribute("aria-label", label);
+  btn.setAttribute("title", label);
+  btn.setAttribute("aria-disabled", blocked ? "true" : "false");
+}
+
+function setupNearMe() {
+  // Sits directly under the zoom control in the top-right stack.
+  const ctl = L.control({ position: "topright" });
+  ctl.onAdd = () => {
+    const wrap = L.DomUtil.create("div", "leaflet-control near-me-control");
+    wrap.innerHTML =
+      // ADS "CrossHair" icon, verbatim from design-system/assets/icons.
+      '<button id="btn-near-me" type="button" aria-label="' + t("near_me") + '">' +
+      '<svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">' +
+      '<path d="M12 16C14.2091 16 16 14.2091 16 12C16 9.79086 14.2091 8 12 8C9.79086 8 8 9.79086 8 12C8 14.2091 9.79086 16 12 16Z"/>' +
+      '<path fill-rule="evenodd" clip-rule="evenodd" d="M10.8422 23V20.9262C6.79754 20.4068 3.59325 17.2025 3.07379 13.1578H1V11.1578H3.03888C3.42796 6.96519 6.69287 3.60669 10.8422 3.07379V1H12.8422V3.03888C17.1406 3.43777 20.5622 6.85942 20.9611 11.1578H23V13.1578H20.9262C20.3933 17.3071 17.0348 20.572 12.8422 20.9611V23H10.8422ZM12 19C15.866 19 19 15.866 19 12C19 8.13401 15.866 5 12 5C8.13401 5 5 8.13401 5 12C5 15.866 8.13401 19 12 19Z"/>' +
+      '<line class="nm-slash" x1="3.5" y1="20.5" x2="20.5" y2="3.5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>' +
+      '</svg></button>';
+    // Stop clicks/scrolls reaching the map underneath.
+    L.DomEvent.disableClickPropagation(wrap);
+    L.DomEvent.disableScrollPropagation(wrap);
+    return wrap;
+  };
+  ctl.addTo(state.map);
+
+  document.getElementById("btn-near-me")?.addEventListener("click", () => {
+    // Denied/unsupported: nothing to do. The browser will not re-prompt for an
+    // origin it has already been refused for, so the struck-through icon is the
+    // whole answer — clicking is inert by design.
+    if (_geoPermission === "denied" || _geoPermission === "unsupported") return;
+    if (state.userPos) { state.map.setView([state.userPos.lat, state.userPos.lon], 15); return; }
+    askGeolocationOnce();
+  });
+
+  if (!navigator.geolocation) { setGeoPermission("unsupported"); return; }
+
+  // permissions.query does NOT trigger a prompt, so this is safe to run on load.
+  // Where it is missing (older Safari) we stay optimistic and let the error
+  // callback in startGeolocation downgrade us to "denied".
+  let query;
+  try { query = navigator.permissions?.query({ name: "geolocation" }); } catch { /* older Safari */ }
+  if (!query) { updateNearMeBtn(); return; }
+  query.then(status => {
+    setGeoPermission(status.state);
+    if (status.state === "granted") askGeolocationOnce();
+    // The user can flip this in browser site settings, which is a different
+    // surface entirely — they come back expecting the map to just work, so
+    // recover live rather than making them reload.
+    status.onchange = () => {
+      setGeoPermission(status.state);
+      if (status.state === "granted") { _geoAsked = false; askGeolocationOnce(); }
+      else if (status.state === "denied") clearNearMe();
+    };
+  }).catch(() => { /* unsupported query — keep the optimistic "prompt" state */ });
+
+  updateNearMeBtn();
+}
+
+// ── Panel navigation ───────────────────────────────────────────────────────
+// The detail action bar lives outside the scrolling content, as a sibling of
+// #list-view-inner inside the column-flex #list-view. That is what pins it to
+// the foot of the *panel* rather than the foot of the content — with a short
+// entry it still sits on the bottom edge of the screen, and with a long one it
+// never scrolls away.
+function setDetailActionBar(nodes) {
+  const bar = document.getElementById("detail-action-bar");
+  if (!bar) return;
+  bar.innerHTML = "";
+  if (!nodes || !nodes.length) { bar.hidden = true; return; }
+  nodes.forEach(n => bar.appendChild(n));
+  bar.hidden = false;
+}
+function clearDetailActionBar() { setDetailActionBar(null); }
+
 
 function enterDetailMode(feature, renderFn, backTo) {
 
@@ -2237,7 +2438,6 @@ function enterDetailMode(feature, renderFn, backTo) {
                      : (isDesktop() ? "list" : state.mobileView);
 
   const listEl  = document.getElementById("list-view");
-  const hdrList = document.getElementById("panel-hdr-list");
   const hdrBack = document.getElementById("panel-hdr-back");
 
   if (!isDesktop()) {
@@ -2246,13 +2446,17 @@ function enterDetailMode(feature, renderFn, backTo) {
     document.body.classList.add("mobile-panel-open", "mobile-detail-open");
   }
 
-  if (hdrList) hdrList.hidden = true;
   if (hdrBack) hdrBack.hidden = false;
 
   const inner = document.getElementById("list-view-inner");
   if (!inner) return;
   inner.innerHTML = "";
   inner.scrollTop = 0;
+  // Column-flex the scroller so .detail-panel-body can grow to the full panel
+  // height — that is what lets the sticky action bar's margin-top:auto push it
+  // to the bottom of the window when the content is shorter than the panel.
+  document.getElementById("list-view")?.classList.remove("mode-list");
+  clearDetailActionBar(); // renderers that use it repopulate it below
   if (renderFn) renderFn(feature, inner);
   else          renderKoelteDetailContent(feature, inner);
 
@@ -2261,6 +2465,7 @@ function enterDetailMode(feature, renderFn, backTo) {
 
 function exitDetailMode() {
   state.panelMode = "list";
+  clearDetailActionBar();
   state.currentDetailFeature = null;
   state.currentDetailRenderFn = null;
 
@@ -2274,9 +2479,7 @@ function exitDetailMode() {
     mapSection.classList.remove("detail-snap");
   }
 
-  const hdrList = document.getElementById("panel-hdr-list");
   const hdrBack = document.getElementById("panel-hdr-back");
-  if (hdrList) hdrList.hidden = false;
   if (hdrBack) hdrBack.hidden = true;
 
   if (!isDesktop()) {
@@ -2310,6 +2513,7 @@ function rerenderCurrentDetailPanel() {
 
   inner.innerHTML = "";
   inner.scrollTop = 0;
+  clearDetailActionBar();
   state.currentDetailRenderFn(state.currentDetailFeature, inner);
 }
 
@@ -2480,8 +2684,9 @@ function renderKoelteDetailContent(feature, container) {
     info.appendChild(notesSec);
   }
 
-  // ── Sticky action bar (sits at panel foot, always reachable) ──
-  const actions = document.createElement("div"); actions.className = "detail-actions detail-actions--sticky";
+  // ── Action buttons — hoisted out of the scrolling content into the panel
+  //    footer (see setDetailActionBar) so they sit on the panel's bottom edge. ──
+  const actions = document.createElement("div"); actions.className = "detail-actions";
   if (p.website_url) {
     const a = document.createElement("a");
     a.className = "btn-website"; a.href = p.website_url; a.target = "_blank"; a.rel = "noopener noreferrer";
@@ -2490,7 +2695,7 @@ function renderKoelteDetailContent(feature, container) {
   }
   const [lon, lat] = feature.geometry.coordinates;
   actions.appendChild(makeDirectionsBtn(lat, lon, p.address));
-  body.appendChild(actions); // outside the padded info → full-width sticky footer
+  setDetailActionBar([actions]);
 
   container.appendChild(body);
 }
@@ -2950,6 +3155,7 @@ async function doSearch(query) {
     const p = f.properties || {};
     const el = document.createElement("div");
     el.className = "sr-item sr-item--local";
+    el.style.borderLeftColor = getCategoryColor(p.type);
     el.innerHTML = `
       <div class="sr-name">${p.name || "Koelteplek"}</div>
       <div class="sr-sub">${[p.neighborhood, p.district].filter(Boolean).join(" · ")} · Koelteplek</div>
@@ -3236,6 +3442,10 @@ function renderListView() {
   const inner = document.getElementById("list-view-inner");
   if (!inner) return;
   inner.innerHTML = "";
+  clearDetailActionBar();
+  // The list has no fixed header any more — its title lives in the first
+  // sticky section header, inside the scroller.
+  document.getElementById("list-view")?.classList.add("mode-list");
 
   const items = getListItems();
   // Disabled locations are flagged "temporarily closed" and live in their own
@@ -3244,7 +3454,7 @@ function renderListView() {
   const inactiveItems = items.filter(({ feature }) => feature.properties?.active === false);
 
   // Pre-calculate near/far so panel header shows accurate near count
-  const NEAR_KM = 1;
+  const NEAR_KM = 0.5;
   let nearItems = [], farItems = [];
   if (state.userPos) {
     nearItems = activeItems.filter(({ feature }) => {
@@ -3259,12 +3469,6 @@ function renderListView() {
     });
   }
 
-  // Update panel header
-  const titleEl = document.getElementById("panel-hdr-title");
-  const countEl = document.getElementById("panel-hdr-count");
-  if (titleEl) titleEl.textContent = state.userPos ? t("near_you") : t("lv_title");
-  if (countEl) countEl.textContent = `${state.userPos ? nearItems.length : activeItems.length} ${t("lv_found")}`;
-
   const statusEl = document.getElementById("a11y-status");
   if (statusEl) statusEl.textContent = `${items.length} ${t("lv_found")}`;
 
@@ -3276,51 +3480,59 @@ function renderListView() {
     return;
   }
 
-  // Helper: append a labelled section of items
-  function appendSection(sectionItems, label) {
-    if (!sectionItems.length) return;
-    if (label) {
-      const hdr = document.createElement("div"); hdr.className = "lv-section-hdr";
-      const labelSpan = document.createElement("span"); labelSpan.textContent = label;
-      const countBadge = document.createElement("span"); countBadge.className = "lv-section-hdr-count";
-      countBadge.textContent = sectionItems.length;
-      hdr.append(labelSpan, countBadge);
-      inner.appendChild(hdr);
+  // Each section wraps its own header + items. That nesting is what makes the
+  // headers evict one another: a sticky element is confined to its containing
+  // block, so "Near you" can only stay pinned while its own <section> is still
+  // on screen — once that section scrolls past, it carries its header up and
+  // out and the next section's header takes over the same slot. Flat sibling
+  // headers would each be confined to the whole list instead, and the first one
+  // would stay pinned forever with the second painting on top of it.
+  function appendSection(sectionItems, label, emptyNote) {
+    const sec = document.createElement("section"); sec.className = "lv-section";
+
+    const hdr   = document.createElement("div"); hdr.className = "lv-section-hdr";
+    const hbox  = document.createElement("div"); hbox.className = "lv-section-hdr-text";
+    const title = document.createElement("div"); title.className = "lv-section-hdr-title";
+    title.textContent = label;
+    const count = document.createElement("div"); count.className = "lv-section-hdr-count";
+    count.textContent = `${sectionItems.length} ${t("lv_found")}`;
+    hbox.append(title, count); hdr.appendChild(hbox); sec.appendChild(hdr);
+
+    if (sectionItems.length) {
+      const list = document.createElement("ul"); list.className = "lv-list";
+      sectionItems.forEach(({ feature }) => list.appendChild(buildListItem(feature)));
+      sec.appendChild(list);
+    } else if (emptyNote) {
+      const note = document.createElement("div"); note.className = "lv-near-empty";
+      note.textContent = emptyNote;
+      sec.appendChild(note);
     }
-    const list = document.createElement("ul"); list.className = "lv-list";
-    sectionItems.forEach(({ feature }) => list.appendChild(buildListItem(feature)));
-    inner.appendChild(list);
+
+    inner.appendChild(sec);
+    return sec;
   }
 
+  let lastSection;
   if (state.userPos) {
-    // Near items directly (panel header IS the "In jouw buurt" label)
-    if (nearItems.length) {
-      const list = document.createElement("ul"); list.className = "lv-list";
-      nearItems.forEach(({ feature }) => list.appendChild(buildListItem(feature)));
-      inner.appendChild(list);
-    }
-    // Other locations: same-style header as panel header, then its items
-    if (farItems.length) {
-      const div = document.createElement("div"); div.className = "lv-other-hdr";
-      const hdrList = document.createElement("div"); hdrList.className = "lv-other-hdr-list";
-      const title = document.createElement("div"); title.className = "lv-other-hdr-title";
-      title.textContent = t("other_locations");
-      const count = document.createElement("div"); count.className = "lv-other-hdr-count";
-      count.textContent = `${farItems.length} ${t("lv_found")}`;
-      hdrList.append(title, count);
-      div.appendChild(hdrList);
-      inner.appendChild(div);
-      const list = document.createElement("ul"); list.className = "lv-list";
-      farItems.forEach(({ feature }) => list.appendChild(buildListItem(feature)));
-      inner.appendChild(list);
-    }
+    // "Near you" renders even when empty — 500 m is a tight radius, and the
+    // note explains the gap rather than leaving a bare header.
+    lastSection = appendSection(nearItems, t("near_you"), t("no_near_results"));
+    if (farItems.length) lastSection = appendSection(farItems, t("other_locations"));
   } else {
-    appendSection(activeItems, null);
+    lastSection = appendSection(activeItems, t("lv_title"));
   }
 
-  // Temporarily-closed (disabled) locations always render last — below all
-  // others, no separate header; their grey pill marks them.
-  appendSection(inactiveItems, null);
+  // Temporarily-closed (disabled) locations always render last — no header of
+  // their own (their grey pill marks them), so they join the final section's
+  // list and keep that section's header pinned through to the end of the list.
+  if (inactiveItems.length) {
+    let list = lastSection.querySelector("ul.lv-list");
+    if (!list) {
+      list = document.createElement("ul"); list.className = "lv-list";
+      lastSection.appendChild(list);
+    }
+    inactiveItems.forEach(({ feature }) => list.appendChild(buildListItem(feature)));
+  }
 }
 
 function isListViewActive() {
@@ -3407,9 +3619,7 @@ function setupViewToggle() {
         // If coming back from detail, reset to list panel mode
         if (state.panelMode === "detail") {
           state.panelMode = "list";
-          const hdrList = document.getElementById("panel-hdr-list");
           const hdrBack = document.getElementById("panel-hdr-back");
-          if (hdrList) hdrList.hidden = false;
           if (hdrBack) hdrBack.hidden = true;
         }
         renderListView();
@@ -3458,10 +3668,114 @@ function setupLandingIntro() {
       if (mapSection) mapSection.scrollIntoView({behavior:"smooth"});
       setTimeout(()=>{ if(state.map) state.map.invalidateSize(); },250);
       setTimeout(()=>{ if(state.map) state.map.invalidateSize(); },800);
+      // Clicking "enter the map" is explicit intent — no dwell needed.
+      askGeolocationOnce();
     });
   });
   const obs=new IntersectionObserver(entries=>{if(entries[0].isIntersecting&&state.map){setTimeout(()=>state.map.invalidateSize(),100);setTimeout(()=>state.map.invalidateSize(),500);}},{threshold:0.1});
   const ms=document.getElementById("map-section"); if(ms) obs.observe(ms);
+}
+
+// ── Dock snap ──────────────────────────────────────────────────────────────
+// CSS scroll-snap cannot solve the seam on its own. #map-contact-wrap is the
+// last child of #page and is exactly one viewport tall, so the fully-docked
+// scroll position coincides with the bottom of the document — and the whole
+// approach to it (a band one viewport high, where the map is half-revealed) has
+// no snap point in it at all. `proximity` only attracts you when you come to
+// rest near a point, so every rest position inside that band is left alone.
+// That is the "half a map" state.
+//
+// So we settle it in JS, downward only. The two directions are not symmetric:
+// #map-contact-wrap is the last thing in the document, so coming down, a
+// half-revealed map is a *terminal* state — there is nothing below it to carry
+// you out. Going up there is a whole landing above, so the same position is
+// just a waypoint the visitor scrolls straight through, and snapping there
+// would be undoing a scroll they had just deliberately made.
+//
+// So: after the user has stopped scrolling, if they were heading down and the
+// map is already showing a majority, finish the dock. Everything else is left
+// exactly where it landed. This runs once per gesture rather than continuously,
+// so it never fights momentum, trackpad inertia, keyboard paging or
+// find-in-page.
+const DOCK_COMMIT = 0.5;    // map showing a majority — past here, finish docking
+function setupDockSnap() {
+  const anchor = document.getElementById("snap-app-anchor");
+  const wrap   = document.getElementById("map-contact-wrap");
+  if (!anchor || !wrap) return;
+
+  const reduced = window.matchMedia("(prefers-reduced-motion: reduce)");
+  let programmatic = false;   // suppress re-entry from our own scrollTo
+  let settleTimer  = null;
+  let dwellTimer   = null;
+  let restP        = 0;       // progress at the last rest — the gesture's origin
+
+  /** 0 = landing fully in view · 1 = map fully docked. */
+  function dockProgress() {
+    const band = wrap.offsetHeight;
+    if (!band) return 0;
+    return Math.min(1, Math.max(0, 1 - (dockY() - window.scrollY) / band));
+  }
+
+  function dockY() {
+    return anchor.getBoundingClientRect().top + window.scrollY
+         - parseFloat(getComputedStyle(document.documentElement).scrollPaddingTop || "0");
+  }
+
+  function scrollToDock() {
+    programmatic = true;
+    window.scrollTo({ top: dockY(), behavior: reduced.matches ? "auto" : "smooth" });
+    // Release the guard once the smooth scroll has had time to finish.
+    setTimeout(() => { programmatic = false; restP = dockProgress(); }, reduced.matches ? 60 : 700);
+  }
+
+  function blocked() {
+    // Never yank the page while an overlay owns the screen, or while a detail
+    // view is open — both mean the visitor is already inside the app.
+    return programmatic
+      || document.body.classList.contains("sidebar-open")
+      || document.body.classList.contains("mobile-panel-open")
+      || state.panelMode === "detail";
+  }
+
+  // The direction test is what keeps this out of the visitor's way. Without it,
+  // easing up off the docked map to glance at the text above would put the rest
+  // position back over DOCK_COMMIT and drag them straight back down — the exact
+  // "it sticks back" that makes a page feel like it is arguing with you.
+  function onSettle() {
+    if (blocked()) return;
+    const p = dockProgress();
+    if (p > 0.995 || p < 0.005) { restP = p; armGeoGate(); return; }   // at an end already
+
+    const goingDown = p > restP;
+    restP = p;
+    if (goingDown && p >= DOCK_COMMIT) scrollToDock();
+    armGeoGate();
+  }
+
+  // Docking is the permission gate: the visitor has committed to the map, so a
+  // location prompt now has visible context. The dwell stops a fast scroll-past
+  // (someone heading for the contact bar) from throwing a dialog in transit.
+  function armGeoGate() {
+    clearTimeout(dwellTimer);
+    dwellTimer = setTimeout(() => {
+      if (dockProgress() > 0.9) askGeolocationOnce();
+    }, 600);
+  }
+
+  // `scrollend` is the precise signal; where it is missing (Safari < 18.2) a
+  // short debounce on `scroll` is equivalent for our purposes.
+  if ("onscrollend" in window) {
+    window.addEventListener("scrollend", onSettle, { passive: true });
+  } else {
+    window.addEventListener("scroll", () => {
+      clearTimeout(settleTimer);
+      settleTimer = setTimeout(onSettle, 150);
+    }, { passive: true });
+  }
+
+  // Deep-link or reload straight into the docked position.
+  restP = dockProgress();
+  if (restP > 0.9) armGeoGate();
 }
 
 // ── Live weather strip ─────────────────────────────────────────────────────
@@ -3555,7 +3869,8 @@ document.addEventListener("DOMContentLoaded", () => {
   setupCategoryFilter();
   setupFilters();
   setupClearFilters();
-  setupNearBtn();
+  setupNearMe();
+  setupDockSnap();
   setupTipsBtn();
   setupSearch();
   setupSidebarToggle();

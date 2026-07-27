@@ -162,6 +162,26 @@
 }
 
 html { height: 100%; scroll-behavior: smooth; background-color: #004699; /* footer blue, shows through the bottom overscroll bounce */ }
+
+/* The blue html/body background paints the overscroll bounce, but it also bleeds
+   behind the page scrollbar (the track). Give only the scrollbar track a neutral
+   background so it matches the site — the thumb keeps the browser default. */
+html::-webkit-scrollbar-track { background: #f0f0f0; }
+
+/* Safari-only (@supports -webkit-hyphens targets Safari): unlike Chrome, Safari
+   ignores the track color above and keeps its transparent overlay scrollbar, so
+   the blue html background still shows through. Defining the whole scrollbar
+   forces a real, neutral track; we also style the thumb to stay close to the
+   native grey since taking over ::-webkit-scrollbar disables the default one. */
+@supports (-webkit-hyphens: none) {
+  html::-webkit-scrollbar { width: 15px; height: 15px; background: #f0f0f0; }
+  html::-webkit-scrollbar-thumb {
+    background: #c1c1c1;
+    border-radius: 8px;
+    border: 3px solid #f0f0f0;   /* inset from the track edges, native-ish look */
+  }
+  html::-webkit-scrollbar-thumb:hover { background: #a8a8a8; }
+}
 body {
   min-height: 100%;
   overflow-y: auto;
@@ -169,7 +189,11 @@ body {
   font-size: var(--ams-body-font-size);
   line-height: var(--ams-body-line-height);
   color: var(--text);
-  background: var(--bg);
+  /* Footer blue, not white: the bottom overscroll bounce reveals whatever the
+     body paints below the content. #page carries the white content background
+     instead (below), so the rubber-band shows blue and reads as an extension of
+     the footer rather than a bare white gap. */
+  background: #004699;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   text-rendering: optimizeLegibility;
@@ -381,17 +405,24 @@ body {
 
 
 /* ── Page wrapper ────────────────────────────────────────────────────────── */
-#page { margin-top: var(--offset); }
+/* Carries the white content background (moved off <body>, which is now blue so
+   the bottom overscroll bounce is blue). #page spans the full content height —
+   landing through the map/contact wrapper — so the white ends exactly where the
+   content does and the bounce below it is body blue. */
+#page { margin-top: var(--offset); background: var(--bg); }
 
 /* ── Scroll-snap: lock onto either the landing OR the fully-docked map app ───
-   The map+contact section is a full-height sticky block, so without snapping it
-   can rest half-revealed with the contact bar below the fold. Two proximity
-   snap points (landing top · docked map) let a scroll settle cleanly on one or
-   the other. scroll-padding-top keeps snapped sections clear of the fixed
-   topbar. Proximity (not mandatory) so reading the tall landing copy is
-   unaffected. A wheel/two-finger gesture scrolls the page freely because
-   Leaflet scrollWheelZoom is off (see initMap), so these points are reachable.
-   Lives on <html>, the document scroll container (body only has min-height). */
+   Proximity (not mandatory) so reading the tall landing copy is unaffected.
+   scroll-padding-top keeps snapped sections clear of the fixed topbar. Lives on
+   <html>, the document scroll container (body only has min-height).
+
+   NOTE: these two points do NOT solve the seam, and CSS alone cannot. Because
+   #map-contact-wrap is the last child of #page and exactly one viewport tall,
+   the docked position equals the maximum scrollTop — and the run-up to it is a
+   band one viewport high containing no snap point whatsoever, so a scroll that
+   stops mid-band (half a map on screen) has nothing to attract it. setupDockSnap
+   in app.js settles that band after the gesture ends; what remains here is the
+   landing-top point and the docked point it scrolls to. */
 html { scroll-snap-type: y proximity; scroll-padding-top: var(--offset); }
 /* Lock the page behind the full-screen mobile legend/filter overlay so the
    background doesn't scroll through underneath it on touch devices (which can
@@ -404,6 +435,10 @@ html:has(body.sidebar-open) { overflow: hidden; }
 #snap-app-anchor { height: 0; pointer-events: none; }
 
 /* ── Map + contact wrapper — Stacks the elements separately ────────────── */
+/* `sticky` only engages once the wrapper's natural top passes above --offset,
+   which needs scrollTop > landing height — i.e. past the end of the document.
+   In practice it therefore never pins on desktop; it is kept because mobile
+   toolbar show/hide changes dvh mid-scroll, which briefly does put it in range. */
 #map-contact-wrap {
   position: sticky;
   top: var(--offset);
@@ -725,8 +760,8 @@ html:has(body.sidebar-open) { overflow: hidden; }
 
   /* FAB sits at top-left — push title/count to right edge, both right-aligned */
   .panel-hdr { padding-left: 72px; }
-  #panel-hdr-list { margin-left: auto; align-items: flex-end; }
-  .lv-other-hdr-list { margin-left: auto; align-items: flex-end; }
+  .lv-section-hdr { padding-left: 72px; }
+  .lv-section-hdr-text { margin-left: auto; align-items: flex-end; }
 
   /* ── Sidebar — full-screen overlay so no map peeks out below ───────────── */
   #sidebar {
@@ -872,6 +907,25 @@ details.filter-section-accordion[open] .filter-section-chevron-icon {
 }
 /* Hide accordion when its chip container is empty */
 .filter-section-accordion:has(> summary + div:empty) { display: none; }
+
+/* ── Always-expanded filter sections (categories, amenities) ─────────────── */
+/* Same visual treatment as an accordion, minus the toggle: these two are
+   permanently open, so they use a plain heading instead of a <summary>. */
+.filter-section-block {
+  border-top: none;  /* no border between a layer and its own sub-filters */
+}
+.filter-section-block + .layer-row {
+  border-top: 1px solid rgba(0,0,0,0.12);
+  margin-top: 4px;
+}
+.filter-section-heading {
+  display: flex; align-items: center; gap: 6px;
+  padding: 8px 14px;
+  font-size: 12px; font-weight: 600;
+  color: var(--muted);
+}
+/* Hide the section when its chip container is empty */
+.filter-section-block:has(> .filter-section-heading + div:empty) { display: none; }
 .sidebar-section-title {
   padding: 6px 14px 5px;
   font-size: 10px; font-weight: 700;
@@ -1170,17 +1224,20 @@ body.mode-user #sidebar-policy { display: none; }
   background: rgba(0,0,0,0.05); border-radius: 999px; padding: 4px 10px;
 }
 
-/* Sticky action bar pinned to the foot of the detail panel */
-.detail-panel-body { min-height: 100%; }
-.detail-actions--sticky {
-  position: sticky; bottom: 0;
-  margin-top: auto;
+/* Action bar pinned to the foot of the detail panel. It is a sibling of the
+   scroller inside the column-flex #list-view, not a child of it — so it always
+   sits on the panel's bottom edge: it does not ride up under short content, and
+   it cannot be scrolled past under long content. */
+.detail-action-bar {
+  flex-shrink: 0;
   padding: 10px var(--ams-space-m) calc(10px + env(safe-area-inset-bottom, 0px));
   background: var(--surface);
   border-top: 1px solid var(--border);
   box-shadow: 0 -4px 12px rgba(0,0,0,0.05);
   z-index: 5;
 }
+.detail-action-bar[hidden] { display: none; }
+.detail-action-bar .detail-actions { margin-top: 0; }
 
 /* ── Detail secondary + notes ────────────────────────────────────────────── */
 .detail-secondary-info { display: flex; flex-wrap: wrap; gap: 5px; padding: 4px 0 8px; border-top: 1px solid var(--border); margin-top: 2px; }
@@ -1270,6 +1327,32 @@ body.mode-user #sidebar-policy { display: none; }
 .hc-name   { font-size: 12px; font-weight: 600; color: #fff; line-height: 1.35; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .hc-sub    { font-size: 10px; color: rgba(255,255,255,0.42); margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
+/* ── "Near me" control ───────────────────────────────────────────────────── */
+/* Sits under the zoom stack (top-right) and borrows its geometry so the three
+   buttons read as one column. */
+.near-me-control { margin: 0 14px 14px !important; position: relative; }
+#btn-near-me {
+  width: 42px; height: 42px;
+  display: flex; align-items: center; justify-content: center;
+  background: var(--navy); border: 1.5px solid var(--navy); color: #fff;
+  border-radius: 12px; cursor: pointer;
+  box-shadow: 0 3px 12px rgba(0,70,153,0.30);
+  transition: filter 0.12s, background 0.12s, color 0.12s;
+}
+#btn-near-me:hover { filter: brightness(1.22); }
+#btn-near-me .nm-slash { display: none; }
+/* Granted + tracking — the button is now a recentre affordance. */
+#btn-near-me.is-active { background: #fff; color: var(--navy); }
+/* Denied/unsupported — the struck-through icon is the entire message: the
+   browser will not re-prompt, so there is no action to offer and no bubble to
+   show. Inert, but still present, because it explains why there is no dot. */
+#btn-near-me.is-blocked {
+  background: var(--surface); color: var(--muted); border-color: var(--border);
+  box-shadow: none; cursor: default;
+}
+#btn-near-me.is-blocked:hover { filter: none; }
+#btn-near-me.is-blocked .nm-slash { display: block; }
+
 /* ── User location marker ────────────────────────────────────────────────── */
 .user-marker-icon { background: none !important; border: none !important; }
 .user-dot  { position: absolute; width: 14px; height: 14px; left: 7px; top: 7px; background: var(--navy); border: 2.5px solid #fff; border-radius: 50%; box-shadow: 0 2px 8px rgba(0,70,153,0.5); z-index: 2; }
@@ -1357,13 +1440,20 @@ body.mode-user #sidebar-policy { display: none; }
     gap: 0;
     pointer-events: auto;
   }
-  /* Extra breathing room at bottom of list so the floating view toggle doesn't
-     cover the last item. iOS Safari drops `padding-bottom` on a scroll
-     container, so add a real spacer block at the end of the scrollable content. */
-  #list-view-inner::after {
+  /* Clearance so the floating map/list toggle doesn't cover the last card.
+     iOS Safari drops `padding-bottom` on a scroll container, so this is a real
+     spacer block at the end of the scrollable content, sized to the toggle's
+     footprint (bottom offset + bar height ≈ 55px) plus a small gap — not more,
+     or it reads as dead scrollable whitespace.
+
+     Scoped to list mode on purpose: the detail view renders into this same
+     scroller but hides the toggle (see body.mobile-detail-open .view-toggle-bar
+     above) and pins its own action bar outside the scroller, so a spacer there
+     is pure empty space you can scroll into past the end of the content. */
+  #list-view.mode-list #list-view-inner::after {
     content: '';
     display: block;
-    height: calc(96px + env(safe-area-inset-bottom, 0px));
+    height: calc(68px + env(safe-area-inset-bottom, 0px));
     flex-shrink: 0;
   }
 }
@@ -1541,27 +1631,10 @@ body.mode-user #sidebar-policy { display: none; }
   display: flex;
   align-items: center;
 }
-#panel-hdr-list { display: flex; flex-direction: column; gap: 1px; }
-#panel-hdr-title {
-  font-size: 16px; font-weight: 800;
-  color: var(--text); letter-spacing: -0.01em;
-}
-#panel-hdr-count { font-size: 12px; color: var(--muted); }
-
-/* "Other locations" divider inside the list — matches panel-hdr style */
-.lv-other-hdr {
-  padding: 14px 16px 12px;
-  border-top: 1px solid var(--border);
-  border-bottom: 1px solid var(--border);
-  background: var(--surface);
-  min-height: 56px;
-  display: flex;
-  align-items: center;
-}
-.lv-other-hdr-list { display: flex; flex-direction: column; gap: 1px; }
-/* Match the "near me" panel header (#panel-hdr-title / -count) exactly. */
-.lv-other-hdr-title { font-size: 16px; font-weight: 800; color: var(--text); letter-spacing: -0.01em; }
-.lv-other-hdr-count { font-size: 12px; color: var(--muted); }
+/* In list mode the panel has no fixed header at all — the list's own sticky
+   section headers fill that slot. The bar stays in the DOM for the detail
+   view's back button. */
+#list-view.mode-list .panel-hdr { display: none; }
 
 .panel-hdr-back {
   display: flex; align-items: center; justify-content: center;
@@ -1572,24 +1645,32 @@ body.mode-user #sidebar-policy { display: none; }
 }
 .panel-hdr-back:hover { background: rgba(0,0,0,0.10); color: var(--text); }
 .panel-hdr-back[hidden] { display: none; }
-#panel-hdr-list[hidden] { display: none; }
 
-/* ── List items ──────────────────────────────────────────────────────────── */
+/* ── List sections ───────────────────────────────────────────────────────── */
+/* One section per group (Near you / Other locations). The header is sticky and
+   confined to its own <section>, so a section scrolling past the top carries
+   its header out and hands the slot to the next one — only ever one header is
+   visible, and it occupies the same row the panel header used to. */
 .lv-section-hdr {
-  padding: 10px 16px 8px;
-  font-size: 12.5px; font-weight: 700;
-  letter-spacing: -0.01em;
-  color: var(--text);
+  position: sticky; top: 0; z-index: 3;
+  padding: 14px 16px 12px;
+  min-height: 56px;
+  display: flex; align-items: center;
   background: var(--surface);
   border-bottom: 1px solid var(--border);
-  position: sticky; top: 0; z-index: 2;
-  display: flex; align-items: center; justify-content: space-between;
 }
-.lv-section-hdr-count {
-  font-size: 11px; font-weight: 500; color: var(--subtle);
-  background: var(--bg); padding: 1px 7px; border-radius: 10px;
-  border: 1px solid var(--border);
+.lv-section-hdr-text { display: flex; flex-direction: column; gap: 1px; }
+.lv-section-hdr-title {
+  font-size: 16px; font-weight: 800;
+  color: var(--text); letter-spacing: -0.01em;
 }
+.lv-section-hdr-count { font-size: 12px; color: var(--muted); }
+
+.lv-near-empty {
+  padding: 18px 16px 20px;
+  font-size: 13px; color: var(--muted); line-height: 1.5;
+}
+
 .lv-list { list-style: none; }
 
 .lv-item {
@@ -2092,31 +2173,8 @@ body.mode-user #sidebar-policy { display: none; }
   box-shadow: 0 0 0 2.5px rgba(255,255,255,0.55);
 }
 
-/* ── Heat-plan pulse rings — two expanding halos, staggered 50% ─────────
-   Each ring exactly overlays the dot (inset: 0) and scales from its own
-   centre (default transform-origin). It sits BEHIND the dot (z-index: -1),
-   so at scale(1) it is fully hidden by the dot and only emerges as an
-   outward halo — it can never appear as a separate, offset dot. */
-@keyframes koelte-pulse {
-  0%   { transform: scale(1);   opacity: 0.5; }
-  70%  { transform: scale(3.2); opacity: 0.04; }
-  100% { transform: scale(3.2); opacity: 0; }
-}
-
-#map-section.heat-active .koelte-marker:not(.koelte-marker--inactive)::before,
-#map-section.heat-active .koelte-marker:not(.koelte-marker--inactive)::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  border-radius: 50%;
-  background: var(--mc, #004699);
-  pointer-events: none;
-  z-index: -1;
-  animation: koelte-pulse 4.0s cubic-bezier(0.25, 0.46, 0.45, 0.94) infinite;
-}
-#map-section.heat-active .koelte-marker:not(.koelte-marker--inactive)::after {
-  animation-delay: 2.0s;
-}
+/* Heat-plan markers no longer pulse — the static glow below is the only
+   heat-plan treatment on the map markers. */
 
 /* Extra glow on the dot when heat plan is active */
 #map-section.heat-active .koelte-marker:not(.koelte-marker--inactive) {

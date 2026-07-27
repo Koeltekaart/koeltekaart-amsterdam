@@ -16,7 +16,7 @@
   <link rel="preload" href="fonts/AmsterdamSans-Bold.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="preload" href="fonts/AmsterdamSans-ExtraBold.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="icon" type="image/svg+xml" href="images/favicon.svg" />
-  <link rel="stylesheet" href="css/app.css" />
+  <link rel="stylesheet" href="css/app.css?v=20260722e" />
   <!-- Cloudflare Web Analytics (cookieless, privacy-friendly) -->
   <script defer src="https://static.cloudflareinsights.com/beacon.min.js" data-cf-beacon='{"token": "d7e9e2ce75ad496e94b7e4825bedbfd3"}'></script>
   <!-- End Cloudflare Web Analytics -->
@@ -56,13 +56,6 @@
     </div>
 
     <div class="topbar-actions">
-      <button id="btn-near" class="ctrl-btn">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-          <path d="M12 16C14.2091 16 16 14.2091 16 12C16 9.79086 14.2091 8 12 8C9.79086 8 8 9.79086 8 12C8 14.2091 9.79086 16 12 16Z"/>
-          <path fill-rule="evenodd" clip-rule="evenodd" d="M10.8422 23V20.9262C6.79754 20.4068 3.59325 17.2025 3.07379 13.1578H1V11.1578H3.03888C3.42796 6.96519 6.69287 3.60669 10.8422 3.07379V1H12.8422V3.03888C17.1406 3.43777 20.5622 6.85942 20.9611 11.1578H23V13.1578H20.9262C20.3933 17.3071 17.0348 20.572 12.8422 20.9611V23H10.8422ZM12 19C15.866 19 19 15.866 19 12C19 8.13401 15.866 5 12 5C8.13401 5 5 8.13401 5 12C5 15.866 8.13401 19 12 19Z"/>
-        </svg>
-        <span data-i18n="near_me">In mijn buurt</span>
-      </button>
       <button id="btn-lang" class="ctrl-btn lang-btn" data-aria-i18n="aria_switch_lang" aria-label="Switch language">EN</button>
     </div>
   </div>
@@ -341,13 +334,12 @@
             <span class="l-count" id="cnt-koelteplekken"></span>
             <span class="l-sw" aria-hidden="true"></span>
           </div>
-          <!-- Collapsible: Location categories -->
-          <details class="filter-section-accordion" open>
-            <summary class="filter-section-summary">
+          <!-- Location categories — always expanded, not collapsible -->
+          <div class="filter-section-block">
+            <div class="filter-section-heading">
               <span class="lang-nl">Soorten locaties</span>
               <span class="lang-en">Location categories</span>
-              <span class="filter-section-chevron" aria-hidden="true"><svg class="filter-section-chevron-icon" viewBox="0 0 24 24" fill="currentColor"><path fill-rule="evenodd" clip-rule="evenodd" d="M2.5 7.91148L12 17.5L21.5 7.91148L20.1016 6.5L12 14.677L3.89845 6.5L2.5 7.91148Z"/></svg></span>
-            </summary>
+            </div>
             <!-- Hard-coded chips; JS only wires their click behaviour (no data-driven categories). -->
             <div id="category-chips" class="category-chips" role="group" aria-label="Filter by category">
               <button class="cat-chip active" data-cat="null" aria-pressed="true"><span class="lang-nl">Alles</span><span class="lang-en">All</span></button>
@@ -361,14 +353,13 @@
               <button class="cat-chip" data-cat="museum" aria-pressed="false" style="--cat-color:#bed200"><span class="cat-chip-dot" style="background:#bed200"></span><span class="lang-nl">Museum</span><span class="lang-en">Museum</span></button>
               <button class="cat-chip" data-cat="overig" aria-pressed="false" style="--cat-color:#202020"><span class="cat-chip-dot" style="background:#202020"></span><span class="lang-nl">Overig</span><span class="lang-en">Other</span></button>
             </div>
-          </details>
-          <!-- Collapsible: Amenities -->
-          <details class="filter-section-accordion" id="amenity-accordion" open>
-            <summary class="filter-section-summary">
+          </div>
+          <!-- Amenities — always expanded, not collapsible -->
+          <div class="filter-section-block" id="amenity-block">
+            <div class="filter-section-heading">
               <span class="lang-nl">Voorzieningen</span>
               <span class="lang-en">Amenities</span>
-              <span class="filter-section-chevron" aria-hidden="true"><svg class="filter-section-chevron-icon" viewBox="0 0 24 24" fill="currentColor"><path fill-rule="evenodd" clip-rule="evenodd" d="M2.5 7.91148L12 17.5L21.5 7.91148L20.1016 6.5L12 14.677L3.89845 6.5L2.5 7.91148Z"/></svg></span>
-            </summary>
+            </div>
             <!-- Hard-coded, curated chips; JS only wires their click behaviour (no data-driven amenities). -->
             <div id="filter-chips" class="filter-chips" role="group" aria-label="Filter amenities">
               <button class="filter-chip" data-filter="ac" aria-pressed="false"><span class="lang-nl">Airco</span><span class="lang-en">A/C</span></button>
@@ -378,7 +369,7 @@
               <button class="filter-chip" data-filter="food_to_buy" aria-pressed="false"><span class="lang-nl">Eten te koop</span><span class="lang-en">Food on site</span></button>
               <button class="filter-chip" data-filter="own_food_allowed" aria-pressed="false"><span class="lang-nl">Eigen eten OK</span><span class="lang-en">Own food OK</span></button>
             </div>
-          </details>
+          </div>
           <div class="layer-row" data-cat="shade" role="switch" aria-checked="false" tabindex="0">
             <span class="l-dot" style="background:#004699;"></span>
             <span class="l-name" data-i18n="shade_label">Loopschaduw</span>
@@ -415,7 +406,7 @@
               <button class="filter-chip swim-filter-chip" data-swim-type="Waterspeeltuin" aria-pressed="false"><span class="lang-nl">Waterspeeltuin</span><span class="lang-en">Water playground</span></button>
             </div>
           </details>
-          <div class="layer-row on" data-cat="parks" role="switch" aria-checked="true" tabindex="0">
+          <div class="layer-row" data-cat="parks" role="switch" aria-checked="false" tabindex="0">
             <span class="l-dot" style="background:#00893c;"></span>
             <span class="l-name" data-i18n="parks_label">Parken</span>
             <span class="l-count" id="cnt-parks"></span>
@@ -443,10 +434,6 @@
     <!-- Right panel — list or detail view -->
     <div id="list-view" hidden aria-label="Locaties">
       <div class="panel-hdr">
-        <div id="panel-hdr-list">
-          <div id="panel-hdr-title"></div>
-          <div id="panel-hdr-count"></div>
-        </div>
         <button class="panel-hdr-back" id="panel-hdr-back" aria-label="Terug" hidden>
           <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
             <path fill-rule="evenodd" clip-rule="evenodd" d="M16.0885 2.5L6.5 12L16.0885 21.5L17.5 20.1016L9.32296 12L17.5 3.89845L16.0885 2.5Z"/>
@@ -454,6 +441,9 @@
         </button>
       </div>
       <div id="list-view-inner" tabindex="-1"></div>
+      <!-- Detail action bar — a sibling of the scroller, not part of it, so it
+           is pinned to the foot of the panel regardless of content length. -->
+      <div id="detail-action-bar" class="detail-action-bar" hidden></div>
     </div>
 
   </div><!-- /#map-section -->
@@ -546,8 +536,8 @@
 
 <script src="libs/leaflet/leaflet.js"></script>
 <script src="libs/protomaps/protomaps-leaflet.js"></script>
-<script src="js/hours.js"></script>
-<script src="js/app.js"></script>
+<script src="js/hours.js?v=20260722e"></script>
+<script src="js/app.js?v=20260722e"></script>
 
 </div><!-- /data-app-start -->
 </body>
