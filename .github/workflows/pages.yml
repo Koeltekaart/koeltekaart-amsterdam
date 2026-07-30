@@ -1,0 +1,65 @@
+name: Deploy dashboard to GitHub Pages
+
+# Publishes the internal data dashboard to a separate, non-brand URL:
+#   https://koeltekaart.github.io/koeltekaart-amsterdam/
+# Only the dashboard and the files it fetches are deployed — NOT the public
+# map site — so this URL stays clearly distinct from koeltekaartamsterdam.nl.
+# Runs on every push to main, including the ~15-min data-refresh commits, so
+# the dashboard stays as fresh as the live site.
+
+on:
+  push:
+    branches: [main]
+    # skip runs that can't change what the dashboard shows
+    paths:
+      - "dashboard.html"
+      - "js/dashboard.js"
+      - "libs/leaflet/**"
+      - "fonts/**"
+      - "images/favicon.svg"
+      - "data/locations.csv"
+      - "geocode_review.csv"
+      - "data/geo/wijken.geojson"
+      - ".github/workflows/pages.yml"
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Assemble dashboard-only bundle
+        run: |
+          set -euo pipefail
+          mkdir -p _site/js _site/libs _site/fonts _site/images _site/data/geo
+          # dashboard is the index of this URL, and also reachable at /dashboard.html
+          cp dashboard.html _site/index.html
+          cp dashboard.html _site/dashboard.html
+          cp js/dashboard.js _site/js/
+          cp -r libs/leaflet _site/libs/
+          cp fonts/AmsterdamSans-Regular.woff2 fonts/AmsterdamSans-Bold.woff2 fonts/AmsterdamSans-ExtraBold.woff2 _site/fonts/
+          cp images/favicon.svg _site/images/
+          cp data/locations.csv _site/data/
+          cp data/geo/wijken.geojson _site/data/geo/
+          # optional feed — the dashboard tolerates its absence
+          cp geocode_review.csv _site/ 2>/dev/null || true
+
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+      - id: deployment
+        uses: actions/deploy-pages@v4
