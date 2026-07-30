@@ -166,8 +166,18 @@
     /* access map */
     .access { display: flex; gap: 18px; flex-wrap: wrap; align-items: stretch; }
     .access .map-card { flex: 3 1 460px; }
-    .access .list-card { flex: 1 1 280px; display: flex; flex-direction: column; max-height: 588px; }
-    .access .list-card .rank { overflow-y: auto; margin-top: 4px; padding-right: 6px; }
+    .access .list-card { flex: 1 1 280px; display: flex; flex-direction: column; }
+    .access .list-card .rank { flex: 1 1 auto; min-height: 0; overflow-y: auto; margin-top: 4px; padding-right: 6px; }
+    @media (max-width: 820px) { .access .list-card { max-height: 520px; } }
+    .rank .r-row.click { cursor: pointer; border-radius: 6px; padding: 3px 5px; margin: 0 -5px; }
+    .rank .r-row.click:hover { background: var(--surface-2); }
+    /* level toggle */
+    .level-toggle { display: inline-flex; gap: 2px; background: var(--surface-2); border: 1px solid var(--border);
+      border-radius: 999px; padding: 3px; margin-bottom: 16px; }
+    .level-toggle button { font: inherit; font-size: .82rem; font-weight: 700; color: var(--ink-2);
+      background: transparent; border: 0; border-radius: 999px; padding: 6px 16px; cursor: pointer; transition: .12s; }
+    .level-toggle button:hover { color: var(--ink); }
+    .level-toggle button.on { background: var(--surface); color: var(--ink); box-shadow: var(--shadow); }
     .access-cov { display: grid; grid-template-columns: repeat(2, 1fr); gap: 14px; margin-bottom: 16px; }
     @media (max-width: 560px) { .access-cov { grid-template-columns: 1fr; } }
     #accessMap { height: 520px; border-radius: 10px; overflow: hidden; background: var(--surface-2); }
