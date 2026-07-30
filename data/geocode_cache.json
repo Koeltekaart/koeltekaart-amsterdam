@@ -1,0 +1,520 @@
+{
+"albardakade 3, 1067dd amsterdam": {
+"lat": 52.37802766,
+"lon": 4.80258063,
+"wijk": "Geuzenveld",
+"gemeente": "Amsterdam",
+"source": "bag"
+},
+"arent janszoon ernststraat 195-197, 1083 gv amsterdam": {
+"lat": 52.33194273,
+"lon": 4.88370198,
+"wijk": "Buitenveldert-Oost",
+"gemeente": "Amsterdam",
+"source": "bag"
+},
+"asterweg 63, 1031 hm amsterdam": {
+"lat": 52.39253435,
+"lon": 4.90196368,
+"wijk": "Noordelijke IJ-oevers-West",
+"gemeente": "Amsterdam",
+"source": "bag"
+},
+"baarsstraat 31, 1075 rv amsterdam": {
+"lat": 52.34972845,
+"lon": 4.85470422,
+"wijk": "Schinkelbuurt",
+"gemeente": "Amsterdam",
+"source": "bag"
+},
+"berthold brechtstraat 1, 1102 ra amsterdam": {
+"lat": 52.31779603,
+"lon": 4.94680995,
+"wijk": "Venserpolder",
+"gemeente": "Amsterdam",
+"source": "bag"
+},
+"bezaanjachtplein 243, 1034 cr amsterdam": {
+"lat": 52.40770011,
+"lon": 4.91693904,
+"wijk": "Banne Buiksloot",
+"gemeente": "Amsterdam",
+"source": "bag"
+},
+"bezaanjachtplein 249, 1034 bm amsterdam": {
+"lat": 52.40773347,
+"lon": 4.91694809,
+"wijk": "Banne Buiksloot",
+"gemeente": "Amsterdam",
+"source": "bag-pc-mismatch"
+},
+"bezaanjachtplein 249, 1034cr amsterdam": {
+"lat": 52.40773347,
+"lon": 4.91694809,
+"wijk": "Banne Buiksloot",
+"gemeente": "Amsterdam",
+"source": "bag"
+},
+"bijlmerplein 526, 1102 dp amsterdam": {
+"lat": 52.31559775,
+"lon": 4.95513242,
+"wijk": "Amsterdamse Poort e.o.",
+"gemeente": "Amsterdam",
+"source": "bag"
+},
+"bos en lommerweg 233, 1055 dv amsterdam": {
+"lat": 52.37877015,
+"lon": 4.85122731,
+"wijk": "Erasmuspark",
+"gemeente": "Amsterdam",
+"source": "bag"
+},
+"botteskerksingel 30b, 1069 xt amsterdam": {
+"lat": 52.35917007,
+"lon": 4.79116405,
+"wijk": "Osdorp-Midden",
+"gemeente": "Amsterdam",
+"source": "bag"
+},
+"c. van eesterenlaan 266, 1019 jr amsterdam": {
+"lat": 52.37071909,
+"lon": 4.93812049,
+"wijk": "Oostelijk Havengebied",
+"gemeente": "Amsterdam",
+"source": "bag"
+},
+"cabralstraat 1, 1057 cd amsterdam": {
+"lat": 52.36967233,
+"lon": 4.85471444,
+"wijk": "Hoofdweg e.o.",
+"gemeente": "Amsterdam",
+"source": "bag"
+},
+"derde oosterparkstraat 159, 1092 cw amsterdam": {
+"lat": 52.35752782,
+"lon": 4.92022769,
+"wijk": "Oosterparkbuurt",
+"gemeente": "Amsterdam",
+"source": "bag"
+},
+"diemerparklaan 79, 1087 gn amsterdam": {
+"lat": 52.35665484,
+"lon": 4.99684699,
+"wijk": "IJburg-West",
+"gemeente": "Amsterdam",
+"source": "bag"
+},
+"eerste ringdijkstraat 4, 1097 bc amsterdam": {
+"lat": 52.34998053,
+"lon": 4.91856054,
+"wijk": "Frankendael",
+"gemeente": "Amsterdam",
+"source": "bag"
+},
+"europaboulevard 2b, 1078 rv amsterdam": {
+"lat": 52.33844332,
+"lon": 4.89100669,
+"wijk": "Zuidas",
+"gemeente": "Amsterdam",
+"source": "bag"
+},
+"gentiaanstraat 1, 1031 ae amsterdam": {
+"lat": 52.39093748,
+"lon": 4.91179606,
+"wijk": "Volewijck",
+"gemeente": "Amsterdam",
+"source": "bag"
+},
+"groenhoven 650, 1103 lt amsterdam": {
+"lat": 52.32624321,
+"lon": 4.97643097,
+"wijk": "Geerdinkhof/Kantershof",
+"gemeente": "Amsterdam",
+"source": "bag"
+},
+"hendrikje stoffelsstraat 1, 1058 gc amsterdam": {
+"lat": 52.35767241,
+"lon": 4.84453874,
+"wijk": "Westlandgracht",
+"gemeente": "Amsterdam",
+"source": "bag"
+},
+"hobbemakade 50, 1071 xl amsterdam": {
+"lat": 52.35582448,
+"lon": 4.88611728,
+"wijk": "Museumkwartier",
+"gemeente": "Amsterdam",
+"source": "bag"
+},
+"hugo de grootkade 18-28, 1052 ls amsterdam": {
+"lat": 52.37320426,
+"lon": 4.87397946,
+"wijk": "Frederik Hendrikbuurt",
+"gemeente": "Amsterdam",
+"source": "bag-approx"
+},
+"hygiëastraat 4, 1076 rm amsterdam": {
+"lat": 52.34841584,
+"lon": 4.86469995,
+"wijk": "Stadionbuurt",
+"gemeente": "Amsterdam",
+"source": "bag"
+},
+"javaplein 2, 1094 hw amsterdam": {
+"lat": 52.36415645,
+"lon": 4.93875703,
+"wijk": "Indische Buurt-West",
+"gemeente": "Amsterdam",
+"source": "bag"
+},
+"joan muyskenweg 10, 1096 cj amsterdam": {
+"lat": 52.33706026,
+"lon": 4.91295182,
+"wijk": "Omval/Overamstel",
+"gemeente": "Amsterdam",
+"source": "bag-approx"
+},
+"jodenbreestraat 4, 1011 nk amsterdam": {
+"lat": 52.36936916,
+"lon": 4.90124965,
+"wijk": "Nieuwmarkt/Lastage",
+"gemeente": "Amsterdam",
+"source": "bag"
+},
+"karspeldreef 1227, 1104 se amsterdam": {
+"lat": 52.31582515,
+"lon": 4.97729835,
+"wijk": "Bijlmermuseum",
+"gemeente": "Amsterdam",
+"source": "bag"
+},
+"kometensingel 189, 1033 be amsterdam": {
+"lat": 52.41438071,
+"lon": 4.88645458,
+"wijk": "Tuindorp Oostzaan",
+"gemeente": "Amsterdam",
+"source": "bag"
+},
+"kon. wilhelminaplein 1, 1062 hg amsterdam": {
+"lat": 52.35569678,
+"lon": 4.84099594,
+"wijk": "Westlandgracht",
+"gemeente": "Amsterdam",
+"source": "bag"
+},
+"kraaiennest 80, 1104 ce amsterdam": {
+"lat": 52.31679198,
+"lon": 4.97968182,
+"wijk": "Bijlmermuseum",
+"gemeente": "Amsterdam",
+"source": "bag"
+},
+"kruislaan 126, 1097 ga amsterdam": {
+"lat": 52.34561,
+"lon": 4.93883561,
+"wijk": "Betondorp",
+"gemeente": "Amsterdam",
+"source": "bag"
+},
+"laan der hesperiden 18, 1076 dm amsterdam": {
+"lat": 52.34528482,
+"lon": 4.85588753,
+"wijk": "Stadionbuurt",
+"gemeente": "Amsterdam",
+"source": "bag-pc-mismatch"
+},
+"laan der hesperiden 18, 1076dn amsterdam": {
+"lat": 52.34528482,
+"lon": 4.85588753,
+"wijk": "Stadionbuurt",
+"gemeente": "Amsterdam",
+"source": "bag"
+},
+"linnaeusstraat 44, 1092 cl amsterdam": {
+"lat": 52.35815417,
+"lon": 4.92623176,
+"wijk": "Oosterparkbuurt",
+"gemeente": "Amsterdam",
+"source": "bag"
+},
+"meer en vaart 300, 1068 le amsterdam": {
+"lat": 52.35905098,
+"lon": 4.80735213,
+"wijk": "Osdorp-Oost",
+"gemeente": "Amsterdam",
+"source": "bag"
+},
+"meibergdreef 27, 1105 az amsterdam": {
+"lat": 52.29233356,
+"lon": 4.95903762,
+"wijk": "Amstel III/Bullewijk",
+"gemeente": "Amsterdam",
+"source": "bag"
+},
+"molenwijk 21, 1035 eg amsterdam": {
+"lat": 52.4178054,
+"lon": 4.8929718,
+"wijk": "Oostzanerwerf",
+"gemeente": "Amsterdam",
+"source": "bag"
+},
+"motorwal 300, 1021 ph amsterdam": {
+"lat": 52.38443626,
+"lon": 4.91777047,
+"wijk": "IJplein/Vogelbuurt",
+"gemeente": "Amsterdam",
+"source": "bag"
+},
+"nicolaas witsenstraat 4, 1017 zh amsterdam": {
+"lat": 52.35898534,
+"lon": 4.89616668,
+"wijk": "De Weteringschans",
+"gemeente": "Amsterdam",
+"source": "bag"
+},
+"nieuwe achtergracht 110, 1018 wt amsterdam": {
+"lat": 52.36265379,
+"lon": 4.90970612,
+"wijk": "Weesperbuurt/Plantage",
+"gemeente": "Amsterdam",
+"source": "bag"
+},
+"nieuwe achtergracht 170, 1018 wv amsterdam": {
+"lat": 52.36328557,
+"lon": 4.91285555,
+"wijk": "Weesperbuurt/Plantage",
+"gemeente": "Amsterdam",
+"source": "bag"
+},
+"nieuwezijds voorburgwal 176-180, 1012 sj amsterdam": {
+"lat": 52.37412512,
+"lon": 4.89077125,
+"wijk": "Burgwallen-Nieuwe Zijde",
+"gemeente": "Amsterdam",
+"source": "bag"
+},
+"olympiaweg 29, 1076 vm amsterdam": {
+"lat": 52.34914696,
+"lon": 4.86337044,
+"wijk": "Stadionbuurt",
+"gemeente": "Amsterdam",
+"source": "bag"
+},
+"ookmeerweg 275, 1067 sp amsterdam": {
+"lat": 52.35962834,
+"lon": 4.77473722,
+"wijk": "Lutkemeer/Ookmeer",
+"gemeente": "Amsterdam",
+"source": "bag"
+},
+"oosterdokskade 143, 1011 dl amsterdam": {
+"lat": 52.37582439,
+"lon": 4.90837481,
+"wijk": "Nieuwmarkt/Lastage",
+"gemeente": "Amsterdam",
+"source": "bag"
+},
+"oosterpark 4, 1091 ac amsterdam": {
+"lat": 52.36002683,
+"lon": 4.91579732,
+"wijk": "Oosterparkbuurt",
+"gemeente": "Amsterdam",
+"source": "bag"
+},
+"osdorpplein 469, 1068 sz amsterdam": {
+"lat": 52.35946948,
+"lon": 4.80289857,
+"wijk": "Osdorp-Oost",
+"gemeente": "Amsterdam",
+"source": "bag"
+},
+"paasheuvelweg 14, 1105 bh amsterdam": {
+"lat": 52.29775068,
+"lon": 4.95096663,
+"wijk": "Amstel III/Bullewijk",
+"gemeente": "Amsterdam",
+"source": "bag"
+},
+"paul van vlissingenstraat 24, 1096 bk amsterdam": {
+"lat": 52.33245481,
+"lon": 4.91795215,
+"wijk": "Omval/Overamstel",
+"gemeente": "Amsterdam",
+"source": "bag"
+},
+"plantage middenlaan 48, 1018 dh amsterdam": {
+"lat": 52.36585716,
+"lon": 4.91287235,
+"wijk": "Weesperbuurt/Plantage",
+"gemeente": "Amsterdam",
+"source": "bag"
+},
+"polanenstraat 6, 1013 vw amsterdam": {
+"lat": 52.38900984,
+"lon": 4.87832387,
+"wijk": "Spaarndammerbuurt/Zeeheldenbuurt",
+"gemeente": "Amsterdam",
+"source": "bag"
+},
+"postjesweg 340, 1061 ax amsterdam": {
+"lat": 52.36428404,
+"lon": 4.83505773,
+"wijk": "Overtoomse Veld",
+"gemeente": "Amsterdam",
+"source": "bag"
+},
+"prinsengracht 281, 1016 gw amsterdam": {
+"lat": 52.37442696,
+"lon": 4.88349879,
+"wijk": "Grachtengordel-West",
+"gemeente": "Amsterdam",
+"source": "bag"
+},
+"recht boomssloot 52, 1011 ec amsterdam": {
+"lat": 52.37195777,
+"lon": 4.90348266,
+"wijk": "Nieuwmarkt/Lastage",
+"gemeente": "Amsterdam",
+"source": "bag"
+},
+"revaleiland 500, 1014 zg amsterdam": {
+"lat": 52.39434428,
+"lon": 4.88210814,
+"wijk": "Houthavens",
+"gemeente": "Amsterdam",
+"source": "bag"
+},
+"roetersstraat 2, 1018 wc amsterdam": {
+"lat": 52.36401478,
+"lon": 4.91066045,
+"wijk": "Weesperbuurt/Plantage",
+"gemeente": "Amsterdam",
+"source": "bag"
+},
+"s.f. van ossstraat 1, 1068 jj amsterdam": {
+"lat": 52.35688775,
+"lon": 4.81718616,
+"wijk": "Osdorp-Oost",
+"gemeente": "Amsterdam",
+"source": "bag"
+},
+"saaftingestraat 8, 1069 bw amsterdam": {
+"lat": 52.36269958,
+"lon": 4.78904149,
+"wijk": "Osdorp-Midden",
+"gemeente": "Amsterdam",
+"source": "bag"
+},
+"sint antoniesbreestraat 69, 1011 hb amsterdam": {
+"lat": 52.3701224,
+"lon": 4.90083026,
+"wijk": "Nieuwmarkt/Lastage",
+"gemeente": "Amsterdam",
+"source": "bag"
+},
+"slotermeerlaan 103e, 1063 jn amsterdam": {
+"lat": 52.37932982,
+"lon": 4.82017471,
+"wijk": "Slotermeer-West",
+"gemeente": "Amsterdam",
+"source": "bag"
+},
+"spaarndammerdijk 302, 1013 zx amsterdam": {
+"lat": 52.39277953,
+"lon": 4.8688489,
+"wijk": "Spaarndammerbuurt/Zeeheldenbuurt",
+"gemeente": "Amsterdam",
+"source": "bag"
+},
+"theater de omval, ouddiemerlaan 104, 1111 hl diemen": {
+"lat": 52.34205809,
+"lon": 4.96473058,
+"wijk": "Diemen Centrum",
+"gemeente": "Diemen",
+"source": "bag"
+},
+"timorplein 21, 1094 cc amsterdam": {
+"lat": 52.36536146,
+"lon": 4.9355026,
+"wijk": "Indische Buurt-West",
+"gemeente": "Amsterdam",
+"source": "bag"
+},
+"tussen meer 68, 1069 ds amsterdam": {
+"lat": 52.35805143,
+"lon": 4.79786743,
+"wijk": "Osdorp-Midden",
+"gemeente": "Amsterdam",
+"source": "bag"
+},
+"van de sande bakhuijzenstraat 4, 1061 ag amsterdam": {
+"lat": 52.37188179,
+"lon": 4.83707378,
+"wijk": "Overtoomse Veld",
+"gemeente": "Amsterdam",
+"source": "bag-approx"
+},
+"van hallstraat 615, 1051 he amsterdam": {
+"lat": 52.37967143,
+"lon": 4.87204229,
+"wijk": "Staatsliedenbuurt",
+"gemeente": "Amsterdam",
+"source": "bag"
+},
+"van ollefenstraat 9, 1065 gj amsterdam": {
+"lat": 52.35478759,
+"lon": 4.8253304,
+"wijk": "Slotervaart-Zuid",
+"gemeente": "Amsterdam",
+"source": "bag"
+},
+"van ostadestraat 151-hs, 1073 tk amsterdam": {
+"lat": 52.35278098,
+"lon": 4.89548676,
+"wijk": "Nieuwe Pijp",
+"gemeente": "Amsterdam",
+"source": "bag"
+},
+"veluwelaan 20, 1079 ra amsterdam, nederland": {
+"lat": 52.33914379,
+"lon": 4.89698774,
+"wijk": "Scheldebuurt",
+"gemeente": "Amsterdam",
+"source": "bag"
+},
+"vijzelstraat 32, 1017 cb amsterdam": {
+"lat": 52.3645642,
+"lon": 4.89239808,
+"wijk": "Grachtengordel-Zuid",
+"gemeente": "Amsterdam",
+"source": "bag-pc-mismatch"
+},
+"vijzelstraat 32, 1017 hl amsterdam": {
+"lat": 52.3645642,
+"lon": 4.89239808,
+"wijk": "Grachtengordel-Zuid",
+"gemeente": "Amsterdam",
+"source": "bag"
+},
+"waterlandplein 255, 1024 lt amsterdam": {
+"lat": 52.39280069,
+"lon": 4.95540835,
+"wijk": "Waterlandpleinbuurt",
+"gemeente": "Amsterdam",
+"source": "bag"
+},
+"waterlandplein 302, 1024 nb amsterdam": {
+"lat": 52.3931107,
+"lon": 4.95483514,
+"wijk": "Waterlandpleinbuurt",
+"gemeente": "Amsterdam",
+"source": "bag"
+},
+"wibautstraat 129, 1091 gl amsterdam": {
+"lat": 52.35456993,
+"lon": 4.91320364,
+"wijk": "Weesperzijde",
+"gemeente": "Amsterdam",
+"source": "bag"
+}
+}

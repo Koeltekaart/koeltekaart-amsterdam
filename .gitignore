@@ -19,3 +19,5 @@ node_modules/
 
 # Python
 __pycache__/
+geocode_review.csv
+location_issues.md

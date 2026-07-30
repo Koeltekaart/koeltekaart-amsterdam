@@ -1,0 +1,80 @@
+name: Validate location coordinates
+
+# Notifies when a location's position becomes unreliable — an address PDOK can't
+# resolve cleanly, a wrong postcode, or a malformed coordinate in the sheet.
+# Coordinates are auto-derived from the address in the refresh pipeline, so the
+# failure mode we watch for is a bad ADDRESS, not a bad pin.
+#
+# How you get notified: findings are collected into ONE GitHub issue
+# ("📍 Location data needs attention"). It is opened the first time problems
+# appear (GitHub emails you), quietly kept up to date while they persist (no new
+# email), and closed automatically once the data is clean again.
+
+on:
+  schedule:
+    - cron: "0 6 * * *"        # daily 06:00 UTC
+  workflow_dispatch: {}
+  push:
+    branches: [main]
+    paths: ["data/locations.csv"]   # re-check whenever the data changes
+
+permissions:
+  contents: read
+  issues: write
+
+concurrency:
+  group: validate-locations
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ github.token }}
+      TITLE: "📍 Location data needs attention"
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - run: pip install --quiet requests
+
+      # Dry run: re-geocode from the committed cache (cheap — unchanged
+      # addresses cost zero PDOK calls) and judge the result. Never writes data.
+      - name: Check coordinates
+        id: check
+        continue-on-error: true          # a finding must not fail the workflow
+        run: |
+          python3 scripts/geocode_pdok.py data/locations.csv
+          python3 scripts/validate_locations.py geocode_review.csv --report location_issues.md
+
+      - name: Open, update, or close the tracking issue
+        run: |
+          set -euo pipefail
+          existing=$(gh issue list --state open --search "$TITLE in:title" \
+                     --json number,title --jq \
+                     ".[] | select(.title==\"$TITLE\") | .number" | head -n1)
+
+          if [ "${{ steps.check.outcome }}" = "failure" ]; then
+            # Problems found (validator exited non-zero).
+            if [ -n "$existing" ]; then
+              gh issue edit "$existing" --body-file location_issues.md   # silent refresh
+              echo "Updated issue #$existing."
+            else
+              gh issue create --title "$TITLE" --body-file location_issues.md \
+                 --label "data-quality" 2>/dev/null \
+              || gh issue create --title "$TITLE" --body-file location_issues.md
+              echo "Opened a new tracking issue."
+            fi
+          else
+            # Clean run — close the tracking issue if one is open.
+            if [ -n "$existing" ]; then
+              gh issue comment "$existing" --body "✅ All location coordinates check out now — closing."
+              gh issue close "$existing"
+              echo "Closed issue #$existing."
+            else
+              echo "No problems, no open issue. Nothing to do."
+            fi
+          fi

@@ -43,7 +43,7 @@ jobs:
           python-version: "3.12"
 
       - name: Install Python deps
-        run: pip install --quiet google-api-python-client google-auth Pillow
+        run: pip install --quiet google-api-python-client google-auth Pillow requests
 
       - name: Fetch CSVs from the private sheet (service account, live read)
         env:
@@ -62,7 +62,14 @@ jobs:
             echo "::error::Secrets SHEET_ID and GOOGLE_SERVICE_ACCOUNT_KEY must be set (Settings → Secrets and variables → Actions → Secrets)."
             exit 1
           fi
-          python3 scripts/fetch_sheet.py "$LOCATIONS_GID" /tmp/locations.csv
+          # Allow-list the PUBLIC columns for locations: only these ever reach the
+          # committed CSV (public repo), so any internal-only column added to the
+          # tab (GGD contact, approval notes, EHBO status, …) cannot leak.
+          # NOTE: stadsdeel, wijk, latitude and longitude are deliberately ABSENT
+          # here — they are no longer in the sheet. The geocode step below derives
+          # all four from `address`, so position/geography is computed, never typed.
+          python3 scripts/fetch_sheet.py "$LOCATIONS_GID" /tmp/locations.csv \
+            --columns "name,type,address,active,website_url,photo_url,description,note,seating,toilets,free_water,food_to_buy,own_food_ok,airco,wheelchair_accessible,games,pets_ok,wifi,heat_mon,heat_tue,heat_wed,heat_thu,heat_fri,heat_sat,heat_sun"
           python3 scripts/fetch_sheet.py "$SETTINGS_GID"  /tmp/settings.csv
 
           # Cheap guardrails: never overwrite good data with an empty/error body.
@@ -74,6 +81,16 @@ jobs:
 
           mv /tmp/locations.csv data/locations.csv
           mv /tmp/settings.csv  data/settings.csv
+
+      # Derive latitude, longitude, stadsdeel and wijk from each address — the
+      # sheet no longer holds any of them. A new location just needs an address;
+      # position and administrative geography are computed here. The address-keyed
+      # cache (committed under data/) means unchanged addresses cost ZERO network
+      # calls, so a routine refresh geocodes only genuinely new/edited rows. If
+      # PDOK is down for an uncached row it is left unplaced and the validate
+      # workflow flags it; it self-heals on the next run once PDOK is back.
+      - name: Derive coordinates + district from address (PDOK/BAG)
+        run: python3 scripts/geocode_pdok.py data/locations.csv --write
 
       - name: Validate data (block bad opening hours from deploying)
         run: python3 scripts/validate_data.py data/locations.csv
