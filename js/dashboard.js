@@ -204,7 +204,7 @@
       }); });
       var w = { feature: f, name: p.wijk || "?", sd: p.stadsdeel || "", code: p.code,
                 pop: (typeof p.pop === "number" ? p.pop : null),
-                rings: rings, bb: bb, sum: 0, cnt: 0, spots: 0 };
+                rings: rings, bb: bb, sum: 0, cnt: 0, spots: 0, c500: 0, c1000: 0 };
       wijken.push(w); byCode[w.code] = w;
     });
     if (!wijken.length) return null;
@@ -237,6 +237,8 @@
           if (d < best) best = d;
         }
         w.sum += best; w.cnt++;
+        if (best <= 500) w.c500++;
+        if (best <= 1000) w.c1000++;
       }
     }
     // score = residents × average distance to the nearest spot, i.e. how much
@@ -247,44 +249,53 @@
       w.score = (w.mean != null && w.pop) ? w.pop * w.mean : null;
     });
 
+    // Coverage: spread each wijk's population evenly over its sampled area, then
+    // sum the share whose cells fall within 500 m / 1 km of a spot. Assumes
+    // uniform density within a wijk (the finest split the data supports).
+    var totPop = 0, in500 = 0, in1000 = 0;
+    wijken.forEach(function (w) {
+      if (w.cnt > 0 && w.pop) {
+        totPop += w.pop;
+        in500 += w.pop * (w.c500 / w.cnt);
+        in1000 += w.pop * (w.c1000 / w.cnt);
+      }
+    });
+    var covPct = function (x) { return totPop > 0 ? Math.round(x / totPop * 100) : 0; };
+
     var fmtM = function (m) { return m >= 1000 ? (m / 1000).toFixed(1) + " km" : Math.round(m / 10) * 10 + " m"; };
     var fmtPop = function (p) { return p >= 10000 ? Math.round(p / 1000) + "k" : p >= 1000 ? (p / 1000).toFixed(1) + "k" : String(p); };
-    function fillOpacityFor(mean) {
-      if (mean == null) return 0.04;
-      return 0.12 + 0.66 * Math.pow(Math.min(1, mean / DMAX), 1.1);
+    // Colour the whole city by priority (residents × distance), normalised to
+    // the worst wijk — so the map itself is the ranking, no top-N list needed.
+    var maxScore = 0;
+    wijken.forEach(function (w) { if (w.score != null && w.score > maxScore) maxScore = w.score; });
+    function fillOpacityFor(w) {
+      if (!w || w.score == null || maxScore <= 0) return 0.05;
+      return 0.12 + 0.74 * Math.pow(w.score / maxScore, 0.55);
     }
 
-    // ---- DOM ----
-    var sec = section("Where access is thin", "");
-    var box = el("div", "access");
+    // ---- DOM (full-width priority map; the colour is the ranking) ----
+    var sec = section("Where to add spots", "");
 
-    var mapCard = card("Access by neighbourhood (wijk)", "Redder = further from the nearest spot. Dots are spots.");
+    // coverage headline: residents near a spot
+    var covRow = el("div", "access-cov");
+    function covTile(label, x) {
+      var k = el("div", "kpi");
+      k.appendChild(el("div", "k-label", esc(label)));
+      k.appendChild(el("div", "k-val", covPct(x) + "%"));
+      k.appendChild(el("div", "k-note", "≈ " + fmtPop(Math.round(x)) + " of " + fmtPop(totPop) + " residents"));
+      return k;
+    }
+    covRow.appendChild(covTile("Residents within 1 km of a spot", in1000));
+    covRow.appendChild(covTile("Residents within 500 m", in500));
+    sec.appendChild(covRow);
+
+    var mapCard = card("Priority by neighbourhood (wijk)",
+      "Redder = higher priority: more residents, further from a spot. Dots are spots.");
     mapCard.className += " map-card";
     var mapDiv = el("div"); mapDiv.id = "accessMap";
     mapCard.appendChild(mapDiv);
-    mapCard.appendChild(el("div", "heat-scale", 'near<span class="ramp"></span>' + (DMAX / 1000) + " km+"));
-    box.appendChild(mapCard);
-
-    var ranked = wijken.filter(function (w) { return w.score != null; })
-      .sort(function (a, b) { return b.score - a.score; }).slice(0, 8);
-    var listCard = card("Go here next", "Ranked by residents × distance to a spot.");
-    listCard.className += " list-card";
-    var rank = el("div", "rank");
-    ranked.forEach(function (w, idx) {
-      var rowE = el("div", "r-row");
-      rowE.appendChild(el("div", "r-n", String(idx + 1)));
-      rowE.appendChild(el("div", "r-name", esc(w.name) +
-        ' <small>' + esc(w.sd) + " · " + fmtPop(w.pop) + " res." +
-        (w.spots ? "" : " · no spots") + "</small>"));
-      rowE.appendChild(el("div", "r-dist", esc(fmtM(w.mean))));
-      rank.appendChild(rowE);
-      bindTip(rowE, "<b>" + esc(w.name) + "</b><br>" + esc(w.sd) + " · " + fmtPop(w.pop) +
-        " residents · " + w.spots + " spot" + (w.spots === 1 ? "" : "s") +
-        "<br>avg " + esc(fmtM(w.mean)) + " to nearest spot");
-    });
-    listCard.appendChild(rank);
-    box.appendChild(listCard);
-    sec.appendChild(box);
+    mapCard.appendChild(el("div", "heat-scale", 'lower<span class="ramp"></span>higher priority'));
+    sec.appendChild(mapCard);
 
     // ---- Leaflet (init once the container is in the DOM) ----
     setTimeout(function () {
@@ -301,7 +312,7 @@
         {
           style: function (f) {
             var w = byCode[f.properties.code];
-            return { fillColor: "#e24a2a", fillOpacity: fillOpacityFor(w ? w.mean : null),
+            return { fillColor: "#e24a2a", fillOpacity: fillOpacityFor(w),
                      color: "#ffffff", weight: 0.6, opacity: 0.7 };
           },
           onEachFeature: function (f, lyr) {
