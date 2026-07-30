@@ -185,16 +185,15 @@
     }).filter(function (s) { return isFinite(s.lat) && isFinite(s.lon); });
     if (spots.length < 2) return null;
 
-    var DMAX = 1500;                          // metres at which the colour maxes out
-    var MIN_CELLS = 4;                        // ignore slivers with too few samples
-
-    // wijk records: rings + bbox, minus the industrial/exclave stadsdelen
-    var wijken = [], byCode = {};
+    // buurt (neighbourhood) records: rings + bbox + centroid, minus the
+    // industrial/exclave stadsdelen. Centroid is a guaranteed sample point so
+    // that even a buurt too small to catch a grid cell still gets counted.
+    var buurten = [], byCode = {};
     wijkGeo.features.forEach(function (f) {
       var p = f.properties || {};
       if (EXCLUDE_STADSDEEL.indexOf(p.stadsdeel) >= 0) return;
       var polys = f.geometry.type === "Polygon" ? [f.geometry.coordinates] : f.geometry.coordinates;
-      var rings = [], bb = [999, 999, -999, -999];
+      var rings = [], bb = [999, 999, -999, -999], cx = 0, cy = 0, cn = 0;
       polys.forEach(function (poly) { poly.forEach(function (r) {
         rings.push(r);
         r.forEach(function (pt) {
@@ -202,11 +201,14 @@
           if (pt[0] > bb[2]) bb[2] = pt[0]; if (pt[1] > bb[3]) bb[3] = pt[1];
         });
       }); });
-      var w = { feature: f, name: p.wijk || "?", sd: p.stadsdeel || "", code: p.code,
-                pop: (typeof p.pop === "number" ? p.pop : null),
-                rings: rings, bb: bb, sum: 0, cnt: 0, spots: 0, c500: 0, c1000: 0 };
-      wijken.push(w); byCode[w.code] = w;
+      rings[0].forEach(function (pt) { cx += pt[0]; cy += pt[1]; cn++; });
+      var w = { feature: f, name: p.buurt || "?", sd: p.stadsdeel || "", wijk: p.wijk || "",
+                code: p.code, pop: (typeof p.pop === "number" ? p.pop : null),
+                rings: rings, bb: bb, cx: cx / cn, cy: cy / cn,
+                sum: 0, cnt: 0, spots: 0, c500: 0, c1000: 0 };
+      buurten.push(w); byCode[w.code] = w;
     });
+    var wijken = buurten;                     // (internal alias; logic below is granularity-agnostic)
     if (!wijken.length) return null;
 
     function wijkAt(lon, lat) {
@@ -225,27 +227,40 @@
       if (b[0] < minLon) minLon = b[0]; if (b[1] < minLat) minLat = b[1];
       if (b[2] > maxLon) maxLon = b[2]; if (b[3] > maxLat) maxLat = b[3];
     });
+    var nearestSpot = function (lat, lon) {
+      var best = Infinity;
+      for (var s = 0; s < spots.length; s++) {
+        var d = metresBetween(lat, lon, spots[s].lat, spots[s].lon);
+        if (d < best) best = d;
+      }
+      return best;
+    };
     var cosLat = Math.cos((minLat + maxLat) / 2 * Math.PI / 180);
-    var stepLon = (maxLon - minLon) / 150, stepLat = stepLon * cosLat;
+    var stepLon = (maxLon - minLon) / 240, stepLat = stepLon * cosLat;   // ~90 m cells for buurt detail
     for (var lat = minLat; lat <= maxLat; lat += stepLat) {
       for (var lon = minLon; lon <= maxLon; lon += stepLon) {
         var w = wijkAt(lon, lat);
         if (!w) continue;
-        var best = Infinity;
-        for (var s = 0; s < spots.length; s++) {
-          var d = metresBetween(lat, lon, spots[s].lat, spots[s].lon);
-          if (d < best) best = d;
-        }
+        var best = nearestSpot(lat, lon);
         w.sum += best; w.cnt++;
         if (best <= 500) w.c500++;
         if (best <= 1000) w.c1000++;
       }
     }
-    // score = residents × average distance to the nearest spot, i.e. how much
-    // walking-to-cool the wijk's population collectively lacks. Prioritises
-    // dense gaps over empty farmland (Waterland has few residents, so it falls).
-    wijken.forEach(function (w) {
-      w.mean = w.cnt >= MIN_CELLS ? w.sum / w.cnt : null;
+    // Guarantee every buurt has at least its centroid as a sample, so small
+    // buurten are never dropped from the coverage total or the priority list.
+    buurten.forEach(function (w) {
+      if (w.cnt === 0) {
+        var best = nearestSpot(w.cy, w.cx);
+        w.sum = best; w.cnt = 1;
+        if (best <= 500) w.c500 = 1;
+        if (best <= 1000) w.c1000 = 1;
+      }
+    });
+    // score = residents × average distance to the nearest spot: how much
+    // walking-to-cool the buurt's population collectively lacks.
+    buurten.forEach(function (w) {
+      w.mean = w.cnt > 0 ? w.sum / w.cnt : null;
       w.score = (w.mean != null && w.pop) ? w.pop * w.mean : null;
     });
 
@@ -289,13 +304,37 @@
     covRow.appendChild(covTile("Residents within 500 m", in500));
     sec.appendChild(covRow);
 
-    var mapCard = card("Priority by neighbourhood (wijk)",
+    var box = el("div", "access");
+
+    var mapCard = card("Priority by buurt",
       "Redder = higher priority: more residents, further from a spot. Dots are spots.");
     mapCard.className += " map-card";
     var mapDiv = el("div"); mapDiv.id = "accessMap";
     mapCard.appendChild(mapDiv);
     mapCard.appendChild(el("div", "heat-scale", 'lower<span class="ramp"></span>higher priority'));
-    sec.appendChild(mapCard);
+    box.appendChild(mapCard);
+
+    // complete priority list — every buurt, highest priority first (scrollable)
+    var ranked = buurten.filter(function (w) { return w.score != null; })
+      .sort(function (a, b) { return b.score - a.score; });
+    var listCard = card("Priority list", ranked.length + " buurten · residents × distance, highest first");
+    listCard.className += " list-card";
+    var rank = el("div", "rank");
+    ranked.forEach(function (w, idx) {
+      var rowE = el("div", "r-row");
+      rowE.appendChild(el("div", "r-n", String(idx + 1)));
+      rowE.appendChild(el("div", "r-name", esc(w.name) +
+        ' <small>' + esc(w.sd) + " · " + fmtPop(w.pop) + " res." +
+        (w.spots ? "" : " · no spots") + "</small>"));
+      rowE.appendChild(el("div", "r-dist", esc(fmtM(w.mean))));
+      rank.appendChild(rowE);
+      bindTip(rowE, "<b>" + esc(w.name) + "</b> <span style=\"opacity:.7\">(" + esc(w.wijk) + ")</span><br>" +
+        esc(w.sd) + " · " + fmtPop(w.pop) + " residents · " + w.spots + " spot" + (w.spots === 1 ? "" : "s") +
+        "<br>avg " + esc(fmtM(w.mean)) + " to nearest spot");
+    });
+    listCard.appendChild(rank);
+    box.appendChild(listCard);
+    sec.appendChild(box);
 
     // ---- Leaflet (init once the container is in the DOM) ----
     setTimeout(function () {
@@ -524,7 +563,7 @@
     $("app").innerHTML = '<div class="loading">Fetching data/locations.csv …</div>';
     var locP = fetchText("data/locations.csv");
     var geoP = fetchText("geocode_review.csv").catch(function () { return null; });
-    var wjP = fetchText("data/geo/wijken.geojson").catch(function () { return null; });
+    var wjP = fetchText("data/geo/buurten.geojson").catch(function () { return null; });
     Promise.all([locP, geoP, wjP]).then(function (res) {
       var locs = toObjects(res[0].text);
       var geo = res[1] ? toObjects(res[1].text) : null;

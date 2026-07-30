@@ -19,7 +19,7 @@ on:
       - "images/favicon.svg"
       - "data/locations.csv"
       - "geocode_review.csv"
-      - "data/geo/wijken.geojson"
+      - "data/geo/buurten.geojson"
       - ".github/workflows/pages.yml"
   workflow_dispatch: {}
 
@@ -53,7 +53,7 @@ jobs:
           cp fonts/AmsterdamSans-Regular.woff2 fonts/AmsterdamSans-Bold.woff2 fonts/AmsterdamSans-ExtraBold.woff2 _site/fonts/
           cp images/favicon.svg _site/images/
           cp data/locations.csv _site/data/
-          cp data/geo/wijken.geojson _site/data/geo/
+          cp data/geo/buurten.geojson _site/data/geo/
           # optional feed — the dashboard tolerates its absence
           cp geocode_review.csv _site/ 2>/dev/null || true
 
