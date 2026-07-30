@@ -465,7 +465,6 @@ const TR = {
     website_hours: "Website",
     near_you: "In jouw buurt",
     other_locations: "Andere locaties",
-    no_near_results: "Geen locaties binnen 500 m van je.",
     near_me: "In mijn buurt",
     near_me_recenter: "Centreer op mijn locatie",
     near_me_blocked: "Locatie is geblokkeerd. Sta het toe via het slotje in de adresbalk → Locatie.",
@@ -606,7 +605,6 @@ const TR = {
     website_hours: "Website",
     near_you: "Near you",
     other_locations: "Other locations",
-    no_near_results: "No locations within 500 m of you.",
     near_me: "Near me",
     near_me_recenter: "Center on my location",
     near_me_blocked: "Location is blocked. Allow it via the lock icon in the address bar → Location.",
@@ -2301,9 +2299,9 @@ function placeUserMarker(lat, lon) {
 }
 function clearRings() { state.rings.forEach(r=>r.remove()); state.rings=[]; }
 function placeDistanceRings(lat, lon) {
-  // Single dashed circle — matches NEAR_KM (500 m) with a subtle navy tint inside
+  // Single dashed circle — matches NEAR_KM (1 km) with a subtle navy tint inside
   const r = L.circle([lat, lon], {
-    radius: 500,
+    radius: 1000,
     color: "#004699",
     weight: 2,
     opacity: 0.65,
@@ -3454,7 +3452,7 @@ function renderListView() {
   const inactiveItems = items.filter(({ feature }) => feature.properties?.active === false);
 
   // Pre-calculate near/far so panel header shows accurate near count
-  const NEAR_KM = 0.5;
+  const NEAR_KM = 1.0;
   let nearItems = [], farItems = [];
   if (state.userPos) {
     nearItems = activeItems.filter(({ feature }) => {
@@ -3487,7 +3485,7 @@ function renderListView() {
   // out and the next section's header takes over the same slot. Flat sibling
   // headers would each be confined to the whole list instead, and the first one
   // would stay pinned forever with the second painting on top of it.
-  function appendSection(sectionItems, label, emptyNote) {
+  function appendSection(sectionItems, label) {
     const sec = document.createElement("section"); sec.className = "lv-section";
 
     const hdr   = document.createElement("div"); hdr.className = "lv-section-hdr";
@@ -3502,10 +3500,6 @@ function renderListView() {
       const list = document.createElement("ul"); list.className = "lv-list";
       sectionItems.forEach(({ feature }) => list.appendChild(buildListItem(feature)));
       sec.appendChild(list);
-    } else if (emptyNote) {
-      const note = document.createElement("div"); note.className = "lv-near-empty";
-      note.textContent = emptyNote;
-      sec.appendChild(note);
     }
 
     inner.appendChild(sec);
@@ -3513,11 +3507,13 @@ function renderListView() {
   }
 
   let lastSection;
-  if (state.userPos) {
-    // "Near you" renders even when empty — 500 m is a tight radius, and the
-    // note explains the gap rather than leaving a bare header.
-    lastSection = appendSection(nearItems, t("near_you"), t("no_near_results"));
+  if (state.userPos && nearItems.length) {
+    // Only show "Near you" when something is actually within NEAR_KM; otherwise
+    // skip straight to the full list rather than showing an empty section.
+    lastSection = appendSection(nearItems, t("near_you"));
     if (farItems.length) lastSection = appendSection(farItems, t("other_locations"));
+  } else if (state.userPos) {
+    lastSection = appendSection(farItems, t("lv_title"));
   } else {
     lastSection = appendSection(activeItems, t("lv_title"));
   }
