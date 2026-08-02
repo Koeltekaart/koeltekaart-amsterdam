@@ -1775,6 +1775,11 @@ body.mode-user #sidebar-policy { display: none; }
 .dp-hours-chevron svg { transition: transform 0.22s; }
 .dp-hours-summary[aria-expanded="true"] .dp-hours-chevron svg { transform: rotate(180deg); }
 
+/* Non-collapsible hours title (today-only mode). The collapsible variant got
+   its type from .dp-hours-summary; without that button we restate the same
+   13px/700 so this title matches every other section title in the panel. */
+.dp-hours-title { font-size: 13px; font-weight: 700; color: var(--text); }
+
 /* Two-column week grid: days flow down the first column then the second. The
    column gap matches the amenity grid (.dp-amenity-grid) so both two-column
    blocks share the same column boundaries and line up down the panel. */
@@ -1788,6 +1793,14 @@ body.mode-user #sidebar-policy { display: none; }
 /* An author `display:grid` beats the UA `[hidden]{display:none}`, so the hidden
    attribute alone wouldn't collapse the grid — restore it explicitly. */
 .dp-hours-grid[hidden] { display: none; }
+/* Today-only variant (HOURS_DISPLAY = "today"): a single full-width row, so the
+   week grid's 4-row/auto-column flow doesn't apply. Small top margin because
+   this row is always visible rather than revealed by the collapsed toggle. */
+.dp-hours-grid--today-only {
+  grid-template-rows: auto;
+  grid-auto-flow: row;
+  margin-top: 6px;
+}
 .dp-hours-cell { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
 .dp-hours-day  { font-size: 14px; font-weight: 500; color: var(--muted); }
 .dp-hours-time { font-size: 14px; font-weight: 500; color: var(--text); font-variant-numeric: tabular-nums; }
