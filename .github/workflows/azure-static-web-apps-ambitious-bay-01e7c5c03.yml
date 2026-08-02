@@ -4,10 +4,17 @@ on:
   push:
     branches:
       - main
-  pull_request:
-    types: [opened, synchronize, reopened, closed]
-    branches:
-      - main
+  # NOTE: deliberately NO pull_request trigger. Azure PR preview environments
+  # do not work on this Static Web App and never have — every PR produced two
+  # guaranteed-failing runs (and two failure emails):
+  #   deploy → "This Static Web App already has the maximum number of staging
+  #             environments. Please remove one and try again."
+  #   close  → "No matching static site found."
+  # Those runs also burned Azure deploy attempts (feeding the very throttling
+  # this workflow retries around) and were the run class that cancelled merge
+  # deploys. Nothing is lost by dropping them: code review happens on the diff,
+  # and the internal GitHub Pages preview (pages.yml) covers "see it running".
+  #
   # Redeploy main on demand ("Run workflow"), without inventing a dummy commit.
   # Needed when a deploy was cancelled and no further push follows to supersede
   # it — otherwise the only recovery is re-running a run from the API.
@@ -19,21 +26,23 @@ on:
 # GitHub (= a failure email) even though the newest deploy succeeds. Grouping
 # by ref with cancel-in-progress makes GitHub supersede the stale run itself,
 # which shows as "cancelled" (no failure notification) and lets only the latest
-# commit deploy. PR previews (different refs) are unaffected.
+# commit deploy.
 #
-# The group is scoped by EVENT as well as ref. Without that, the
-# "pull_request: closed" run fired when a PR is merged lands in the same group
-# as the push run publishing that very merge, and cancels it — observed twice,
-# each time leaving main's HEAD undeployed with no newer run to supersede it, so
-# merged code silently never reached production while main looked healthy.
-# Only pushes to the same branch may collapse into one another.
+# The group is scoped by EVENT as well as ref, so different kinds of run can
+# never cancel one another. This is what previously went wrong: the
+# "pull_request: closed" run fired on merge shared a group with the push run
+# publishing that very merge and cancelled it — observed twice, each time
+# leaving main's HEAD undeployed with no newer run to supersede it, so merged
+# code silently never reached production while main looked healthy. That trigger
+# is gone now (see above); the event scoping stays so a manual workflow_dispatch
+# and an in-flight push deploy also can't kill each other.
 concurrency:
   group: azure-swa-${{ github.event_name }}-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
   build_and_deploy_job:
-    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch' || (github.event_name == 'pull_request' && github.event.action != 'closed')
+    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     name: Build and Deploy Job
     permissions:
@@ -105,18 +114,3 @@ jobs:
           output_location: ""
           skip_app_build: true
           github_id_token: ${{ steps.idtoken.outputs.result }}
-
-  close_pull_request_job:
-    if: github.event_name == 'pull_request' && github.event.action == 'closed'
-    runs-on: ubuntu-latest
-    name: Close Pull Request Job
-    steps:
-      - name: Close Pull Request
-        id: closepullrequest
-        uses: Azure/static-web-apps-deploy@v1
-        with:
-          # Without this the action exits with "deployment_token was not
-          # provided" — so EVERY merged PR produced a failed run and a failure
-          # email, and the PR's preview environment was never torn down.
-          azure_static_web_apps_api_token: ${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN_AMBITIOUS_BAY_01E7C5C03 }}
-          action: "close"
