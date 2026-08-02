@@ -27,7 +27,18 @@ def _load():
         for f in fc["features"]:
             g = f["geometry"]
             polys = g["coordinates"] if g["type"] == "MultiPolygon" else [g["coordinates"]]
-            _POLYS.append((f["properties"]["naam"], polys))
+            # The bundled geojson is also consumed by the dashboard, which
+            # normalised every level to {name, stadsdeel, pop}. Accept the
+            # gemeente's original "naam" too so a future re-export of the raw
+            # dataset can't silently break the refresh pipeline again.
+            props = f["properties"]
+            name = props.get("name") or props.get("naam")
+            if not name:
+                raise KeyError(
+                    f"{STADSDELEN}: feature has neither 'name' nor 'naam' "
+                    f"(keys: {sorted(props)})"
+                )
+            _POLYS.append((name, polys))
     return _POLYS
 
 
