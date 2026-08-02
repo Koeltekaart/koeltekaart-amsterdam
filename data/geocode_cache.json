@@ -363,6 +363,13 @@
 "gemeente": "Amsterdam",
 "source": "bag"
 },
+"prinsengracht 279, 1016 gw amsterdam": {
+"lat": 52.37452582,
+"lon": 4.88349767,
+"wijk": "Grachtengordel-West",
+"gemeente": "Amsterdam",
+"source": "bag"
+},
 "prinsengracht 281, 1016 gw amsterdam": {
 "lat": 52.37442696,
 "lon": 4.88349879,
