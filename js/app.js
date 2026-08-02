@@ -1035,24 +1035,26 @@ const HOURS_DISPLAY = "today";
  * @returns {HTMLElement} A `<div class="dp-hours-grid">` holding one row.
  */
 function renderTodayRow(hours) {
-  const closed = state.lang === "nl" ? "Gesloten" : "Closed";
-  const grid = document.createElement("div"); grid.className = "dp-hours-grid dp-hours-grid--today-only";
-  if (!Array.isArray(hours)) return grid;
+  if (!Array.isArray(hours)) return null;
   const todayIdx = (new Date().getDay() + 6) % 7;
   const slot = hours[todayIdx];
+  // Closed all day, or hours unknown: the status pill already says exactly that,
+  // so a row repeating it would be the duplication this mode exists to remove.
+  // The row earns its place only when it adds a time window.
+  if (!slot || slot === HOURS_UNKNOWN) return null;
 
+  const grid = document.createElement("div");
+  grid.className = "dp-hours-grid dp-hours-grid--today-only";
+  // Deliberately NOT .dp-hours-cell--today: that navy emphasis exists to pick
+  // today out of the seven-row week grid. As the only row it has nothing to
+  // stand out from, and it just competes with the status pill for attention.
   const row = document.createElement("div");
-  row.className = "dp-hours-cell dp-hours-cell--today";
+  row.className = "dp-hours-cell";
   const day = document.createElement("span"); day.className = "dp-hours-day";
   day.textContent = state.lang === "nl" ? "Vandaag" : "Today";
   const time = document.createElement("span");
-  if (slot === HOURS_UNKNOWN) {
-    time.className = "dp-hours-time dp-hours-time--unknown";
-    time.textContent = state.lang === "nl" ? "onbekend" : "unknown";
-  } else {
-    time.className = "dp-hours-time" + (!slot ? " dp-hours-time--closed" : "");
-    time.textContent = slot ? slot.replace("-", " – ") : closed;
-  }
+  time.className = "dp-hours-time";
+  time.textContent = slot.replace("-", " – ");
   row.append(day, time); grid.appendChild(row);
   return grid;
 }
@@ -2648,9 +2650,16 @@ function renderKoelteDetailContent(feature, container) {
   if (cs.boxVariant) {
     const sec = document.createElement("div"); sec.className = "dp-section dp-hours-section";
     const headRow2 = document.createElement("div"); headRow2.className = "dp-hours-head";
+    // Today-mode: build the row first, because whether it exists decides how
+    // much the pill needs to say. With a row, the pill drops its time (the row
+    // already prints today's window — otherwise "14:00" appears twice, in two
+    // different colours). With no row, the pill keeps the full text so the
+    // next opening time isn't lost.
+    const todayRow = HOURS_DISPLAY === "today" ? renderTodayRow(featureHours(p)) : null;
+
     const statusBox = document.createElement("span");
     statusBox.className = "ams-badge ams-badge--" + cs.boxVariant;
-    statusBox.textContent = cs.boxText;
+    statusBox.textContent = (todayRow && cs.boxTextShort) ? cs.boxTextShort : cs.boxText;
 
     if (HOURS_DISPLAY === "today") {
       // One row only, so there is nothing to disclose — a chevron here would
@@ -2660,7 +2669,8 @@ function renderKoelteDetailContent(feature, container) {
       // Label the hours as cooling-spot hours (not the venue's regular hours).
       title.textContent = t("hours_koelteplek_title");
       headRow2.append(title, statusBox);
-      sec.append(headRow2, renderTodayRow(featureHours(p)));
+      sec.append(headRow2);
+      if (todayRow) sec.appendChild(todayRow);
     } else {
       const summary = document.createElement("button");
       summary.type = "button"; summary.className = "dp-hours-summary";
@@ -2819,7 +2829,10 @@ function coolingSpotStatus(p) {
   // the list and (identically) as the detail-panel status pill:
   //   green "Open · sluit 22:00" · orange "Sluit binnenkort · 18:00" ·
   //   red "Niet open nu · opent 09:00". Unknown hours → no box (boxVariant null).
-  let hoursStatus = null, boxText = null, boxVariant = null;
+  // boxText     — status + the next transition ("Gesloten · Opent om 14:00").
+  // boxTextShort — status word only ("Gesloten"). Used where today's window is
+  //   already printed next to the pill, so the time isn't stated twice.
+  let hoursStatus = null, boxText = null, boxTextShort = null, boxVariant = null;
 
   if (showHours) {
     const s = getOpenStatus(featureHours(p));
@@ -2830,20 +2843,23 @@ function coolingSpotStatus(p) {
       closingSoon = minsLeft > 0 && minsLeft <= 60;
       if (closingSoon) {
         hoursStatus = "closing"; boxVariant = "orange";
-        boxText = t("closes_soon") + (s.closesAt ? ` · ${s.closesAt}` : "");
+        boxTextShort = t("closes_soon");
+        boxText = boxTextShort + (s.closesAt ? ` · ${s.closesAt}` : "");
       } else {
         hoursStatus = "open"; boxVariant = "green";
-        boxText = t("open_now") + (s.closesAt ? ` · ${t("closes_at")} ${s.closesAt}` : "");
+        boxTextShort = t("open_now");
+        boxText = boxTextShort + (s.closesAt ? ` · ${t("closes_at")} ${s.closesAt}` : "");
       }
     } else if (s.status === "closed") {
       hoursStatus = "closed"; boxVariant = "red";
-      boxText = t("closed_now") + (s.opensAt ? ` · ${t("opens_at")} ${s.opensAt}` : "");
+      boxTextShort = t("closed_now");
+      boxText = boxTextShort + (s.opensAt ? ` · ${t("opens_at")} ${s.opensAt}` : "");
     } else {
       hoursStatus = "unknown"; // hours unparseable → no box
     }
   }
 
-  return { showHours, open, closingSoon, hoursStatus, boxText, boxVariant };
+  return { showHours, open, closingSoon, hoursStatus, boxText, boxTextShort, boxVariant };
 }
 
 function dpSection(titleNl, titleEn) {
