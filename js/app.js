@@ -714,6 +714,19 @@ const DEFAULT_LAYER_ON = Object.freeze({
   koelteplekken: true, water_taps: false, parks: false, swimming_pools: false, shade: false,
 });
 
+// ── How the detail panel presents cooling-spot hours ─────────────────────────
+// Driven live from the settings sheet (hours_display), so it can be flipped
+// without a deploy — same mechanism as heat_plan_active.
+//   "today" — only the current day's hours. The heat plan is often active for
+//     just a few days, so a full Mo–Su table implies an ongoing commitment the
+//     plan doesn't make, and invites people to turn up on a day the spot isn't
+//     participating.
+//   "week"  — the original collapsible Mo–Su grid (renderWeekGrid).
+// Anything the sheet says that isn't one of these falls back to the default, so
+// a typo in a spreadsheet cell can never blank out the hours section.
+const HOURS_DISPLAY_MODES = Object.freeze(["today", "week"]);
+const HOURS_DISPLAY_DEFAULT = "today";
+
 const state = {
   map: null,
   layers: {},
@@ -729,6 +742,10 @@ const state = {
   lang: localStorage.getItem("koeltekaart_lang") || "nl",
   activeCategories: new Set(),
   heatPlanActive: false,
+  // "today" | "week" — driven by the hours_display key in the settings sheet.
+  // See HOURS_DISPLAY_DEFAULT for what each value means and why "today" wins
+  // when the sheet says nothing.
+  hoursDisplay: HOURS_DISPLAY_DEFAULT,
   panelMode: "list",    // "list" | "detail"
   mobileView: "map",    // "map"  | "list"   — mobile only
   detailBackTo: "map",  // "map"  | "list"   — where back button returns to on mobile
@@ -848,8 +865,12 @@ function updateBannerText() {
 }
 
 // ── Settings (heat-plan switch) ────────────────────────────────────────────
-// Settings tab columns: key, value. The ONLY key the site reads live is:
+// Settings tab columns: key, value. The keys the site reads live are:
 //   heat_plan_active       TRUE / FALSE   (flips the banner + map heat styling)
+//   hours_display          today / week   (one row for today, or the Mo–Su grid)
+// Both are polled on the same 5-minute cycle, so either can be flipped from the
+// sheet without a deploy. Both have safe in-code defaults, so the site behaves
+// correctly even if the row is missing entirely.
 // Category and amenity LABELS are intentionally NOT fetched live — they live in
 // TYPE_DISPLAY_* / AMENITY_LABELS in code. Fewer live moving parts = fewer ways
 // for the public site to break; labels change rarely and ship with a release.
@@ -858,14 +879,37 @@ let _settingsPromise = null;
 
 /** Apply heat_plan_active from a list of {key,value} setting rows. */
 function _applySettings(rows) {
-  const row = rows.find(r => (r.key || "").trim().toLowerCase() === "heat_plan_active");
-  if (!row) return;
-  const was = state.heatPlanActive;
-  state.heatPlanActive = csvToBool((row.value || "").trim()) === true;
-  if (was !== state.heatPlanActive) {
-    updateBannerText();
-    // Heat plan flipping changes which hours apply, so open/closed badges and
-    // the detail panel must be recomputed.
+  // Each key is handled independently: a missing or misspelled heat_plan_active
+  // must not stop hours_display from being read (and vice versa).
+  const valueOf = key => {
+    const row = rows.find(r => (r.key || "").trim().toLowerCase() === key);
+    return row ? String(row.value || "").trim() : null;
+  };
+
+  let heatChanged = false, hoursChanged = false;
+
+  const heatRaw = valueOf("heat_plan_active");
+  if (heatRaw !== null) {
+    const was = state.heatPlanActive;
+    state.heatPlanActive = csvToBool(heatRaw) === true;
+    heatChanged = was !== state.heatPlanActive;
+  }
+
+  // hours_display: "today" | "week". An unrecognised value (typo, blank cell)
+  // falls back to the default rather than rendering nothing at all.
+  const hoursRaw = valueOf("hours_display");
+  if (hoursRaw !== null) {
+    const want = hoursRaw.toLowerCase();
+    const next = HOURS_DISPLAY_MODES.includes(want) ? want : HOURS_DISPLAY_DEFAULT;
+    hoursChanged = state.hoursDisplay !== next;
+    state.hoursDisplay = next;
+  }
+
+  if (heatChanged) updateBannerText();
+  if (heatChanged || hoursChanged) {
+    // Heat plan flipping changes which hours apply, and hours_display changes
+    // how they are drawn — either way the badges and the open detail panel
+    // must be recomputed.
     refreshListIfActive();
     rerenderCurrentDetailPanel();
   }
@@ -1018,19 +1062,9 @@ function renderHoursBlock(hours) {
   return wrap;
 }
 
-// ── How the detail panel presents cooling-spot hours ────────────────────────
-// "today" — only the current day's hours (renderTodayRow). This is the live
-//   behaviour: the heat plan is often active for just a few days, so printing a
-//   full Mo–Su table implies an ongoing commitment the plan doesn't actually
-//   make, and invites people to turn up on a day the spot isn't participating.
-// "week"  — the original collapsible Mo–Su grid (renderWeekGrid, kept below and
-//   fully working). Flip this constant back to "week" to restore it; nothing
-//   else needs to change.
-const HOURS_DISPLAY = "today";
-
 /**
  * Single-line "today" row for the detail panel — the current day's cooling-spot
- * hours only. See HOURS_DISPLAY for why this is the default.
+ * hours only. See HOURS_DISPLAY_DEFAULT for what the modes mean.
  * @param {string[]|null} hours - Seven Mo–Su slots, as accepted by getOpenStatus.
  * @returns {HTMLElement} A `<div class="dp-hours-grid">` holding one row.
  */
@@ -1064,8 +1098,8 @@ function renderTodayRow(hours) {
  * (Mo–Th) then the second (Fr–Su), today highlighted in navy. Mirrors the
  * reference layout — no status badge (the header pill covers "now").
  *
- * NOT currently rendered — HOURS_DISPLAY is "today". Kept intact (not deleted)
- * so the week view can be brought back by flipping that constant.
+ * Rendered when the settings sheet sets hours_display to "week"; the sheet
+ * default ("today") uses renderTodayRow instead.
  */
 function renderWeekGrid(hours) {
   const dayShort = state.lang === "nl" ? DAY_SHORT_NL : DAY_SHORT_EN;
@@ -2655,13 +2689,13 @@ function renderKoelteDetailContent(feature, container) {
     // already prints today's window — otherwise "14:00" appears twice, in two
     // different colours). With no row, the pill keeps the full text so the
     // next opening time isn't lost.
-    const todayRow = HOURS_DISPLAY === "today" ? renderTodayRow(featureHours(p)) : null;
+    const todayRow = state.hoursDisplay === "today" ? renderTodayRow(featureHours(p)) : null;
 
     const statusBox = document.createElement("span");
     statusBox.className = "ams-badge ams-badge--" + cs.boxVariant;
     statusBox.textContent = (todayRow && cs.boxTextShort) ? cs.boxTextShort : cs.boxText;
 
-    if (HOURS_DISPLAY === "today") {
+    if (state.hoursDisplay === "today") {
       // One row only, so there is nothing to disclose — a chevron here would
       // just hide today's hours behind a click. Plain title, row always visible.
       const title = document.createElement("span");
