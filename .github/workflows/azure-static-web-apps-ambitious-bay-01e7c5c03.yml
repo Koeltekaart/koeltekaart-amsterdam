@@ -8,6 +8,10 @@ on:
     types: [opened, synchronize, reopened, closed]
     branches:
       - main
+  # Redeploy main on demand ("Run workflow"), without inventing a dummy commit.
+  # Needed when a deploy was cancelled and no further push follows to supersede
+  # it — otherwise the only recovery is re-running a run from the API.
+  workflow_dispatch: {}
 
 # Rapid sheet edits push several "data: refresh" commits in a row, each
 # triggering a deploy. Without this, an older deploy is still running when the
@@ -16,13 +20,20 @@ on:
 # by ref with cancel-in-progress makes GitHub supersede the stale run itself,
 # which shows as "cancelled" (no failure notification) and lets only the latest
 # commit deploy. PR previews (different refs) are unaffected.
+#
+# The group is scoped by EVENT as well as ref. Without that, the
+# "pull_request: closed" run fired when a PR is merged lands in the same group
+# as the push run publishing that very merge, and cancels it — observed twice,
+# each time leaving main's HEAD undeployed with no newer run to supersede it, so
+# merged code silently never reached production while main looked healthy.
+# Only pushes to the same branch may collapse into one another.
 concurrency:
-  group: azure-swa-${{ github.ref }}
+  group: azure-swa-${{ github.event_name }}-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
   build_and_deploy_job:
-    if: github.event_name == 'push' || (github.event_name == 'pull_request' && github.event.action != 'closed')
+    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch' || (github.event_name == 'pull_request' && github.event.action != 'closed')
     runs-on: ubuntu-latest
     name: Build and Deploy Job
     permissions:
@@ -37,7 +48,10 @@ jobs:
       # newer commit arrives while we sit here, cancel-in-progress cancels this
       # (still-waiting) run, so a burst collapses into a single deploy of the
       # latest commit instead of many throttled ones.
+      # Skipped for workflow_dispatch: a manual run is a deliberate "publish now"
+      # (typically recovering a missed deploy), not part of an edit burst.
       - name: Debounce burst deploys
+        if: github.event_name != 'workflow_dispatch'
         run: sleep 60
 
       - uses: actions/checkout@v6
@@ -101,4 +115,8 @@ jobs:
         id: closepullrequest
         uses: Azure/static-web-apps-deploy@v1
         with:
+          # Without this the action exits with "deployment_token was not
+          # provided" — so EVERY merged PR produced a failed run and a failure
+          # email, and the PR's preview environment was never torn down.
+          azure_static_web_apps_api_token: ${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN_AMBITIOUS_BAY_01E7C5C03 }}
           action: "close"
