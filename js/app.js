@@ -1018,10 +1018,52 @@ function renderHoursBlock(hours) {
   return wrap;
 }
 
+// ── How the detail panel presents cooling-spot hours ────────────────────────
+// "today" — only the current day's hours (renderTodayRow). This is the live
+//   behaviour: the heat plan is often active for just a few days, so printing a
+//   full Mo–Su table implies an ongoing commitment the plan doesn't actually
+//   make, and invites people to turn up on a day the spot isn't participating.
+// "week"  — the original collapsible Mo–Su grid (renderWeekGrid, kept below and
+//   fully working). Flip this constant back to "week" to restore it; nothing
+//   else needs to change.
+const HOURS_DISPLAY = "today";
+
+/**
+ * Single-line "today" row for the detail panel — the current day's cooling-spot
+ * hours only. See HOURS_DISPLAY for why this is the default.
+ * @param {string[]|null} hours - Seven Mo–Su slots, as accepted by getOpenStatus.
+ * @returns {HTMLElement} A `<div class="dp-hours-grid">` holding one row.
+ */
+function renderTodayRow(hours) {
+  const closed = state.lang === "nl" ? "Gesloten" : "Closed";
+  const grid = document.createElement("div"); grid.className = "dp-hours-grid dp-hours-grid--today-only";
+  if (!Array.isArray(hours)) return grid;
+  const todayIdx = (new Date().getDay() + 6) % 7;
+  const slot = hours[todayIdx];
+
+  const row = document.createElement("div");
+  row.className = "dp-hours-cell dp-hours-cell--today";
+  const day = document.createElement("span"); day.className = "dp-hours-day";
+  day.textContent = state.lang === "nl" ? "Vandaag" : "Today";
+  const time = document.createElement("span");
+  if (slot === HOURS_UNKNOWN) {
+    time.className = "dp-hours-time dp-hours-time--unknown";
+    time.textContent = state.lang === "nl" ? "onbekend" : "unknown";
+  } else {
+    time.className = "dp-hours-time" + (!slot ? " dp-hours-time--closed" : "");
+    time.textContent = slot ? slot.replace("-", " – ") : closed;
+  }
+  row.append(day, time); grid.appendChild(row);
+  return grid;
+}
+
 /**
  * Two-column week grid for the detail panel: days flow down the first column
  * (Mo–Th) then the second (Fr–Su), today highlighted in navy. Mirrors the
  * reference layout — no status badge (the header pill covers "now").
+ *
+ * NOT currently rendered — HOURS_DISPLAY is "today". Kept intact (not deleted)
+ * so the week view can be brought back by flipping that constant.
  */
 function renderWeekGrid(hours) {
   const dayShort = state.lang === "nl" ? DAY_SHORT_NL : DAY_SHORT_EN;
@@ -2606,27 +2648,38 @@ function renderKoelteDetailContent(feature, container) {
   if (cs.boxVariant) {
     const sec = document.createElement("div"); sec.className = "dp-section dp-hours-section";
     const headRow2 = document.createElement("div"); headRow2.className = "dp-hours-head";
-    const summary = document.createElement("button");
-    summary.type = "button"; summary.className = "dp-hours-summary";
-    summary.setAttribute("aria-expanded", "false");
-    const sumText = document.createElement("span"); sumText.className = "dp-section-title-text";
-    // Label the hours as cooling-spot hours (not the venue's regular hours).
-    sumText.textContent = t("hours_koelteplek_title");
-    const chev = document.createElement("span"); chev.className = "dp-hours-chevron";
-    chev.innerHTML = adsIcon("ChevronDown", { size: 13, fill: "currentColor" });
-    summary.append(sumText, chev);
     const statusBox = document.createElement("span");
     statusBox.className = "ams-badge ams-badge--" + cs.boxVariant;
     statusBox.textContent = cs.boxText;
-    headRow2.append(summary, statusBox);
-    const grid = renderWeekGrid(featureHours(p));
-    grid.hidden = true;
-    summary.addEventListener("click", () => {
-      const expanded = summary.getAttribute("aria-expanded") === "true";
-      summary.setAttribute("aria-expanded", String(!expanded));
-      grid.hidden = expanded;
-    });
-    sec.append(headRow2, grid);
+
+    if (HOURS_DISPLAY === "today") {
+      // One row only, so there is nothing to disclose — a chevron here would
+      // just hide today's hours behind a click. Plain title, row always visible.
+      const title = document.createElement("span");
+      title.className = "dp-section-title-text dp-hours-title";
+      // Label the hours as cooling-spot hours (not the venue's regular hours).
+      title.textContent = t("hours_koelteplek_title");
+      headRow2.append(title, statusBox);
+      sec.append(headRow2, renderTodayRow(featureHours(p)));
+    } else {
+      const summary = document.createElement("button");
+      summary.type = "button"; summary.className = "dp-hours-summary";
+      summary.setAttribute("aria-expanded", "false");
+      const sumText = document.createElement("span"); sumText.className = "dp-section-title-text";
+      sumText.textContent = t("hours_koelteplek_title");
+      const chev = document.createElement("span"); chev.className = "dp-hours-chevron";
+      chev.innerHTML = adsIcon("ChevronDown", { size: 13, fill: "currentColor" });
+      summary.append(sumText, chev);
+      headRow2.append(summary, statusBox);
+      const grid = renderWeekGrid(featureHours(p));
+      grid.hidden = true;
+      summary.addEventListener("click", () => {
+        const expanded = summary.getAttribute("aria-expanded") === "true";
+        summary.setAttribute("aria-expanded", String(!expanded));
+        grid.hidden = expanded;
+      });
+      sec.append(headRow2, grid);
+    }
     info.appendChild(sec);
   }
 
