@@ -17,6 +17,9 @@ node_modules/
 # Claude Code
 .claude/
 
+# GitHub Pages build output (assembled by .github/workflows/pages.yml)
+_site/
+
 # Python
 __pycache__/
 geocode_review.csv

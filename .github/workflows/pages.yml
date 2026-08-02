@@ -1,27 +1,35 @@
-name: Deploy dashboard to GitHub Pages
+name: Deploy dashboard + heat-plan preview to GitHub Pages
 
-# Publishes the internal data dashboard to a separate, non-brand URL:
-#   https://koeltekaart.github.io/koeltekaart-amsterdam/
-# Only the dashboard and the files it fetches are deployed — NOT the public
-# map site — so this URL stays clearly distinct from koeltekaartamsterdam.nl.
+# Publishes two INTERNAL things to a separate, non-brand URL:
+#   /         → the data dashboard
+#   /preview/ → the full public site, rendered with heat_plan_active forced TRUE
+# so the team can rehearse the activated state before the plan is really
+# switched on. Neither is the public site — koeltekaartamsterdam.nl is served
+# from Azure and is unaffected by anything in this workflow.
+#
+# The preview is a byte-for-byte copy of the real site with exactly ONE data
+# change (settings.csv) plus an unmissable "internal preview" ribbon, because
+# the Pages URL is publicly reachable and an activated-looking page must never
+# be mistaken for a real activation.
+#
 # Runs on every push to main, including the ~15-min data-refresh commits, so
-# the dashboard stays as fresh as the live site.
+# both stay as fresh as the live site.
 
 on:
   push:
     branches: [main]
-    # skip runs that can't change what the dashboard shows
+    # skip runs that can't change what the dashboard or the preview shows
     paths:
       - "dashboard.html"
-      - "js/dashboard.js"
-      - "libs/leaflet/**"
+      - "index.html"
+      - "js/**"
+      - "css/**"
+      - "libs/**"
       - "fonts/**"
-      - "images/favicon.svg"
-      - "data/locations.csv"
+      - "images/**"
+      - "data/**"
       - "geocode_review.csv"
-      - "data/geo/stadsdelen.geojson"
-      - "data/geo/wijken.geojson"
-      - "data/geo/buurten.geojson"
+      - "scripts/preview-banner.js"
       - ".github/workflows/pages.yml"
   workflow_dispatch: {}
 
@@ -58,6 +66,44 @@ jobs:
           cp data/geo/stadsdelen.geojson data/geo/wijken.geojson data/geo/buurten.geojson _site/data/geo/
           # optional feed — the dashboard tolerates its absence
           cp geocode_review.csv _site/ 2>/dev/null || true
+
+      - name: Assemble heat-plan preview of the public site (/preview/)
+        run: |
+          set -euo pipefail
+          mkdir -p _site/preview
+          # Copy exactly what the public site serves. Everything the site
+          # references is a RELATIVE path (verified: zero root-absolute src/href
+          # in index.html), so it works unchanged from a /preview/ subpath.
+          # shade.geojson is the 29 MB *source* for shade.pmtiles and is never
+          # fetched at runtime — excluded to keep the artifact small.
+          rsync -a \
+            --exclude '.git' \
+            --exclude 'data/shade.geojson' \
+            --exclude 'data/build-shade.py' \
+            index.html css js libs fonts images data \
+            _site/preview/
+
+          # The ONE deliberate difference from production: the heat plan reads
+          # as active. Rewrite only that key, and fail loudly if it isn't there
+          # (a renamed key must not silently yield an inactive "preview").
+          grep -q '^heat_plan_active,' _site/preview/data/settings.csv
+          sed -i 's/^heat_plan_active,.*/heat_plan_active,TRUE/' _site/preview/data/settings.csv
+          grep -q '^heat_plan_active,TRUE$' _site/preview/data/settings.csv
+
+          # Unmissable "this is not real" ribbon, injected before </body>.
+          cp scripts/preview-banner.js _site/preview/js/preview-banner.js
+          test "$(grep -c '</body>' _site/preview/index.html)" = "1"
+          sed -i 's#</body>#<script src="js/preview-banner.js"></script>\n</body>#' \
+            _site/preview/index.html
+          grep -q 'preview-banner.js' _site/preview/index.html
+
+          # Keep the whole internal URL out of search results.
+          printf 'User-agent: *\nDisallow: /\n' > _site/robots.txt
+          for f in _site/index.html _site/dashboard.html _site/preview/index.html; do
+            sed -i 's#<head>#<head><meta name="robots" content="noindex, nofollow">#' "$f"
+          done
+
+          echo "Preview bundle:"; du -sh _site _site/preview
 
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
