@@ -3631,6 +3631,13 @@ function renderListView() {
       lastSection.appendChild(list);
     }
     inactiveItems.forEach(({ feature }) => list.appendChild(buildListItem(feature)));
+    // They land under this section's header, so its count has to include them —
+    // otherwise the header claims fewer locations than the section shows.
+    const countEl = lastSection.querySelector(".lv-section-hdr-count");
+    if (countEl) {
+      const shown = list.children.length;
+      countEl.textContent = `${shown} ${t("lv_found")}`;
+    }
   }
 }
 
