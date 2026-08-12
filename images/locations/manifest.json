@@ -39,6 +39,10 @@
     "file": "images/locations/avani-museum-quarter.jpg",
     "src": "1OWBanZF8g9Ht-EuNcr9PxcXUtVWGwbzq"
   },
+  "buurthuis-de-boomsspijker": {
+    "file": "images/locations/buurthuis-de-boomsspijker.jpg",
+    "src": "1fsA1dYMTTZH9LM__UTikrRrCufMphC8e"
+  },
   "buurtkamer-de-buurtsingel": {
     "file": "images/locations/buurtkamer-de-buurtsingel.jpg",
     "src": "1CK6exgCpKRxdu_4vyQP5gMx_RE9Mz2nX"
@@ -54,10 +58,6 @@
   "de-balie": {
     "file": "images/locations/de-balie.jpg",
     "src": "1t8jyaVU-hxB2O4HRKGXdEvZNlaE4Vknc"
-  },
-  "de-boomsspijker-dock": {
-    "file": "images/locations/de-boomsspijker-dock.jpg",
-    "src": "1fsA1dYMTTZH9LM__UTikrRrCufMphC8e"
   },
   "de-eester": {
     "file": "images/locations/de-eester.jpg",
