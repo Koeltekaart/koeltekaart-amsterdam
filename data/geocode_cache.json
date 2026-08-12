@@ -118,6 +118,13 @@
 "gemeente": "Amsterdam",
 "source": "bag"
 },
+"elzenhagensingel 1537a, 1022 la amsterdam": {
+"lat": 52.39981171,
+"lon": 4.92826224,
+"wijk": "Elzenhagen",
+"gemeente": "Amsterdam",
+"source": "bag"
+},
 "europaboulevard 2b, 1078 rv amsterdam": {
 "lat": 52.33844332,
 "lon": 4.89100669,
