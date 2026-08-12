@@ -1,3 +1,3 @@
 key,value
-heat_plan_active,FALSE
-hours_display,today
+heat_plan_active,TRUE
+hours_display,week
