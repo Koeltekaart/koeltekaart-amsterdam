@@ -34,6 +34,13 @@
 "gemeente": "Amsterdam",
 "source": "bag"
 },
+"batjanstraat 1a, 1094 rc amsterdam": {
+"lat": 52.35952196,
+"lon": 4.93820664,
+"wijk": "Indische Buurt-West",
+"gemeente": "Amsterdam",
+"source": "bag"
+},
 "berthold brechtstraat 1, 1102 ra amsterdam": {
 "lat": 52.31779603,
 "lon": 4.94680995,
