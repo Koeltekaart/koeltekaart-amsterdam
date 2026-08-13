@@ -2,6 +2,6 @@ key,value
 heat_plan_active,TRUE
 banner_active_nl,Het Amsterdam hitteplan is actief - locaties zijn nu open als koelteplek
 banner_active_en,Amsterdam Heat Plan active — locations are now open as cooling spots
-banner_inactive_nl,
-banner_inactive_en,
+banner_inactive_nl,Geen hitteplan actief - locaties worden niet als koelteplek ingezet
+banner_inactive_en,No heat plan active — locations are not available as cooling spots
 hours_display,week
