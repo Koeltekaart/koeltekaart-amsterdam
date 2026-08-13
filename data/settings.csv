@@ -1,4 +1,7 @@
 key,value
 heat_plan_active,TRUE
 banner_active_nl,
+banner_active_en,
+banner_inactive_nl,
+banner_inactive_en,
 hours_display,week
