@@ -1,5 +1,9 @@
 # SharePoint / Microsoft 365 Setup
 
+> **Status: planned, not in use.** The live site runs on Google Sheets today —
+> see [DATA_PIPELINE.md](DATA_PIPELINE.md) for the setup that is actually
+> deployed, including the settings keys. This document is the migration target.
+
 The recommended way to run the Koeltekaart's location data, heat-plan status, and
 photos on Microsoft 365 — GGD edits a SharePoint List, the public website stays
 **100% client-side** and reads only static files.
@@ -94,6 +98,8 @@ A two-column List that drives the heat-plan banner and optional labels:
 | key | value | meaning |
 |---|---|---|
 | `heat_plan_active` | `TRUE` / `FALSE` | **required** — flips the whole site into heat-plan mode |
+| `banner_active_nl` / `_en` | free text | optional banner sentence while the plan is **on**; blank = shipped copy |
+| `banner_inactive_nl` / `_en` | free text | optional banner sentence while the plan is **off**; blank = shipped copy |
 | `category.<type>.nl` | e.g. `Museum` | optional Dutch label for a `type` |
 | `category.<type>.en` | e.g. `Museum` | optional English label |
 | `amenity.<key>.nl` / `.en` | e.g. `Kluisjes` / `Lockers` | optional amenity labels |
@@ -232,5 +238,9 @@ and the heat-plan banner all keep working unchanged.
 - **Hide a location:** set `active` to **No** (data is kept, just hidden).
 - **Activate the heat plan:** in *Instellingen*, set `heat_plan_active` to `TRUE`
   (or `FALSE`). The banner and heat-plan opening hours switch automatically.
+- **Reword the banner:** in *Instellingen*, fill `banner_active_nl` / `_en` (or
+  the `banner_inactive_*` pair) with the sentence you want. Leave them empty to
+  use the standard text. Both languages are independent — fill only the one you
+  want to change.
 - **External organisations** (libraries, churches, …) do **not** edit directly —
   they send details to GGD, who enters them in the List.

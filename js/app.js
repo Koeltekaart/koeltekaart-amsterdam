@@ -742,6 +742,10 @@ const state = {
   lang: localStorage.getItem("koeltekaart_lang") || "nl",
   activeCategories: new Set(),
   heatPlanActive: false,
+  // Banner copy overrides from the settings sheet, keyed "<state>_<lang>" (see
+  // BANNER_TEXT_KEYS). A missing or blank cell leaves the built-in translation
+  // in place, so the banner always says something sensible.
+  bannerText: {},
   // "today" | "week" — driven by the hours_display key in the settings sheet.
   // See HOURS_DISPLAY_DEFAULT for what each value means and why "today" wins
   // when the sheet says nothing.
@@ -844,6 +848,23 @@ function setupLang() {
 }
 
 // ── Heat plan banner + map marker pulse ──────────────────────────────────
+// The banner sentence can be rewritten from the settings sheet, per heat-plan
+// state and per language, so GGD can tailor the wording to the situation ("code
+// oranje", extended opening hours, …) without a deploy. Each entry maps a
+// settings key to the i18n key it overrides.
+const BANNER_TEXT_KEYS = Object.freeze([
+  { setting: "banner_active_nl",   state: "active",   lang: "nl" },
+  { setting: "banner_active_en",   state: "active",   lang: "en" },
+  { setting: "banner_inactive_nl", state: "inactive", lang: "nl" },
+  { setting: "banner_inactive_en", state: "inactive", lang: "en" },
+]);
+
+/** Banner sentence for the current state + language: sheet override, else i18n. */
+function bannerText() {
+  const key = `${state.heatPlanActive ? "active" : "inactive"}_${state.lang}`;
+  return state.bannerText[key] || t(state.heatPlanActive ? "banner_active" : "banner_inactive");
+}
+
 function applyHeatPlanToMap() {
   // .heat-active on #map-section drives the CSS pulse rings on .koelte-marker
   // Pulse ONLY activates when heat plan is active
@@ -859,7 +880,7 @@ function updateBannerText() {
     banner.classList.toggle("heat-banner--inactive", !state.heatPlanActive);
   }
   if (text) {
-    text.textContent = t(state.heatPlanActive ? "banner_active" : "banner_inactive");
+    text.textContent = bannerText();
   }
   applyHeatPlanToMap();
 }
@@ -868,9 +889,14 @@ function updateBannerText() {
 // Settings tab columns: key, value. The keys the site reads live are:
 //   heat_plan_active       TRUE / FALSE   (flips the banner + map heat styling)
 //   hours_display          today / week   (one row for today, or the Mo–Su grid)
-// Both are polled on the same 5-minute cycle, so either can be flipped from the
-// sheet without a deploy. Both have safe in-code defaults, so the site behaves
+//   banner_active_nl/_en   free text      (banner sentence while the plan is on)
+//   banner_inactive_nl/_en free text      (banner sentence while the plan is off)
+// All are polled on the same 5-minute cycle, so any of them can be changed from
+// the sheet without a deploy. All have safe in-code defaults, so the site behaves
 // correctly even if the row is missing entirely.
+// The banner_* rows are the ONE exception to the "labels live in code" rule
+// below: the banner is the site's emergency-comms surface, and GGD must be able
+// to reword it mid-heatwave. Blank the cell to fall back to the shipped copy.
 // Category and amenity LABELS are intentionally NOT fetched live — they live in
 // TYPE_DISPLAY_* / AMENITY_LABELS in code. Fewer live moving parts = fewer ways
 // for the public site to break; labels change rarely and ship with a release.
@@ -886,7 +912,20 @@ function _applySettings(rows) {
     return row ? String(row.value || "").trim() : null;
   };
 
-  let heatChanged = false, hoursChanged = false;
+  let heatChanged = false, hoursChanged = false, bannerChanged = false;
+
+  // Banner copy per state + language. Like the keys below, a row that is absent
+  // leaves the current value alone; a row that is present but blank clears the
+  // override, so emptying the cell in the sheet restores the built-in sentence.
+  for (const { setting, state: st, lang } of BANNER_TEXT_KEYS) {
+    const raw = valueOf(setting);
+    if (raw === null) continue;
+    const key = `${st}_${lang}`;
+    if ((state.bannerText[key] || "") === raw) continue;
+    bannerChanged = true;
+    if (raw) state.bannerText[key] = raw;
+    else delete state.bannerText[key];
+  }
 
   const heatRaw = valueOf("heat_plan_active");
   if (heatRaw !== null) {
@@ -905,7 +944,7 @@ function _applySettings(rows) {
     state.hoursDisplay = next;
   }
 
-  if (heatChanged) updateBannerText();
+  if (heatChanged || bannerChanged) updateBannerText();
   if (heatChanged || hoursChanged) {
     // Heat plan flipping changes which hours apply, and hours_display changes
     // how they are drawn — either way the badges and the open detail panel

@@ -63,6 +63,37 @@ Each day cell becomes one of three things — this is the safety contract:
 The key rule: **a cell we can't parse is never treated as "Closed."** A typo
 must not make an open location look shut. The logic is pure and unit-tested.
 
+## Settings tab (live switches, no deploy)
+
+The **Instellingen** tab is a plain `key` / `value` sheet. Unlike the locations
+tab it has **no column allow-list** (`fetch_sheet.py` emits it whole), so adding
+a row here is all it takes — nothing to change in the Action. The site re-reads
+it on the same ~5-minute poll, so a change goes live within a refresh cycle.
+
+| key | value | meaning |
+|---|---|---|
+| `heat_plan_active` | `TRUE` / `FALSE` | flips the banner, the map pulse and heat-plan opening hours |
+| `hours_display` | `today` / `week` | one row for today, or the full Mo–Su grid |
+| `banner_active_nl` | free text | banner sentence while the plan is **on**, Dutch |
+| `banner_active_en` | free text | banner sentence while the plan is **on**, English |
+| `banner_inactive_nl` | free text | banner sentence while the plan is **off**, Dutch |
+| `banner_inactive_en` | free text | banner sentence while the plan is **off**, English |
+
+Every key has a safe in-code default, so a missing row, a blank cell or a typo
+never blanks the site — it falls back to the copy that shipped with the release.
+
+**Rewording the banner.** The four `banner_*` rows let GGD retitle the site's
+emergency-comms line mid-heatwave ("code oranje", extended hours) without a
+deploy. The two languages are independent: fill only `banner_active_nl` and
+English keeps its standard sentence rather than showing Dutch to EN visitors.
+Empty the cell again to return to the shipped copy.
+
+These rows are the deliberate exception to the rule that display labels live in
+code (`TYPE_DISPLAY_*`, `AMENITY_LABELS`) — fewer live moving parts means fewer
+ways for the public site to break, and category labels change rarely enough to
+ride a release. The banner is the one string that has to change *during* an
+incident, so it earns the live path.
+
 ## One-time setup (service-account ingestion)
 
 Done once, then hands-off. The spreadsheet stays **private** the whole time.
