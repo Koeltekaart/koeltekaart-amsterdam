@@ -104,6 +104,13 @@
 "gemeente": "Amsterdam",
 "source": "bag"
 },
+"dapperstraat 76, dapperstraat 82, 1093 bx amsterdam": {
+"lat": 52.36150382,
+"lon": 4.92799599,
+"wijk": "Dapperbuurt",
+"gemeente": "Amsterdam",
+"source": "bag"
+},
 "derde oosterparkstraat 159, 1092 cw amsterdam": {
 "lat": 52.35752782,
 "lon": 4.92022769,
