@@ -447,6 +447,13 @@
 "gemeente": "Amsterdam",
 "source": "bag"
 },
+"sluisplein 41-46, 1191 gv ouderkerk aan de amstel": {
+"lat": 52.29743861,
+"lon": 4.91431776,
+"wijk": "Wijk 00",
+"gemeente": "Ouder-Amstel",
+"source": "bag"
+},
 "spaarndammerdijk 302, 1013 zx amsterdam": {
 "lat": 52.39277953,
 "lon": 4.8688489,
