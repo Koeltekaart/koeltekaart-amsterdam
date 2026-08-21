@@ -160,6 +160,13 @@
 "gemeente": "Amsterdam",
 "source": "bag"
 },
+"haarlemmerweg 645a, 1055 ps amsterdam": {
+"lat": 52.38475384,
+"lon": 4.84877545,
+"wijk": "Landlust",
+"gemeente": "Amsterdam",
+"source": "bag"
+},
 "hendrikje stoffelsstraat 1, 1058 gc amsterdam": {
 "lat": 52.35767241,
 "lon": 4.84453874,
