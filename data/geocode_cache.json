@@ -272,6 +272,13 @@
 "gemeente": "Amsterdam",
 "source": "bag"
 },
+"landskroon 90, 1081 cg amsterdam": {
+"lat": 52.32562825,
+"lon": 4.86103505,
+"wijk": "Buitenveldert-West",
+"gemeente": "Amsterdam",
+"source": "bag-pc-mismatch"
+},
 "linnaeusstraat 44, 1092 cl amsterdam": {
 "lat": 52.35815417,
 "lon": 4.92623176,
