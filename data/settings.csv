@@ -1,7 +1,7 @@
 key,value
 heat_plan_active,FALSE
-banner_active_nl,Het Amsterdam hitteplan is actief - locaties zijn nu open als koelteplek. Let op: koelteplekken zijn zeker open tot en met vrijdag.
-banner_active_en,Amsterdam Heat Plan active — locations are now open as cooling spots. Please note: cooling spots will stay open up to and including Friday.
+banner_active_nl,Het Amsterdam hitteplan is actief - locaties zijn nu open als koelteplek
+banner_active_en,Amsterdam Heat Plan active — locations are now open as cooling spots
 banner_inactive_nl,Geen hitteplan actief - locaties worden niet als koelteplek ingezet
 banner_inactive_en,No heat plan active — locations are not available as cooling spots
 hours_display,week
