@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
-"""Shared tabular→CSV logic for the ingestion scripts.
+"""Shared tabular→CSV rendering for the ingestion step.
 
-Both fetch_sheet.py (Google Sheet source) and fetch_excel.py (Excel source)
-turn a list-of-rows into the exact same byte-stable public CSV, so the source
-of truth can change without changing what the site sees. Keeping the allow-list
-and cleaning in ONE place means the two sources cannot drift apart.
+fetch_sheet.py turns a list-of-rows from the Google Sheet into the public CSV
+the site serves. The allow-list and cell cleaning live here, apart from the
+Sheets-API plumbing, so the "what may be published" rule stays readable on its
+own and is unit-testable without a network call.
 """
 import csv
 import io
@@ -41,35 +41,12 @@ def _select_columns(rows, columns):
     return out
 
 
-def _filter_rows(rows, require):
-    """Keep only data rows whose `col` cell equals `value` (case-insensitive) —
-    the vetting gate. The source is a live collaborative document, so un-approved
-    / half-finished rows are always present; only rows a reviewer has marked
-    (e.g. publiceren=ja) may be published. Returns None if the control column is
-    absent, so a renamed/removed flag stops the run instead of silently
-    publishing everything."""
-    col, value = require
-    header = [clean(c) for c in rows[0]]
-    if col not in header:
-        print(f"::error::vetting column {col!r} not found in header; available: {header}")
-        return None
-    ci = header.index(col)
-    want = clean(value).lower()
-    return [rows[0]] + [r for r in rows[1:]
-                        if ci < len(r) and clean(r[ci]).lower() == want]
-
-
-def to_csv(rows, columns, require=None):
+def to_csv(rows, columns):
     """Render rows as LF-terminated CSV text (byte-stable), padded to a fixed
-    width. `require=(col, value)` first applies the vetting gate (keep only
-    approved rows). If `columns` is given it is a PUBLIC-COLUMN ALLOW-LIST: only
-    those columns are emitted, in that order, and everything else in the source
-    is dropped — the safety boundary that keeps internal columns out of the
-    public repo. Returns None on a missing control/allow-listed column."""
-    if require:
-        rows = _filter_rows(rows, require)
-        if rows is None:
-            return None
+    width. If `columns` is given it is a PUBLIC-COLUMN ALLOW-LIST: only those
+    columns are emitted, in that order, and everything else in the source is
+    dropped — the safety boundary that keeps internal columns out of the public
+    repo. Returns None if an allow-listed column is missing."""
     if columns:
         out_rows = _select_columns(rows, columns)
         if out_rows is None:
