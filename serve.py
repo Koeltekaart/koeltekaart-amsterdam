@@ -10,6 +10,7 @@ Usage:  python3 serve.py [port]   (default port 8008)
 Then open http://localhost:8008/
 """
 import os
+import socket
 import sys
 from functools import partial
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
@@ -72,10 +73,34 @@ class RangeHandler(SimpleHTTPRequestHandler):
         self._range = None
 
 
+class DualStackServer(ThreadingHTTPServer):
+    """Listen on IPv6 with V6ONLY switched off, so a single socket answers on
+    both ::1 and 127.0.0.1.
+
+    `localhost` resolves to both addresses and Safari tries the IPv6 one first
+    (RFC 6724). The stock IPv4-only bind therefore makes the site unreachable by
+    name in Safari — "can't connect to the server" — even though curl works,
+    because curl quietly falls back to IPv4.
+    """
+    address_family = socket.AF_INET6
+
+    def server_bind(self):
+        self.socket.setsockopt(socket.IPPROTO_IPV6, socket.IPV6_V6ONLY, 0)
+        return super().server_bind()
+
+
+def make_server(port, handler):
+    """Dual-stack where possible; plain IPv4 on hosts with IPv6 disabled."""
+    try:
+        return DualStackServer(("", port), handler)
+    except OSError:
+        return ThreadingHTTPServer(("", port), handler)
+
+
 def main():
     port = int(sys.argv[1]) if len(sys.argv) > 1 else 8008
     handler = partial(RangeHandler, directory=os.path.dirname(os.path.abspath(__file__)))
-    with ThreadingHTTPServer(("", port), handler) as httpd:
+    with make_server(port, handler) as httpd:
         print(f"Serving (with Range support) on http://localhost:{port}/  — Ctrl+C to stop")
         try:
             httpd.serve_forever()
