@@ -22,7 +22,15 @@ permissions:
 
 concurrency:
   group: refresh-data
-  cancel-in-progress: false
+  # Supersede, don't queue. Every run regenerates data/ wholesale from the sheet
+  # (the source of truth), so a run cancelled mid-flight loses nothing the next
+  # one won't redo — the newest fetch wins either way. Queuing instead is what
+  # turns a runner hiccup into red X's: GitHub keeps only ONE pending run per
+  # concurrency group, so once a run can't get a runner, the ~5-min Apps Script
+  # heartbeat stacks dispatches behind it and each new arrival marks the waiting
+  # one failed (runs 21226/21227 on 2026-08-26 never executed a single step).
+  # Superseded runs now report as cancelled instead.
+  cancel-in-progress: true
 
 jobs:
   refresh:
