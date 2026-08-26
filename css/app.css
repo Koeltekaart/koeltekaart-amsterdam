@@ -1115,24 +1115,10 @@ body.mode-user #sidebar-policy { display: none; }
   line-height: var(--ams-heading-4-line-height); letter-spacing: -0.02em;
   color: var(--text); margin: 3px 0 5px; white-space: normal;
 }
-/* Compact hours in detail panel — borderless clean list (the bordered box +
-   internal status badge are dropped; the header status box covers "now"). */
-.detail-panel-info .hours-wrap { margin-bottom: 0; border: 0; border-radius: 0; }
-.detail-panel-info .hours-table { padding: 2px 0; }
-/* Clean list rows: flush to the edges, no per-row band. Today is bold, not
-   highlighted (matches the mockup). */
-.detail-panel-info .hours-row { padding: 3px 0; margin: 0; border-radius: 0; }
-.detail-panel-info .hours-row--today { background: transparent; }
-.detail-panel-info .hours-row--today .hours-time { font-weight: 700; }
-.detail-panel-info .hours-day  { font-size: 13px; width: 26px; }
-.detail-panel-info .hours-time { font-size: 13.5px; }
-.detail-panel-info .hours-status { padding: var(--ams-space-xs) var(--ams-space-s); font-size: var(--ams-body-small-font-size); }
-.detail-panel-info .filter-chips.detail-chips { padding: 0; }
 .detail-panel-info .detail-notes { padding: 8px 0; font-size: 14px; }
 .detail-panel-info .detail-actions { margin-top: 4px; gap: 6px; padding: 0; }
 .detail-panel-info .btn-website,
 .detail-panel-info .btn-directions { height: 42px; font-size: 14px; }
-/* Heat plan hours note — now uses the shared .ads-info-note style */
 
 /* Icon badge in detail panel header (swimming spots, parks) */
 .detail-icon-badge {
@@ -1141,32 +1127,6 @@ body.mode-user #sidebar-policy { display: none; }
   border-radius: 10px; border: 1px solid transparent;
   background: rgba(0,0,0,0.04);
 }
-
-/* Legacy namesec — keep for sheet/mobile compat */
-.detail-panel-namesec { margin-bottom: 14px; }
-.detail-panel-namesec .sheet-name { font-size: 17px; white-space: normal; }
-.detail-panel-namesec .sheet-badge { margin-bottom: 3px; }
-
-/* ── Opening hours ───────────────────────────────────────────────────────── */
-.hours-wrap { margin-bottom: var(--ams-space-s); border: var(--ams-border-width-s) solid var(--border); border-radius: var(--radius); overflow: hidden; }
-.hours-status { display: flex; align-items: center; gap: 7px; padding: var(--ams-space-xs) var(--ams-space-s); font-size: var(--ams-body-small-font-size); border-bottom: var(--ams-border-width-s) solid var(--border); }
-.hours-status--open    { background: rgba(0,137,60,0.07); }
-.hours-status--closed  { background: rgba(236,0,0,0.05); }
-.hours-status--unknown { background: var(--bg); color: var(--muted); font-style: italic; border-bottom: none; }
-.hours-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
-.hours-status--open    .hours-dot { background: #00893c; }
-.hours-status--closed  .hours-dot { background: #ec0000; }
-.hours-status--unknown .hours-dot { background: var(--subtle); }
-.hours-status--open    span:not(.hours-dot) { color: #006d2e; }
-.hours-status--closed  span:not(.hours-dot) { color: var(--ams-color-feedback-error); }
-.hours-table { padding: 6px 0; }
-.hours-row { display: flex; align-items: center; padding: 4px 12px; border-radius: 4px; margin: 1px 4px; }
-.hours-row--today { background: rgba(0,70,153,0.07); }
-.hours-row--today .hours-day { color: var(--navy); font-weight: 700; }
-.hours-day  { font-size: 13px; font-weight: 500; color: var(--muted); width: 30px; flex-shrink: 0; }
-.hours-time { font-size: 13.5px; font-weight: 500; color: var(--text); }
-.hours-time--closed { color: var(--subtle); font-style: italic; }
-.hours-note { font-size: 13px; color: var(--muted); background: var(--bg); border-radius: var(--radius); padding: 8px 11px; margin-bottom: 8px; line-height: 1.5; }
 
 /* ── Detail category label ───────────────────────────────────────────────── */
 .dp-cat {
@@ -1192,17 +1152,7 @@ body.mode-user #sidebar-policy { display: none; }
    layout difference (don't let it shrink on the flex title row). */
 .dp-status { flex-shrink: 0; }
 
-/* Amsterdam Design System info note (replaces the plain grey hours box) */
-.ads-info-note {
-  display: flex; align-items: flex-start; gap: 8px;
-  font-size: 13px; line-height: 1.45; color: var(--text);
-  background: color-mix(in srgb, var(--ams-color-feedback-info) 9%, transparent);
-  border-left: 3px solid var(--ams-color-feedback-info);
-  border-radius: 6px; padding: 8px 10px;
-}
-.ads-info-note-ic { color: var(--ams-color-feedback-info); flex-shrink: 0; display: flex; line-height: 0; margin-top: 1px; }
 .dp-section .detail-notes { border-top: none; padding: 0; color: var(--text); }
-.dp-section .hours-note { margin-bottom: 0; }
 
 /* Facilities grid — scannable present (check) vs absent (cross) */
 .dp-amenity-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 7px 12px; }

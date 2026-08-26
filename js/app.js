@@ -174,8 +174,6 @@ async function _fetchLive(gid) {
   return r.text();
 }
 
-const TYPE_LABEL    = { koelteplekken: "Koelteplek", water_taps: "Water fountain", parks: "Park", swimming_pools: "Swimming spot" };
-const TYPE_LABEL_NL = { koelteplekken: "Koelteplek", water_taps: "Drinkwaterkraan", parks: "Park", swimming_pools: "Zwemplek" };
 
 // ── Amenity label map (translatable) — new keys discovered in data auto-add ─
 const AMENITY_LABELS = {
@@ -1035,71 +1033,12 @@ function fmtDist(km) {
        : km < 1   ? (km * 1000).toFixed(0) + " m"
                   : km.toFixed(1) + " km";
 }
-function polygonCentroid(coordinates) {
-  const ring = coordinates[0];
-  return [ring.reduce((s,c) => s+c[1],0)/ring.length, ring.reduce((s,c) => s+c[0],0)/ring.length];
-}
 
 // ── Opening hours ──────────────────────────────────────────────────────────
 // The pure hours logic (parseMinutes, _normaliseSlot, _parseHoursFromRow,
 // getOpenStatus, HOURS_UNKNOWN, _CSV_DAY_COLS …) lives in js/hours.js, loaded
 // before this file, so it can be unit-tested in Node. Only the DOM rendering
 // below stays here.
-
-/**
- * Build a DOM element displaying a weekly opening-hours table plus a
- * current open/closed status badge.
- * @param {string[]|null} hours - Same format as accepted by getOpenStatus.
- * @returns {HTMLElement} A `<div class="hours-wrap">` ready to insert into the DOM.
- */
-function renderHoursBlock(hours) {
-  const status   = getOpenStatus(hours);
-  const dayShort = state.lang === "nl" ? DAY_SHORT_NL : DAY_SHORT_EN;
-  const dayLong  = state.lang === "nl" ? DAY_LONG_NL  : DAY_LONG_EN;
-  const closed   = state.lang === "nl" ? "Gesloten" : "Closed";
-  const now      = new Date(), todayIdx = (now.getDay()+6)%7;
-  const wrap = document.createElement("div"); wrap.className = "hours-wrap";
-  if (status.status !== "unknown") {
-    const badge = document.createElement("div");
-    badge.className = "hours-status hours-status--" + status.status;
-    const dot = document.createElement("span"); dot.className = "hours-dot";
-    const msg = document.createElement("span");
-    if (status.status === "open") {
-      msg.innerHTML = `<strong>${t("open_now")}</strong> &mdash; ${t("closes_at")} ${status.closesAt}`;
-    } else {
-      let text = t("closed_now");
-      if (status.opensAt) text += ` &mdash; ${t("opens_at")} ${status.opensAt}`;
-      else if (status.nextDay != null) text += ` &mdash; ${t("opens_on")} ${dayLong[status.nextDay]} ${hours[status.nextDay].split("-")[0]}`;
-      msg.innerHTML = text;
-    }
-    badge.append(dot, msg);
-    wrap.appendChild(badge);
-  } else {
-    const badge = document.createElement("div"); badge.className = "hours-status hours-status--unknown";
-    badge.textContent = t("hours_unknown");
-    wrap.appendChild(badge);
-  }
-  if (hours && Array.isArray(hours)) {
-    const table = document.createElement("div"); table.className = "hours-table";
-    hours.forEach((slot, i) => {
-      const row  = document.createElement("div");
-      row.className = "hours-row" + (i===todayIdx ? " hours-row--today" : "");
-      const day  = document.createElement("span"); day.className = "hours-day"; day.textContent = dayShort[i];
-      const time = document.createElement("span");
-      if (slot === HOURS_UNKNOWN) {
-        // Cell had unparseable content — show "unknown", never a false "Closed".
-        time.className = "hours-time hours-time--unknown";
-        time.textContent = state.lang === "nl" ? "onbekend" : "unknown";
-      } else {
-        time.className = "hours-time" + (!slot ? " hours-time--closed" : "");
-        time.textContent = slot ? slot.replace("-"," – ") : closed;
-      }
-      row.append(day, time); table.appendChild(row);
-    });
-    wrap.appendChild(table);
-  }
-  return wrap;
-}
 
 /**
  * Single-line "today" row for the detail panel — the current day's cooling-spot
@@ -1162,11 +1101,6 @@ function renderWeekGrid(hours) {
   });
   return grid;
 }
-
-// Heat-plan markers no longer animate, so a layer rebuild has no animation to
-// restart — this is now a plain pass-through, kept so the call sites read the
-// same. (Was: temporarily stripped .heat-active to avoid a pulse restart flash.)
-function _withoutHeatPulse(fn) { fn(); }
 
 // ── Map init ───────────────────────────────────────────────────────────────
 function initMap() {
@@ -1561,9 +1495,6 @@ function buildKoelteplekkenLayer(def, data) {
 }
 
 function _renderKoelteplekkenLayer(def, features) {
-  _withoutHeatPulse(() => _renderKoelteplekkenLayerInner(def, features));
-}
-function _renderKoelteplekkenLayerInner(def, features) {
   HC.hide(); // dismiss any lingering hover card before swapping layers
   if (state.layers.koelteplekken) state.map.removeLayer(state.layers.koelteplekken);
   const filtered = features.filter(f => (f.properties||{}).active !== false && koelteplekPassesFilters(f.properties||{}));
@@ -1796,9 +1727,6 @@ function _renderShadeLayer() {
 
 // ── Swimming pools layer (filtered by sub-type) ────────────────────────────
 function _renderSwimmingPoolsLayer(def, features) {
-  _withoutHeatPulse(() => _renderSwimmingPoolsLayerInner(def, features));
-}
-function _renderSwimmingPoolsLayerInner(def, features) {
   HC.hide();
   if (state.layers.swimming_pools) state.map.removeLayer(state.layers.swimming_pools);
 
@@ -2945,16 +2873,6 @@ function dpSection(titleNl, titleEn) {
   return sec;
 }
 
-/** Amsterdam Design System styled info note (InfoFill icon + feedback-info accent). */
-function adsInfoNote(text) {
-  const el = document.createElement("div"); el.className = "ads-info-note";
-  const ic = document.createElement("span"); ic.className = "ads-info-note-ic";
-  ic.innerHTML = adsIcon("InfoFill", { size: 16 });
-  const tx = document.createElement("span"); tx.textContent = text;
-  el.append(ic, tx);
-  return el;
-}
-
 function cell(label, value, full=false) {
   const d=document.createElement("div"); d.className="prop-cell"+(full?" full":"");
   const l=document.createElement("div"); l.className="prop-label"; l.textContent=label;
@@ -3442,7 +3360,7 @@ function getListItems() {
   // Koelteplekken only (water taps excluded from list). Inactive locations stay
   // in the list — hidden from the map, flagged "temporarily closed", and pulled
   // into their own section at the bottom by renderListView. See buildListItem
-  // and the map-layer filter in _renderKoelteplekkenLayerInner.
+  // and the map-layer filter in _renderKoelteplekkenLayer.
   let items = state.features.koelteplekken
     .filter(f => koelteplekPassesFilters(f.properties || {}))
     .map(f => ({ feature: f, cat: "koelteplekken" }));
