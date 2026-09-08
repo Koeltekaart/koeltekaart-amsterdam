@@ -465,6 +465,7 @@ const TR = {
     opens_on: "Opent op",
     hours_unknown: "Openingstijden onbekend",
     hours_koelteplek_title: "Openingstijden koelteplek",
+    hours_title: "Openingstijden",
     get_directions: "Routebeschrijving",
     website_hours: "Website",
     near_you: "In jouw buurt",
@@ -605,6 +606,7 @@ const TR = {
     opens_on: "Opens on",
     hours_unknown: "Opening hours unknown",
     hours_koelteplek_title: "Cooling spot opening hours",
+    hours_title: "Opening hours",
     get_directions: "Get directions",
     website_hours: "Website",
     near_you: "Near you",
@@ -693,7 +695,23 @@ function t(key) { return TR[state.lang]?.[key] ?? TR.en[key] ?? key; }
  * panel always agree. See effectiveHours() in hours.js for the override rules.
  */
 function featureHours(p) {
-  return effectiveHours(p.hours, p.hours_heat, state.heatPlanActive);
+  return effectiveHours(p.hours, p.hours_heat, state.heatPlanActive || alwaysOpen(p));
+}
+
+/**
+ * Locations that are open to the public on their own terms, independent of the
+ * heat plan — public buildings you may walk into during their opening hours.
+ * For those we show real opening hours year-round instead of going silent when
+ * the plan is off, but we never call them a koelteplek outside the plan.
+ *
+ * Driven off `type` for now: the sheet has no column for this yet. When one is
+ * added (an editorial yes/no — deriving it from the amenity booleans would let
+ * an unrelated edit silently drop a location), read it here and keep the type
+ * list as the fallback.
+ */
+const ALWAYS_OPEN_TYPES = new Set(["library"]);
+function alwaysOpen(p) {
+  return ALWAYS_OPEN_TYPES.has((p.type || "").trim().toLowerCase());
 }
 
 /**
@@ -2670,6 +2688,9 @@ function renderKoelteDetailContent(feature, container) {
     // different colours). With no row, the pill keeps the full text so the
     // next opening time isn't lost.
     const todayRow = state.hoursDisplay === "today" ? renderTodayRow(featureHours(p)) : null;
+    // Only the heat plan makes these "cooling-spot hours"; otherwise they are
+    // simply the venue's opening hours.
+    const hoursTitle = t(state.heatPlanActive ? "hours_koelteplek_title" : "hours_title");
 
     const statusBox = document.createElement("span");
     statusBox.className = "ams-badge ams-badge--" + cs.boxVariant;
@@ -2681,7 +2702,7 @@ function renderKoelteDetailContent(feature, container) {
       const title = document.createElement("span");
       title.className = "dp-section-title-text dp-hours-title";
       // Label the hours as cooling-spot hours (not the venue's regular hours).
-      title.textContent = t("hours_koelteplek_title");
+      title.textContent = hoursTitle;
       headRow2.append(title, statusBox);
       sec.append(headRow2);
       if (todayRow) sec.appendChild(todayRow);
@@ -2690,7 +2711,7 @@ function renderKoelteDetailContent(feature, container) {
       summary.type = "button"; summary.className = "dp-hours-summary";
       summary.setAttribute("aria-expanded", "false");
       const sumText = document.createElement("span"); sumText.className = "dp-section-title-text";
-      sumText.textContent = t("hours_koelteplek_title");
+      sumText.textContent = hoursTitle;
       const chev = document.createElement("span"); chev.className = "dp-hours-chevron";
       chev.innerHTML = adsIcon("ChevronDown", { size: 13, fill: "currentColor" });
       summary.append(sumText, chev);
@@ -2835,9 +2856,10 @@ function featurePhotoSrc(p) {
 
 function coolingSpotStatus(p) {
   const participating = p.active !== false;
-  // Opening hours only mean "cooling-spot hours" while the plan is on; a
-  // withdrawn spot shows no hours at all.
-  const showHours = state.heatPlanActive && participating;
+  // Opening hours only mean "cooling-spot hours" while the plan is on — but an
+  // always-open location has its own hours worth showing year-round. A withdrawn
+  // spot shows no hours at all.
+  const showHours = (state.heatPlanActive || alwaysOpen(p)) && participating;
   let open = false, closingSoon = false;
   // The opening-hours status as one colour-coded, single-line box, shown both in
   // the list and (identically) as the detail-panel status pill:
@@ -3454,9 +3476,9 @@ function buildListItem(feature) {
   // a colour-coded opening-hours box (green/orange/red); unknown hours show no
   // box; only a withdrawn spot gets the neutral "Niet open als koelteplek".
   let statusBox = null;
-  if (state.heatPlanActive) {
+  if (state.heatPlanActive || alwaysOpen(p)) {
     const cs = coolingSpotStatus(p);
-    if (p.active === false) {
+    if (p.active === false && state.heatPlanActive) {
       statusBox = document.createElement("span");
       statusBox.className = "ams-badge ams-badge--neutral";
       statusBox.textContent = t("cool_closed");
