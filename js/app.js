@@ -61,7 +61,13 @@ function adsIcon(key, { size = 16, fill = "currentColor", cls = "" } = {}) {
 const LAYER_DEFS = [
   { cat: "koelteplekken",  label: "Koelteplekken",   color: "#004699",   type: "geojson", radius: 8 },
   { cat: "water_taps",     label: "Water fountains",  color: "#009de6",   src: "data/layers/water-taps.geojson",  type: "geojson", radius: 4 },
-  { cat: "parks",          label: "Parks",            color: "#00893c",   src: "data/layers/parks.json",          type: "polygon" },
+  // The park layer is two sources: the gemeente's own CC0 export inside
+  // Amsterdam, and OpenStreetMap for Amstelveen/Diemen/Ouder-Amstel/Weesp,
+  // which have no comparable municipal dataset (see scripts/fetch_parks.py).
+  // ODbL obliges us to credit OSM whenever that data is on screen, hence the
+  // per-layer attribution — it appears only while the layer is switched on.
+  { cat: "parks",          label: "Parks",            color: "#00893c",   src: "data/layers/parks.json",          type: "polygon",
+    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>-bijdragers / Gemeente Amsterdam' },
   { cat: "swimming_pools", label: "Swimming spots",   color: "#009de6",   src: "data/layers/swimming-spots.geojson",   type: "geojson", radius: 6 },
   { cat: "shade",          label: "Sidewalk shade",   color: "#004699",   type: "shade" },
 ];
@@ -1587,17 +1593,24 @@ function buildStaticLayer(def, data) {
     const parkGroups = {};
     state.layers[def.cat] = L.geoJSON(fc, {
       pane: "parksPane",
+      attribution: def.attribution,
       style: { color:def.color, weight:1.5, opacity:0.85, fillColor:def.color, fillOpacity:0.12 },
       onEachFeature: (f,l) => {
-        const name=f.properties?.Naam||"Park", sub=(f.properties?.Stadsdeel||"")+" · Park";
-        if (!parkGroups[name]) parkGroups[name]=[];
-        parkGroups[name].push(l);
+        const name=f.properties?.Naam||"Park", area=f.properties?.Stadsdeel||"";
+        const sub=area+" · Park";
+        // Big parks arrive as several polygons under one name (Sloterpark is
+        // eight), and hovering any of them should light up the whole park — but
+        // the key has to include the district, or the Nelson Mandelapark in
+        // Diemen would highlight its Zuidoost namesake across town.
+        const key=name+"|"+area;
+        if (!parkGroups[key]) parkGroups[key]=[];
+        parkGroups[key].push(l);
         // Hover handlers only on real mouse devices. On touch they'd make the
         // first tap register as a hover (needing a second tap to open the park)
         // and pop up the hover card, which shouldn't exist on mobile.
         if (!IS_TOUCH_DEVICE) {
-          l.on("mouseover",e=>{parkGroups[name].forEach(pl=>pl.setStyle({fillOpacity:0.28,weight:2.5}));HC.show(e.originalEvent.clientX,e.originalEvent.clientY,name,sub,def.color);});
-          l.on("mouseout",()=>{parkGroups[name].forEach(pl=>pl.setStyle({fillOpacity:0.12,weight:1.5}));HC.hide();});
+          l.on("mouseover",e=>{parkGroups[key].forEach(pl=>pl.setStyle({fillOpacity:0.28,weight:2.5}));HC.show(e.originalEvent.clientX,e.originalEvent.clientY,name,sub,def.color);});
+          l.on("mouseout",()=>{parkGroups[key].forEach(pl=>pl.setStyle({fillOpacity:0.12,weight:1.5}));HC.hide();});
           l.on("mousemove",e=>HC.move(e.originalEvent.clientX,e.originalEvent.clientY));
         }
         l.on("click",e=>{L.DomEvent.stopPropagation(e);showParkDetail(f);});
