@@ -293,6 +293,13 @@
 "gemeente": "Amsterdam",
 "source": "bag"
 },
+"meeuwenlaan 138, 1022 am amsterdam": {
+"lat": 52.39057075,
+"lon": 4.92819442,
+"wijk": "IJplein/Vogelbuurt",
+"gemeente": "Amsterdam",
+"source": "bag"
+},
 "meibergdreef 27, 1105 az amsterdam": {
 "lat": 52.29233356,
 "lon": 4.95903762,
